@@ -1,0 +1,113 @@
+
+
+#include "ALDRAM.h"
+#include "TLDRAM.h"
+
+
+    ALDRAM* aldram = new ALDRAM(ALDRAM::Org::ALDRAM_4Gb_x8, ALDRAM::Speed::ALDRAM_1600K);
+    IPC = run_simulation(aldram, argv[1], 1, 1, 4);
+    printf("ALDRAM:   %.5lf %.5lf\n", IPC, IPC / baseIPC);
+
+    TLDRAM* tldram = new TLDRAM(TLDRAM::Org::TLDRAM_4Gb_x8, TLDRAM::Speed::TLDRAM_1600K, 16);
+    IPC = run_simulation(tldram, argv[1], 1, 1, 4);
+    printf("TLDRAM:   %.5lf %.5lf\n", IPC, IPC / baseIPC);
+
+
+            // ALDRAM: update timing parameters based on temperatures
+            ALDRAM::Temp current_temperature = ALDRAM::Temp::COLD;
+            update_temp(current_temperature);
+
+
+    void update_temp(ALDRAM::Temp current_temperature)
+    {
+    }
+
+
+template <>
+void Controller<ALDRAM>::update_temp(ALDRAM::Temp current_temperature){
+    channel->spec->aldram_timing(current_temperature);
+}
+
+
+template <>
+void Controller<TLDRAM>::tick(){
+    clk++;
+
+    /*** 1. Serve completed reads ***/
+    if (pending.size()) {
+        Request& req = pending[0];
+        if (req.depart <= clk) {
+            req.callback(req);
+            pending.pop_front();
+        }
+    }
+
+    /*** 2. Should we schedule refreshes? ***/
+    int refresh_interval = channel->spec->speed_entry.nREFI;
+    if (clk - refreshed >= refresh_interval) {
+        auto req_type = Request::Type::REFRESH;
+
+        vector<int> addr_vec(int(TLDRAM::Level::MAX), -1);
+        addr_vec[0] = channel->id;
+        for (auto child : channel->children) {
+            addr_vec[1] = child->id;
+            Request req(addr_vec, req_type, NULL);
+            bool res = enqueue(req);
+            assert(res);
+        }
+        refreshed = clk;
+    }
+
+    /*** 3. Should we schedule writes? ***/
+    if (!write_mode) {
+        // yes -- write queue is almost full or read queue is empty
+        if (writeq.size() >= int(0.8 * writeq.max) || readq.size() == 0)
+            write_mode = true;
+    }
+    else {
+        // no -- write queue is almost empty and read queue is not empty
+        if (writeq.size() <= int(0.2 * writeq.max) && readq.size() != 0)
+            write_mode = false;
+    }
+
+    /*** 4. Find the best command to schedule, if any ***/
+    Queue* queue = !write_mode ? &readq : &writeq;
+    if (otherq.size())
+        queue = &otherq;  // "other" requests are rare, so we give them precedence over reads/writes
+
+    auto req = scheduler->get_head(queue->q);
+    if (req == queue->q.end() || !is_ready(req)) {
+        // we couldn't find a command to schedule -- let's try to be speculative
+        auto cmd = TLDRAM::Command::PRE;
+        vector<int> victim = rowpolicy->get_victim(cmd);
+        if (!victim.empty()){
+            issue_cmd(cmd, victim);
+        }
+        return;  // nothing more to be done this cycle
+    }
+
+    /*** 5. Change a read request to a migration request ***/
+    if (req->type == Request::Type::READ) {
+        req->type = Request::Type::EXTENSION;
+    }
+
+    // issue command on behalf of request
+    auto cmd = get_first_cmd(req);
+    issue_cmd(cmd, get_addr_vec(cmd, req));
+
+    // check whether this is the last command (which finishes the request)
+    if (cmd != channel->spec->translate[int(req->type)])
+        return;
+
+    // set a future completion time for read requests
+    if (req->type == Request::Type::READ || req->type == Request::Type::EXTENSION) {
+        req->depart = clk + channel->spec->read_latency;
+        pending.push_back(*req);
+    }
+
+    // remove request from queue
+    queue->q.erase(req);
+}
+
+
+        EXTENSION,  // DHL: supporting extended functionality
