@@ -37,7 +37,7 @@ LPDDR3::LPDDR3(Org org, Speed speed)
 }
 
 LPDDR3::LPDDR3(const string& org_str, const string& speed_str) :
-    LPDDR3(org_map[org_str], speed_map[speed_str]) 
+    LPDDR3(org_map[org_str], speed_map[speed_str])
 {
 }
 
@@ -119,7 +119,7 @@ void LPDDR3::init_prereq()
 
     // REFPB
     prereq[int(Level::Bank)][int(Command::REFPB)] = [] (DRAM<LPDDR3>* node, Command cmd, int id) {
-    	if (node->state == State::Closed) return Command::REFPB;
+      if (node->state == State::Closed) return Command::REFPB;
         else return Command::PRE;};
 
     // PD
@@ -187,7 +187,7 @@ void LPDDR3::init_timing()
     SpeedEntry& s = speed_entry;
     vector<TimingEntry> *t;
 
-    /*** Channel ***/ 
+    /*** Channel ***/
     t = timing[int(Level::Channel)];
 
     // CAS <-> CAS
@@ -201,7 +201,7 @@ void LPDDR3::init_timing()
     t[int(Command::WRA)].push_back({Command::WRA, 1, s.nBL});
 
 
-    /*** Rank ***/ 
+    /*** Rank ***/
     t = timing[int(Level::Rank)];
 
     // CAS <-> CAS
@@ -292,7 +292,7 @@ void LPDDR3::init_timing()
     // REF <-> SR
     t[int(Command::SREFX)].push_back({Command::REF, 1, s.nXSR});
     t[int(Command::SREFX)].push_back({Command::REFPB, 1, s.nXSR});
-    
+
     // PD <-> PD
     t[int(Command::PD)].push_back({Command::PDX, 1, s.nCKE});
     t[int(Command::PDX)].push_back({Command::PD, 1, s.nXP});
@@ -300,12 +300,12 @@ void LPDDR3::init_timing()
     // PD <-> SR
     t[int(Command::PDX)].push_back({Command::SREF, 1, s.nXP});
     t[int(Command::SREFX)].push_back({Command::PD, 1, s.nXSR});
-    
+
     // SR <-> SR
     t[int(Command::SREF)].push_back({Command::SREFX, 1, s.nCKESR});
     t[int(Command::SREFX)].push_back({Command::SREF, 1, s.nXSR});
 
-    /*** Bank ***/ 
+    /*** Bank ***/
     t = timing[int(Level::Bank)];
 
     // CAS <-> RAS

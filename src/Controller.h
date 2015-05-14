@@ -41,7 +41,7 @@ public:
         list<Request> q;
         int max = 32;
         int size() {return q.size();}
-    }; 
+    };
 
     Queue readq;  // queue for read requests
     Queue writeq;  // queue for write requests
@@ -57,7 +57,7 @@ public:
         scheduler(new Scheduler<T>(this)),
         rowpolicy(new RowPolicy<T>(this)),
         rowtable(new RowTable<T>(this)),
-		refresh(new Refresh<T>(this))
+        refresh(new Refresh<T>(this))
     {
         if (record_cmd_trace){
             string prefix = cmd_trace_prefix + "chan-" + to_string(channel->id) + "-rank-";
@@ -98,7 +98,7 @@ public:
         queue.q.push_back(req);
         // shortcut for read requests, if a write to same addr exists
         // necessary for coherence
-        if (req.type == Request::Type::READ && find_if(writeq.q.begin(), writeq.q.end(), 
+        if (req.type == Request::Type::READ && find_if(writeq.q.begin(), writeq.q.end(),
                 [req](Request& wreq){ return req.addr == wreq.addr;}) != writeq.q.end()){
             req.depart = clk + 1;
             pending.push_back(req);

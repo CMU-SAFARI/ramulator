@@ -143,7 +143,7 @@ void TLDRAM::init_prereq()
             case int(State::SelfRefresh): return Command::SRX;
             default: assert(false);
         }
-		};
+    };
     prereq[int(Level::Rank)][int(Command::MIG)] = prereq[int(Level::Rank)][int(Command::RD)];
 
     prereq[int(Level::Bank)][int(Command::RD)] = [] (DRAM<TLDRAM>* node, Command cmd, int id) {
@@ -162,7 +162,7 @@ void TLDRAM::init_prereq()
                     return Command::PREF;
             default: assert(false);
         }
-		};
+    };
     prereq[int(Level::Bank)][int(Command::MIG)] = [] (DRAM<TLDRAM>* node, Command cmd, int id) {
         switch (int(node->state)) {
             case int(State::Closed):
@@ -173,7 +173,7 @@ void TLDRAM::init_prereq()
                 return Command::PREM;
             default: assert(false);
         }
-		};
+    };
 
     // WR
     prereq[int(Level::Rank)][int(Command::WR)] = prereq[int(Level::Rank)][int(Command::RD)];
@@ -190,7 +190,7 @@ void TLDRAM::init_prereq()
                 return Command::PREAF;
         }
         return Command::REF;
-		};
+    };
 
     // PD
     prereq[int(Level::Rank)][int(Command::PDE)] = [] (DRAM<TLDRAM>* node, Command cmd, int id) {
@@ -201,7 +201,7 @@ void TLDRAM::init_prereq()
             case int(State::SelfRefresh): return Command::SRX;
             default: assert(false);
         }
-		};
+    };
 
     // SR
     prereq[int(Level::Rank)][int(Command::SRE)] = [] (DRAM<TLDRAM>* node, Command cmd, int id) {
@@ -212,7 +212,7 @@ void TLDRAM::init_prereq()
             case int(State::SelfRefresh): return Command::SRE;
             default: assert(false);
         }
-		};
+    };
 }
 
 
@@ -221,45 +221,45 @@ void TLDRAM::init_lambda()
     lambda[int(Level::Bank)][int(Command::ACT)] = [] (DRAM<TLDRAM>* node, int id) {
         node->state = State::Opened;
         node->row_state[id] = State::Opened;
-		};
+    };
     lambda[int(Level::Bank)][int(Command::ACTF)] = [] (DRAM<TLDRAM>* node, int id) {
         node->state = State::Opened;
         node->row_state[id] = State::Opened;
-		};
+    };
     lambda[int(Level::Bank)][int(Command::ACTM)] = [] (DRAM<TLDRAM>* node, int id) {
         node->state = State::Opened;
         node->row_state[id] = State::Opened;
-		};
+    };
     lambda[int(Level::Bank)][int(Command::PRE)] = [] (DRAM<TLDRAM>* node, int id) {
         node->state = State::Closed;
         node->row_state.clear();
-		};
+    };
     lambda[int(Level::Bank)][int(Command::PREF)] = [] (DRAM<TLDRAM>* node, int id) {
         node->state = State::Closed;
         node->row_state.clear();
-		};
+    };
     lambda[int(Level::Bank)][int(Command::PREM)] = [] (DRAM<TLDRAM>* node, int id) {
         node->state = State::Closed;
         node->row_state.clear();
-		};
+    };
     lambda[int(Level::Rank)][int(Command::PREA)] = [] (DRAM<TLDRAM>* node, int id) {
         for (auto bank : node->children) {
             bank->state = State::Closed;
             bank->row_state.clear();
-				}
-		};
+        }
+    };
     lambda[int(Level::Rank)][int(Command::PREAF)] = [] (DRAM<TLDRAM>* node, int id) {
         for (auto bank : node->children) {
             bank->state = State::Closed;
             bank->row_state.clear();
-				}
-		};
+        }
+    };
     lambda[int(Level::Rank)][int(Command::PREAM)] = [] (DRAM<TLDRAM>* node, int id) {
         for (auto bank : node->children) {
             bank->state = State::Closed;
             bank->row_state.clear();
-				}
-		};
+        }
+    };
     lambda[int(Level::Rank)][int(Command::REF)] = [] (DRAM<TLDRAM>* node, int id) {};
     lambda[int(Level::Rank)][int(Command::REF)] = [] (DRAM<TLDRAM>* node, int id) {};
     lambda[int(Level::Bank)][int(Command::RD)] = [] (DRAM<TLDRAM>* node, int id) {};
@@ -273,16 +273,16 @@ void TLDRAM::init_lambda()
             return;
         }
         node->state = State::PrePowerDown;
-		};
+    };
     lambda[int(Level::Rank)][int(Command::PDX)] = [] (DRAM<TLDRAM>* node, int id) {
         node->state = State::PowerUp;
-		};
+    };
     lambda[int(Level::Rank)][int(Command::SRE)] = [] (DRAM<TLDRAM>* node, int id) {
         node->state = State::SelfRefresh;
-		};
+    };
     lambda[int(Level::Rank)][int(Command::SRX)] = [] (DRAM<TLDRAM>* node, int id) {
         node->state = State::PowerUp;
-		};
+    };
 }
 
 
