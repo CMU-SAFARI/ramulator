@@ -47,12 +47,12 @@ private:
     typedef list<Request>::iterator ReqIter;
     function<ReqIter(ReqIter, ReqIter)> compare[int(Type::MAX)] = {
         // FCFS
-        [this] (ReqIter req1, ReqIter req2) { 
+        [this] (ReqIter req1, ReqIter req2) {
             if (req1->arrive <= req2->arrive) return req1;
             return req2;},
 
         // FRFCFS
-        [this] (ReqIter req1, ReqIter req2) { 
+        [this] (ReqIter req1, ReqIter req2) {
             bool ready1 = this->ctrl->is_ready(req1);
             bool ready2 = this->ctrl->is_ready(req2);
 
@@ -65,7 +65,7 @@ private:
             return req2;},
 
         // FRFCFS_CAP
-        [this] (ReqIter req1, ReqIter req2) { 
+        [this] (ReqIter req1, ReqIter req2) {
             bool ready1 = this->ctrl->is_ready(req1);
             bool ready2 = this->ctrl->is_ready(req2);
 
@@ -105,7 +105,7 @@ public:
 private:
     function<vector<int>(typename T::Command)> policy[int(Type::MAX)] = {
         // Closed
-        [this] (typename T::Command cmd) -> vector<int> { 
+        [this] (typename T::Command cmd) -> vector<int> {
             for (auto& kv : this->ctrl->rowtable->table) {
                 if (!this->ctrl->is_ready(cmd, kv.first))
                     continue;
@@ -114,11 +114,11 @@ private:
             return vector<int>();},
 
         // Opened
-        [this] (typename T::Command cmd) { 
+        [this] (typename T::Command cmd) {
             return vector<int>();},
 
         // Timeout
-        [this] (typename T::Command cmd) -> vector<int> { 
+        [this] (typename T::Command cmd) -> vector<int> {
             for (auto& kv : this->ctrl->rowtable->table) {
                 auto& entry = kv.second;
                 if (this->ctrl->clk - entry.timestamp < timeout)
@@ -171,18 +171,18 @@ public:
         } /* accessing */
 
         if (spec->is_closing(cmd)) {
-            // we are closing one or more rows -- remove their entries
-        	int n_rm = 0;
-        	int scope = int(spec->scope[int(cmd)]);
-			for (auto it = table.begin(); it != table.end();) {
-				if (equal(begin, begin + scope + 1, it->first.begin())) {
-					n_rm++;
-					it = table.erase(it);
-				}
-				else
-					it++;
-			}
-			assert(n_rm > 0);
+          // we are closing one or more rows -- remove their entries
+          int n_rm = 0;
+          int scope = int(spec->scope[int(cmd)]);
+          for (auto it = table.begin(); it != table.end();) {
+            if (equal(begin, begin + scope + 1, it->first.begin())) {
+              n_rm++;
+              it = table.erase(it);
+            }
+            else
+              it++;
+          }
+          assert(n_rm > 0);
         } /* closing */
     }
 

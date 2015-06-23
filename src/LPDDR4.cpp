@@ -34,14 +34,14 @@ LPDDR4::LPDDR4(Org org, Speed speed)
 }
 
 LPDDR4::LPDDR4(const string& org_str, const string& speed_str) :
-    LPDDR4(org_map[org_str], speed_map[speed_str]) 
+    LPDDR4(org_map[org_str], speed_map[speed_str])
 {
 }
 
 void LPDDR4::init_speed()
 {
     // 12Gb/16Gb RFCab/RFCpb TBD
-	// Numbers are in DRAM cycles
+    // Numbers are in DRAM cycles
     const static int RFCPB_TABLE[int(Org::MAX)][int(Speed::MAX)] = {
         {48,  72,  96},
         {72, 108, 144},
@@ -59,7 +59,7 @@ void LPDDR4::init_speed()
         {1563, 2344, 3125},
         { 782, 1172, 1563}
     };
-    
+
     const static int XSR_TABLE[int(Org::MAX)][int(Speed::MAX)] = {
         {110, 165, 220},
         {150, 225, 300},
@@ -185,7 +185,7 @@ void LPDDR4::init_timing()
     SpeedEntry& s = speed_entry;
     vector<TimingEntry> *t;
 
-    /*** Channel ***/ 
+    /*** Channel ***/
     t = timing[int(Level::Channel)];
 
     // CAS <-> CAS
@@ -199,7 +199,7 @@ void LPDDR4::init_timing()
     t[int(Command::WRA)].push_back({Command::WRA, 1, s.nBL});
 
 
-    /*** Rank ***/ 
+    /*** Rank ***/
     t = timing[int(Level::Rank)];
 
     // CAS <-> CAS
@@ -216,7 +216,7 @@ void LPDDR4::init_timing()
     t[int(Command::RD)].push_back({Command::WRA, 1, s.nCL + s.nBL + s.nDQSCK + 1 - s.nCWL});
     t[int(Command::RDA)].push_back({Command::WR, 1, s.nCL + s.nBL + s.nDQSCK + 1 - s.nCWL});
     t[int(Command::RDA)].push_back({Command::WRA, 1, s.nCL + s.nBL + s.nDQSCK + 1 - s.nCWL});
-    
+
     t[int(Command::WR)].push_back({Command::RD, 1, s.nCWL + s.nBL + s.nWTR + 1});
     t[int(Command::WR)].push_back({Command::RDA, 1, s.nCWL + s.nBL + s.nWTR + 1});
     t[int(Command::WRA)].push_back({Command::RD, 1, s.nCWL + s.nBL + s.nWTR + 1});
@@ -292,7 +292,7 @@ void LPDDR4::init_timing()
     // REF <-> SR
     t[int(Command::SREFX)].push_back({Command::REF, 1, s.nXSR});
     t[int(Command::SREFX)].push_back({Command::REFPB, 1, s.nXSR});
-    
+
     // PD <-> PD
     t[int(Command::PDE)].push_back({Command::PDX, 1, s.nCKE});
     t[int(Command::PDX)].push_back({Command::PDE, 1, s.nXP});
@@ -300,12 +300,12 @@ void LPDDR4::init_timing()
     // PD <-> SR
     t[int(Command::PDX)].push_back({Command::SREF, 1, s.nXP});
     t[int(Command::SREFX)].push_back({Command::PDE, 1, s.nXSR});
-    
+
     // SR <-> SR
     t[int(Command::SREF)].push_back({Command::SREFX, 1, s.nSR});
     t[int(Command::SREFX)].push_back({Command::SREF, 1, s.nXSR});
 
-    /*** Bank ***/ 
+    /*** Bank ***/
     t = timing[int(Level::Bank)];
 
     // CAS <-> RAS

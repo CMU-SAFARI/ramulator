@@ -67,7 +67,7 @@ public:
     // for parallelizing REF and demand accesses.
     enum class Level : int
     {
-    	Channel, Rank, Bank, SubArray, Row, Column, MAX
+      Channel, Rank, Bank, SubArray, Row, Column, MAX
     };
 
     /* Command */
@@ -225,16 +225,16 @@ public:
         //int nCKE, nXP; // CKE value n/a
         //int nSR, nXSR; // tXSR = tRFCab + 7.5ns
     } speed_table[int(Speed::MAX)] = {
-    	{1333,
-    	(400.0/3)*5, (3/0.4)/5,
-		4, 4, 2,
-		9, 9, 8, 9, 7,
-		24, 33,
-		5, 5, 10,
-		5, 30,
-		0, 0, 0, 0, // set in DSARP.cpp
-		4, 4, 16,
-		5, 114, 512},
+      {1333,
+      (400.0/3)*5, (3/0.4)/5,
+       4, 4, 2,
+       9, 9, 8, 9, 7,
+       24, 33,
+       5, 5, 10,
+       5, 30,
+       0, 0, 0, 0, // set in DSARP.cpp
+       4, 4, 16,
+       5, 114, 512},
     }, speed_entry;
 
     int read_latency;
