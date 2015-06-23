@@ -2,8 +2,10 @@ MAIN := src/Main.cpp
 SRC := $(filter-out $(MAIN), $(wildcard src/*.cpp))
 OBJ := $(SRC:.cpp=.o)
 
-CXX := clang++
-CXXFLAGS := -O3 -std=c++11 -stdlib=libc++ -g -Wall
+#CXX := clang++
+CXX := g++
+#CXXFLAGS := -O3 -std=c++11 -stdlib=libc++ -g -Wall -lc++abi
+CXXFLAGS := -O3 -std=c++11 -g -Wall
 
 all: ramulator-dramtrace ramulator-cputrace
 
