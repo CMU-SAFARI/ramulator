@@ -13,6 +13,8 @@
 #include "Refresh.h"
 #include "Request.h"
 #include "Scheduler.h"
+#include "SALP.h"
+#include "TLDRAM.h"
 
 using namespace std;
 namespace ramulator
@@ -222,6 +224,15 @@ private:
         return req->addr_vec;
     }
 };
+
+template <>
+vector<int> Controller<SALP>::get_addr_vec(SALP::Command cmd, list<Request>::iterator req);
+template <>
+bool Controller<SALP>::is_ready(list<Request>::iterator req);
+template <>
+void Controller<ALDRAM>::update_temp(ALDRAM::Temp current_temperature);
+template <>
+void Controller<TLDRAM>::tick();
 
 } /*namespace ramulator*/
 

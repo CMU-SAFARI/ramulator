@@ -67,6 +67,11 @@ public:
     }
 };
 
+//template <>
+//void MemoryFactory<LPDDR4>::validate(int channels, int ranks, map<string, string>& options); 
+
+//template <>
+//void MemoryFactory<WideIO>::validate(int channels, int ranks, map<string, string>& options);
 } /*namespace ramulator*/
 
 #endif /*__MEMORY_FACTORY_H*/
