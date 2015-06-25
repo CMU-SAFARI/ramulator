@@ -18,42 +18,42 @@ public:
     enum class Speed;
     HBM(Org org, Speed speed);
     HBM(const string& org_str, const string& speed_str);
-    
+
     static map<string, enum Org> org_map;
     static map<string, enum Speed> speed_map;
 
     /* Level */
     enum class Level : int
-    { 
+    {
         Channel, Rank, BankGroup, Bank, Row, Column, MAX
     };
 
     /* Command */
     enum class Command : int
-    { 
-        ACT, PRE,   PREA, 
-        RD,  WR,    RDA, WRA, 
-        REF, REFSB, PDE, PDX,  SRE, SRX, 
+    {
+        ACT, PRE,   PREA,
+        RD,  WR,    RDA, WRA,
+        REF, REFSB, PDE, PDX,  SRE, SRX,
         MAX
     };
 
     // REFSB and REF is not compatible, choose one or the other.
-    // REFSB can be issued to banks in any order, as long as REFI1B 
+    // REFSB can be issued to banks in any order, as long as REFI1B
     // is satisfied for all banks
 
     string command_name[int(Command::MAX)] = {
-        "ACT", "PRE",   "PREA", 
-        "RD",  "WR",    "RDA",  "WRA", 
+        "ACT", "PRE",   "PREA",
+        "RD",  "WR",    "RDA",  "WRA",
         "REF", "REFSB", "PDE",  "PDX",  "SRE", "SRX"
     };
 
     Level scope[int(Command::MAX)] = {
-        Level::Row,    Level::Bank,   Level::Rank,   
+        Level::Row,    Level::Bank,   Level::Rank,
         Level::Column, Level::Column, Level::Column, Level::Column,
         Level::Rank,   Level::Bank,   Level::Rank,   Level::Rank,   Level::Rank,   Level::Rank
     };
 
-    bool is_opening(Command cmd) 
+    bool is_opening(Command cmd)
     {
         switch(int(cmd)) {
             case int(Command::ACT):
@@ -63,7 +63,7 @@ public:
         }
     }
 
-    bool is_accessing(Command cmd) 
+    bool is_accessing(Command cmd)
     {
         switch(int(cmd)) {
             case int(Command::RD):
@@ -76,7 +76,7 @@ public:
         }
     }
 
-    bool is_closing(Command cmd) 
+    bool is_closing(Command cmd)
     {
         switch(int(cmd)) {
             case int(Command::RDA):
@@ -89,7 +89,7 @@ public:
         }
     }
 
-    bool is_refreshing(Command cmd) 
+    bool is_refreshing(Command cmd)
     {
         switch(int(cmd)) {
             case int(Command::REF):
@@ -124,7 +124,7 @@ public:
         int dist;
         int val;
         bool sibling;
-    }; 
+    };
     vector<TimingEntry> timing[int(Level::MAX)][int(Command::MAX)];
 
     /* Lambda */
@@ -144,10 +144,9 @@ public:
         int dq;
         int count[int(Level::MAX)];
     } org_table[int(Org::MAX)] = {
-        // fixed to have 1 ranl
-        {1<<10, 128, {0, 1, 4, 2, 1<<13, 1<<6}},
-        {2<<10, 128, {0, 1, 4, 2, 1<<14, 1<<6}},
-        {4<<10, 128, {0, 1, 4, 4, 1<<14, 1<<6}},
+        {1<<10, 128, {0, 0, 4, 2, 1<<13, 1<<6}},
+        {2<<10, 128, {0, 0, 4, 2, 1<<14, 1<<6}},
+        {4<<10, 128, {0, 0, 4, 4, 1<<14, 1<<6}},
     }, org_entry;
 
     /* Speed */

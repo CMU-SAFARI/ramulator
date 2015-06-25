@@ -22,7 +22,7 @@ map<string, enum HBM::Speed> HBM::speed_map = {
 
 HBM::HBM(Org org, Speed speed)
     : org_entry(org_table[int(org)]),
-    speed_entry(speed_table[int(speed)]), 
+    speed_entry(speed_table[int(speed)]),
     read_latency(speed_entry.nCL + speed_entry.nBL)
 {
     init_speed();
@@ -32,7 +32,7 @@ HBM::HBM(Org org, Speed speed)
 }
 
 HBM::HBM(const string& org_str, const string& speed_str) :
-    HBM(org_map[org_str], speed_map[speed_str]) 
+    HBM(org_map[org_str], speed_map[speed_str])
 {
 }
 
@@ -173,7 +173,7 @@ void HBM::init_timing()
     SpeedEntry& s = speed_entry;
     vector<TimingEntry> *t;
 
-    /*** Channel ***/ 
+    /*** Channel ***/
     t = timing[int(Level::Channel)];
 
     // CAS <-> CAS
@@ -187,7 +187,7 @@ void HBM::init_timing()
     t[int(Command::WRA)].push_back({Command::WRA, 1, s.nBL});
 
 
-    /*** Rank ***/ 
+    /*** Rank ***/
     t = timing[int(Level::Rank)];
 
     // CAS <-> CAS
@@ -220,7 +220,7 @@ void HBM::init_timing()
     t[int(Command::PDX)].push_back({Command::RDA, 1, s.nXP});
     t[int(Command::PDX)].push_back({Command::WR, 1, s.nXP});
     t[int(Command::PDX)].push_back({Command::WRA, 1, s.nXP});
-    
+
     // CAS <-> SR: none (all banks have to be precharged)
 
     // RAS <-> RAS
@@ -254,7 +254,7 @@ void HBM::init_timing()
 
     // REF <-> SR
     t[int(Command::SRX)].push_back({Command::REF, 1, s.nXS});
-    
+
     // PD <-> PD
     t[int(Command::PDE)].push_back({Command::PDX, 1, s.nPD});
     t[int(Command::PDX)].push_back({Command::PDE, 1, s.nXP});
@@ -262,12 +262,12 @@ void HBM::init_timing()
     // PD <-> SR
     t[int(Command::PDX)].push_back({Command::SRE, 1, s.nXP});
     t[int(Command::SRX)].push_back({Command::PDE, 1, s.nXS});
-    
+
     // SR <-> SR
     t[int(Command::SRE)].push_back({Command::SRX, 1, s.nCKESR});
     t[int(Command::SRX)].push_back({Command::SRE, 1, s.nXS});
 
-    /*** Bank Group ***/ 
+    /*** Bank Group ***/
     t = timing[int(Level::BankGroup)];
     // CAS <-> CAS
     t[int(Command::RD)].push_back({Command::RD, 1, s.nCCDL});
@@ -290,7 +290,7 @@ void HBM::init_timing()
     // RAS <-> RAS
     t[int(Command::ACT)].push_back({Command::ACT, 1, s.nRRDL});
 
-    /*** Bank ***/ 
+    /*** Bank ***/
     t = timing[int(Level::Bank)];
 
     // CAS <-> RAS

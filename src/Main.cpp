@@ -101,7 +101,7 @@ int main (int argc, char** argv)
     //     total_latency += kv.first * kv.second;
     // }
     // printf("Avg latency: %.3lf ns\n", tCK * total_latency / reads);
-    
+
     return 0;
 }
 
