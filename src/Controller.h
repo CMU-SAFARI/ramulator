@@ -22,12 +22,6 @@ template <typename T>
 class Controller
 {
 public:
-    /* Command trace for DRAMPower 3.1 */
-    string cmd_trace_prefix = "cmd-trace-";
-    vector<ofstream> cmd_trace_files;
-    bool record_cmd_trace = false;
-    /* Commands to stdout */
-    bool print_cmd_trace = false;
     /* Member Variables */
     long clk = 0;
     DRAM<T>* channel;
@@ -51,19 +45,27 @@ public:
     bool write_mode = false;  // whether write requests should be prioritized over reads
     //long refreshed = 0;  // last time refresh requests were generated
 
+    /* Command trace for DRAMPower 3.1 */
+    string cmd_trace_prefix = "cmd-trace-";
+    vector<ofstream> cmd_trace_files;
+    bool record_cmd_trace = false;
+    /* Commands to stdout */
+    bool print_cmd_trace = false;
+
     /* Constructor */
     Controller(DRAM<T>* channel) :
         channel(channel),
         scheduler(new Scheduler<T>(this)),
         rowpolicy(new RowPolicy<T>(this)),
         rowtable(new RowTable<T>(this)),
-        refresh(new Refresh<T>(this))
+        refresh(new Refresh<T>(this)),
+        cmd_trace_files(channel->children.size())
     {
         if (record_cmd_trace){
             string prefix = cmd_trace_prefix + "chan-" + to_string(channel->id) + "-rank-";
             string suffix = ".cmdtrace";
             for (int i = 0; i < channel->children.size(); i++)
-                cmd_trace_files.emplace_back(prefix + to_string(i) + suffix);
+                cmd_trace_files[i].open(prefix + to_string(i) + suffix);
         }
     }
 
