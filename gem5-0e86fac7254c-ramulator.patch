@@ -1,9 +1,51 @@
 diff -crbN --exclude build --exclude '*.pyc' gem5-stable-clean/SConstruct gem5-stable-ramulator/SConstruct
-*** gem5-stable-clean/SConstruct	2014-06-01 09:00:23.000000000 +0800
---- gem5-stable-ramulator/SConstruct	2014-10-12 06:52:51.000000000 +0800
+*** gem5-stable-clean/SConstruct	2014-10-13 11:46:36.781764500 -0400
+--- gem5-stable-ramulator/SConstruct	2015-06-26 17:54:09.220044774 -0400
+***************
+*** 215,220 ****
+--- 215,224 ----
+  main.root = Dir(".")         # The current directory (where this file lives).
+  main.srcdir = Dir("src")     # The source directory
+  
++ # RAMULATOR: forcing clang
++ main['CC'] = "clang"
++ main['CXX'] = "clang++"
++ 
+  main_dict_keys = main.Dictionary().keys()
+  
+  # Check that we have a C/C++ compiler
+***************
+*** 541,550 ****
+      main.Append(CCFLAGS=['-fno-strict-aliasing'])
+      # Enable -Wall and then disable the few warnings that we
+      # consistently violate
+!     main.Append(CCFLAGS=['-Wall', '-Wno-sign-compare', '-Wundef'])
+      # We always compile using C++11, but only gcc >= 4.7 and clang 3.1
+      # actually use that name, so we stick with c++0x
+!     main.Append(CXXFLAGS=['-std=c++0x'])
+      # Add selected sanity checks from -Wextra
+      main.Append(CXXFLAGS=['-Wmissing-field-initializers',
+                            '-Woverloaded-virtual'])
+--- 545,560 ----
+      main.Append(CCFLAGS=['-fno-strict-aliasing'])
+      # Enable -Wall and then disable the few warnings that we
+      # consistently violate
+!     # RAMULATOR: compatibiltiy for clang
+!     if main['GCC']:
+!         main.Append(CCFLAGS=['-Wall', '-Wno-sign-compare', '-Wundef'])
+!     else:
+!         main.Append(CCFLAGS=['-Wall', '-Wno-sign-compare', '-Wundef', '-Wno-unused-private-field', '-Wno-deprecated-register'])
+      # We always compile using C++11, but only gcc >= 4.7 and clang 3.1
+      # actually use that name, so we stick with c++0x
+!     # RAMULATOR: support newer compilers by using c++11
+!     # main.Append(CXXFLAGS=['-std=c++0x'])
+!     main.Append(CXXFLAGS=['-std=c++11'])
+      # Add selected sanity checks from -Wextra
+      main.Append(CXXFLAGS=['-Wmissing-field-initializers',
+                            '-Woverloaded-virtual'])
 ***************
 *** 1154,1159 ****
---- 1154,1162 ----
+--- 1164,1172 ----
   main.SConscript('ext/dramsim2/SConscript',
                   variant_dir = joinpath(build_root, 'dramsim2'))
   
@@ -14,8 +56,8 @@ diff -crbN --exclude build --exclude '*.pyc' gem5-stable-clean/SConstruct gem5-s
   #
   # This function is used to set up a directory with switching headers
 diff -crbN --exclude build --exclude '*.pyc' gem5-stable-clean/configs/common/MemConfig.py gem5-stable-ramulator/configs/common/MemConfig.py
-*** gem5-stable-clean/configs/common/MemConfig.py	2014-06-01 09:00:23.000000000 +0800
---- gem5-stable-ramulator/configs/common/MemConfig.py	2014-10-11 22:13:30.000000000 +0800
+*** gem5-stable-clean/configs/common/MemConfig.py	2014-10-13 11:46:36.809764239 -0400
+--- gem5-stable-ramulator/configs/common/MemConfig.py	2015-06-26 17:18:04.803697058 -0400
 ***************
 *** 54,60 ****
       ("lpddr2_s4_1066_x32", "LPDDR2_S4_1066_x32"),
@@ -40,27 +82,28 @@ diff -crbN --exclude build --exclude '*.pyc' gem5-stable-clean/configs/common/Me
               # mapping and row-buffer size
               ctrl = cls()
 ! 
-              # Only do this for DRAMs
+!             # Only do this for DRAMs
 !             if issubclass(cls, m5.objects.DRAMCtrl):
                   # Inform each controller how many channels to account
                   # for
                   ctrl.channels = nbr_mem_ctrls
---- 159,170 ----
+--- 159,171 ----
               # Create an instance so we can figure out the address
               # mapping and row-buffer size
               ctrl = cls()
+!             
 !             if issubclass(cls, m5.objects.Ramulator):
 !                 if not options.ramulator_config:
 !                     fatal("--mem-type=ramulator require --ramulator-config option")
 !                 ctrl.config_file = options.ramulator_config
-              # Only do this for DRAMs
+!             # Only do this for DRAMs
 !             elif issubclass(cls, m5.objects.DRAMCtrl):
                   # Inform each controller how many channels to account
                   # for
                   ctrl.channels = nbr_mem_ctrls
 diff -crbN --exclude build --exclude '*.pyc' gem5-stable-clean/configs/common/Options.py gem5-stable-ramulator/configs/common/Options.py
-*** gem5-stable-clean/configs/common/Options.py	2014-06-01 09:00:23.000000000 +0800
---- gem5-stable-ramulator/configs/common/Options.py	2014-10-11 18:39:16.000000000 +0800
+*** gem5-stable-clean/configs/common/Options.py	2014-10-13 11:46:36.813764203 -0400
+--- gem5-stable-ramulator/configs/common/Options.py	2015-06-26 17:18:04.803697058 -0400
 ***************
 *** 93,98 ****
 --- 93,100 ----
@@ -69,14 +112,35 @@ diff -crbN --exclude build --exclude '*.pyc' gem5-stable-clean/configs/common/Op
                         help="Specify the physical memory size (single memory)")
 +     parser.add_option("--ramulator-config", type="string", dest="ramulator_config",
 +                       help="Specify Ramulator configuration file, overrides other --mem-XXX options")
-      
+  
       parser.add_option("-l", "--lpae", action="store_true")
       parser.add_option("-V", "--virtualisation", action="store_true")
-Binary files gem5-stable-clean/ext/dramsim2/.DS_Store and gem5-stable-ramulator/ext/dramsim2/.DS_Store differ
-Binary files gem5-stable-clean/ext/ramulator/.DS_Store and gem5-stable-ramulator/ext/ramulator/.DS_Store differ
+diff -crbN --exclude build --exclude '*.pyc' gem5-stable-clean/ext/dnet/os.h gem5-stable-ramulator/ext/dnet/os.h
+*** gem5-stable-clean/ext/dnet/os.h	2014-10-13 11:46:36.829764055 -0400
+--- gem5-stable-ramulator/ext/dnet/os.h	2015-06-26 17:18:04.803697058 -0400
+***************
+*** 98,104 ****
+  
+  /* Support for flexible arrays. */
+  #undef __flexarr
+! #if defined(__GNUC__) && ((__GNUC__ > 2) || (__GNUC__ == 2 && __GNUC_MINOR__ >= 97))
+  /* GCC 2.97 supports C99 flexible array members.  */
+  # define __flexarr	[]
+  #else
+--- 98,107 ----
+  
+  /* Support for flexible arrays. */
+  #undef __flexarr
+! /* RAMULATOR: fix for clang */
+! #if 1
+! # define __flexarr [1]
+! #elif defined(__GNUC__) && ((__GNUC__ > 2) || (__GNUC__ == 2 && __GNUC_MINOR__ >= 97))
+  /* GCC 2.97 supports C99 flexible array members.  */
+  # define __flexarr	[]
+  #else
 diff -crbN --exclude build --exclude '*.pyc' gem5-stable-clean/ext/ramulator/README gem5-stable-ramulator/ext/ramulator/README
-*** gem5-stable-clean/ext/ramulator/README	1970-01-01 08:00:00.000000000 +0800
---- gem5-stable-ramulator/ext/ramulator/README	2014-10-11 22:21:26.000000000 +0800
+*** gem5-stable-clean/ext/ramulator/README	1969-12-31 19:00:00.000000000 -0500
+--- gem5-stable-ramulator/ext/ramulator/README	2015-06-26 17:18:04.843696695 -0400
 ***************
 *** 0 ****
 --- 1,11 ----
@@ -84,7 +148,7 @@ diff -crbN --exclude build --exclude '*.pyc' gem5-stable-clean/ext/ramulator/REA
 + 
 + 1. Download Ramulator
 +     1.1 Go to ext/ramulator (this directory)
-+     1.2 copy Ramulator code so it's contents are located in ext/ramulator/Ramulator/
++     1.2 Clone Ramulator: git clone git://github.com/CMU-SAFARI/ramulator.git
 + 
 + 2. Compile gem5
 + 
@@ -92,11 +156,11 @@ diff -crbN --exclude build --exclude '*.pyc' gem5-stable-clean/ext/ramulator/REA
 +     3.1 Use --mem-type=ramulator and --ramulator-config=XXX
 + 
 diff -crbN --exclude build --exclude '*.pyc' gem5-stable-clean/ext/ramulator/SConscript gem5-stable-ramulator/ext/ramulator/SConscript
-*** gem5-stable-clean/ext/ramulator/SConscript	1970-01-01 08:00:00.000000000 +0800
---- gem5-stable-ramulator/ext/ramulator/SConscript	2014-10-12 07:01:35.000000000 +0800
+*** gem5-stable-clean/ext/ramulator/SConscript	1969-12-31 19:00:00.000000000 -0500
+--- gem5-stable-ramulator/ext/ramulator/SConscript	2015-06-26 17:18:04.851696622 -0400
 ***************
 *** 0 ****
---- 1,43 ----
+--- 1,46 ----
 + # -*- mode:python -*-
 + 
 + import os
@@ -135,15 +199,17 @@ diff -crbN --exclude build --exclude '*.pyc' gem5-stable-clean/ext/ramulator/SCo
 + dramenv.Append(CXXFLAGS=['-Wno-unused-variable'])
 + dramenv.Append(CXXFLAGS=['-Wno-reorder'])
 + 
++ # added support to hook in gem5 headers
++ dramenv.Append(CPPPATH = Dir('../../src/'))
++ 
 + dramenv.Library('ramulator', [dramenv.SharedObject(f) for f in dram_files])
 + 
 + main.Prepend(CPPPATH=Dir('.'))
 + main.Append(LIBS=['ramulator'])
 + main.Prepend(LIBPATH=[Dir('.')])
-Binary files gem5-stable-clean/src/mem/.DS_Store and gem5-stable-ramulator/src/mem/.DS_Store differ
 diff -crbN --exclude build --exclude '*.pyc' gem5-stable-clean/src/mem/Ramulator.py gem5-stable-ramulator/src/mem/Ramulator.py
-*** gem5-stable-clean/src/mem/Ramulator.py	1970-01-01 08:00:00.000000000 +0800
---- gem5-stable-ramulator/src/mem/Ramulator.py	2014-10-08 00:52:22.000000000 +0800
+*** gem5-stable-clean/src/mem/Ramulator.py	1969-12-31 19:00:00.000000000 -0500
+--- gem5-stable-ramulator/src/mem/Ramulator.py	2015-06-26 17:18:04.979695460 -0400
 ***************
 *** 0 ****
 --- 1,13 ----
@@ -151,7 +217,7 @@ diff -crbN --exclude build --exclude '*.pyc' gem5-stable-clean/src/mem/Ramulator
 + from m5.params import *
 + from AbstractMemory import *
 + 
-+ # A wrapper for DRAMSim2 multi-channel memory controller
++ # A wrapper for Ramulator multi-channel memory controller
 + class Ramulator(AbstractMemory):
 +     type = 'Ramulator'
 +     cxx_header = "mem/ramulator.hh"
@@ -161,8 +227,8 @@ diff -crbN --exclude build --exclude '*.pyc' gem5-stable-clean/src/mem/Ramulator
 + 
 +     config_file = Param.String("", "configuration file")
 diff -crbN --exclude build --exclude '*.pyc' gem5-stable-clean/src/mem/SConscript gem5-stable-ramulator/src/mem/SConscript
-*** gem5-stable-clean/src/mem/SConscript	2014-06-01 09:00:23.000000000 +0800
---- gem5-stable-ramulator/src/mem/SConscript	2014-10-12 07:00:43.000000000 +0800
+*** gem5-stable-clean/src/mem/SConscript	2014-10-13 11:46:36.873763648 -0400
+--- gem5-stable-ramulator/src/mem/SConscript	2015-06-26 17:18:04.979695460 -0400
 ***************
 *** 71,76 ****
 --- 71,81 ----
@@ -178,11 +244,12 @@ diff -crbN --exclude build --exclude '*.pyc' gem5-stable-clean/src/mem/SConscrip
   DebugFlag('BusAddrRanges')
   DebugFlag('CoherentBus')
 diff -crbN --exclude build --exclude '*.pyc' gem5-stable-clean/src/mem/ramulator.cc gem5-stable-ramulator/src/mem/ramulator.cc
-*** gem5-stable-clean/src/mem/ramulator.cc	1970-01-01 08:00:00.000000000 +0800
---- gem5-stable-ramulator/src/mem/ramulator.cc	2014-10-12 06:59:08.000000000 +0800
+*** gem5-stable-clean/src/mem/ramulator.cc	1969-12-31 19:00:00.000000000 -0500
+--- gem5-stable-ramulator/src/mem/ramulator.cc	2015-06-26 17:46:09.752398588 -0400
 ***************
 *** 0 ****
---- 1,142 ----
+--- 1,216 ----
++ #include "base/callback.hh"
 + #include "mem/ramulator.hh"
 + #include "Ramulator/src/Gem5Wrapper.h"
 + #include "Ramulator/src/Request.h"
@@ -192,8 +259,15 @@ diff -crbN --exclude build --exclude '*.pyc' gem5-stable-clean/src/mem/ramulator
 + Ramulator::Ramulator(const Params *p):
 +     AbstractMemory(p),
 +     port(name() + ".port", *this),
++     requestsInFlight(0),
++     drain_manager(NULL),
 +     config_file(p->config_file),
++     wrapper(NULL),
 +     read_cb_func(std::bind(&Ramulator::readComplete, this, std::placeholders::_1)),
++     write_cb_func(std::bind(&Ramulator::writeComplete, this, std::placeholders::_1)),
++     ticks_per_clk(0),
++     resp_stall(false),
++     req_stall(false),
 +     send_resp_event(this),
 +     tick_event(this) 
 + {
@@ -222,7 +296,9 @@ diff -crbN --exclude build --exclude '*.pyc' gem5-stable-clean/src/mem/ramulator
 + 
 + unsigned int Ramulator::drain(DrainManager* dm) {
 +     DPRINTF(Ramulator, "Requested to drain\n");
-+     if (resp_queue.size()) {
++     // updated to include all in-flight requests
++     // if (resp_queue.size()) {
++     if (numOutstanding()) {
 +         setDrainState(Drainable::Draining);
 +         drain_manager = dm;
 +         return 1;
@@ -241,15 +317,26 @@ diff -crbN --exclude build --exclude '*.pyc' gem5-stable-clean/src/mem/ramulator
 + }
 + 
 + void Ramulator::sendResponse() {
-+         long addr = resp_queue.front()->getAddr();
-+         if (port.sendTimingResp(resp_queue.front())){
-+             DPRINTF(Ramulator, "Response to %ld sent.\n", addr);
-+             resp_queue.pop_front();
-+             if (resp_queue.size() && !send_resp_event.scheduled())
-+                 schedule(send_resp_event, curTick());
-+         } else 
-+             resp_stall = true;
-+     }
++     assert(!resp_stall);
++     assert(!resp_queue.empty());
++ 
++     DPRINTF(Ramulator, "Attempting to send response\n");
++ 
++     long addr = resp_queue.front()->getAddr();
++     if (port.sendTimingResp(resp_queue.front())){
++         DPRINTF(Ramulator, "Response to %ld sent.\n", addr);
++         resp_queue.pop_front();
++         if (resp_queue.size() && !send_resp_event.scheduled())
++             schedule(send_resp_event, curTick());
++ 
++         // check if we were asked to drain and if we are now done
++         if (drain_manager && numOutstanding() == 0) {
++             drain_manager->signalDrainDone();
++             drain_manager = NULL;
++         }
++     } else 
++         resp_stall = true;
++ }
 +     
 + void Ramulator::tick() {
 +     wrapper->tick();
@@ -258,6 +345,14 @@ diff -crbN --exclude build --exclude '*.pyc' gem5-stable-clean/src/mem/ramulator
 +         port.sendRetry();
 +     }
 +     schedule(tick_event, curTick() + ticks_per_clk);
++ }
++ 
++ // added an atomic packet response function to enable fast forwarding
++ Tick Ramulator::recvAtomic(PacketPtr pkt) {
++     access(pkt);
++ 
++     // set an fixed arbitrary 50ns response time for atomic requests
++     return pkt->memInhibitAsserted() ? 0 : 50000;
 + }
 + 
 + void Ramulator::recvFunctional(PacketPtr pkt) {
@@ -269,9 +364,20 @@ diff -crbN --exclude build --exclude '*.pyc' gem5-stable-clean/src/mem/ramulator
 + }
 + 
 + bool Ramulator::recvTimingReq(PacketPtr pkt) {
-+     for (PacketPtr pkt: pending_del)
-+         delete pkt;
++     // we should never see a new request while in retry
++     assert(!req_stall);
++ 
++     for (PacketPtr pendPkt: pending_del)
++         delete pendPkt;
 +     pending_del.clear();
++ 
++     if (pkt->memInhibitAsserted()) {
++         // snooper will supply based on copy of packet
++         // still target's responsibility to delete packet
++         pending_del.push_back(pkt);
++         return true;
++     }
++ 
 +     bool accepted = true;
 +     if (pkt->isRead()) {
 +         ramulator::Request req(pkt->getAddr(), ramulator::Request::Type::READ, read_cb_func);
@@ -279,23 +385,35 @@ diff -crbN --exclude build --exclude '*.pyc' gem5-stable-clean/src/mem/ramulator
 +         if (accepted){
 +             reads[req.addr].push_back(pkt);
 +             DPRINTF(Ramulator, "Read to %ld accepted.\n", req.addr);
++ 
++             // added counter to track requests in flight
++             ++requestsInFlight;
 +         } else {
 +             req_stall = true;
 +         }
 +     } else if (pkt->isWrite()) {
-+         ramulator::Request req(pkt->getAddr(), ramulator::Request::Type::WRITE, read_cb_func);
++         ramulator::Request req(pkt->getAddr(), ramulator::Request::Type::WRITE, write_cb_func);
 +         accepted = wrapper->send(req);
 +         if (accepted){
 +             accessAndRespond(pkt);
 +             DPRINTF(Ramulator, "Write to %ld accepted and served.\n", req.addr);
++ 
++             // added counter to track requests in flight
++             ++requestsInFlight;
 +         } else {
 +             req_stall = true;
 +         }
++     } else {
++         // keep it simple and just respond if necessary
++         accessAndRespond(pkt);
 +     }
 +     return accepted;
 + }
 + 
 + void Ramulator::recvRetry() {
++     DPRINTF(Ramulator, "Retrying\n");
++ 
++     assert(resp_stall);
 +     resp_stall = false;
 +     sendResponse();
 + }
@@ -304,7 +422,12 @@ diff -crbN --exclude build --exclude '*.pyc' gem5-stable-clean/src/mem/ramulator
 +     bool need_resp = pkt->needsResponse();
 +     access(pkt);
 +     if (need_resp) {
++         assert(pkt->isResponse());
 +         pkt->busFirstWordDelay = pkt->busLastWordDelay = 0;
++ 
++         DPRINTF(Ramulator, "Queuing response for address %lld\n",
++                 pkt->getAddr());
++ 
 +         resp_queue.push_back(pkt);
 +         if (!resp_stall && !send_resp_event.scheduled())
 +             schedule(send_resp_event, curTick());
@@ -319,18 +442,35 @@ diff -crbN --exclude build --exclude '*.pyc' gem5-stable-clean/src/mem/ramulator
 +     pkt_q.pop_front();
 +     if (!pkt_q.size())
 +         reads.erase(req.addr);
++ 
++     // added counter to track requests in flight
++     --requestsInFlight;
++ 
 +     accessAndRespond(pkt);
++ }
++ 
++ void Ramulator::writeComplete(ramulator::Request& req){
++     DPRINTF(Ramulator, "Write to %ld completed.\n", req.addr);
++ 
++     // added counter to track requests in flight
++     --requestsInFlight;
++ 
++     // check if we were asked to drain and if we are now done
++     if (drain_manager && numOutstanding() == 0) {
++         drain_manager->signalDrainDone();
++         drain_manager = NULL;
++     }
 + }
 + 
 + Ramulator *RamulatorParams::create(){
 +     return new Ramulator(this);
 + }
 diff -crbN --exclude build --exclude '*.pyc' gem5-stable-clean/src/mem/ramulator.hh gem5-stable-ramulator/src/mem/ramulator.hh
-*** gem5-stable-clean/src/mem/ramulator.hh	1970-01-01 08:00:00.000000000 +0800
---- gem5-stable-ramulator/src/mem/ramulator.hh	2014-10-12 06:59:01.000000000 +0800
+*** gem5-stable-clean/src/mem/ramulator.hh	1969-12-31 19:00:00.000000000 -0500
+--- gem5-stable-ramulator/src/mem/ramulator.hh	2015-06-26 17:18:05.011695170 -0400
 ***************
 *** 0 ****
---- 1,82 ----
+--- 1,92 ----
 + #ifndef __RAMULATOR_HH__
 + #define __RAMULATOR_HH__
 + 
@@ -356,7 +496,10 @@ diff -crbN --exclude build --exclude '*.pyc' gem5-stable-clean/src/mem/ramulator
 +         TestPort(const std::string& _name, Ramulator& _mem): SlavePort(_name, &_mem), mem(_mem) {}
 +     protected:
 +         Tick recvAtomic(PacketPtr pkt) {
-+             assert(false && "only accepts functional or timing pakects"); }
++             // modified to perform a fixed latency return for atomic packets to enable fast forwarding
++             // assert(false && "only accepts functional or timing packets");
++             return mem.recvAtomic(pkt);
++         }
 +         
 +         void recvFunctional(PacketPtr pkt) {
 +             mem.recvFunctional(pkt);
@@ -377,7 +520,9 @@ diff -crbN --exclude build --exclude '*.pyc' gem5-stable-clean/src/mem/ramulator
 +         }
 +     } port;
 + 
++     unsigned int requestsInFlight;
 +     std::map<long, std::deque<PacketPtr> > reads;
++     std::map<long, std::deque<PacketPtr> > writes;
 +     std::deque<PacketPtr> resp_queue;
 +     std::deque<PacketPtr> pending_del;
 +     DrainManager *drain_manager;
@@ -385,9 +530,12 @@ diff -crbN --exclude build --exclude '*.pyc' gem5-stable-clean/src/mem/ramulator
 +     std::string config_file;
 +     ramulator::Gem5Wrapper *wrapper;
 +     std::function<void(ramulator::Request&)> read_cb_func;
++     std::function<void(ramulator::Request&)> write_cb_func;
 +     Tick ticks_per_clk;
 +     bool resp_stall;
 +     bool req_stall;
++ 
++     unsigned int numOutstanding() const { return requestsInFlight + resp_queue.size(); }
 +     
 +     void sendResponse();
 +     void tick();
@@ -405,11 +553,13 @@ diff -crbN --exclude build --exclude '*.pyc' gem5-stable-clean/src/mem/ramulator
 +         PortID idx = InvalidPortID);
 +     ~Ramulator();
 + protected:
++     Tick recvAtomic(PacketPtr pkt);
 +     void recvFunctional(PacketPtr pkt);
 +     bool recvTimingReq(PacketPtr pkt);
 +     void recvRetry();
 +     void accessAndRespond(PacketPtr pkt);
 +     void readComplete(ramulator::Request& req);
++     void writeComplete(ramulator::Request& req);
 + };
 + 
 + #endif // __RAMULATOR_HH__
