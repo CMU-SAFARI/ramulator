@@ -5,6 +5,7 @@
 #include <functional>
 
 using namespace std;
+
 namespace ramulator
 {
 

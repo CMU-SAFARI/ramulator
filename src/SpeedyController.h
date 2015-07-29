@@ -13,6 +13,7 @@
 #include <queue>
 
 using namespace std;
+
 namespace ramulator
 {
 
@@ -36,7 +37,7 @@ public:
     /* Commands to stdout */
     bool print_cmd_trace = false;
     /* Member Variables */
-    int queue_capacity = 32;
+    const unsigned int queue_capacity = 32;
     long clk = 0;
     DRAM<T>* channel;
 
@@ -63,7 +64,7 @@ public:
         if (record_cmd_trace){
             string prefix = cmd_trace_prefix + "chan-" + to_string(channel->id) + "-rank-";
             string suffix = ".cmdtrace";
-            for (int i = 0; i < channel->children.size(); i++)
+            for (unsigned int i = 0; i < channel->children.size(); i++)
                 cmd_trace_files.emplace_back(prefix + to_string(i) + suffix);
         }
         readq.reserve(queue_capacity);
@@ -136,12 +137,12 @@ public:
         /*** 3. Should we schedule writes? ***/
         if (!write_mode) {
             // yes -- write queue is almost full or read queue is empty
-            if (writeq.size() >= int(write_hi * queue_capacity) || readq.size() == 0)
+            if (writeq.size() >= (unsigned int)(write_hi * queue_capacity) || readq.size() == 0)
                 write_mode = true;
         }
         else {
             // no -- write queue is almost empty and read queue is not empty
-            if (writeq.size() <= int(write_low * queue_capacity) && readq.size() != 0)
+            if (writeq.size() <= (unsigned int)(write_low * queue_capacity) && readq.size() != 0)
                 write_mode = false;
         }
 

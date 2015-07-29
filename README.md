@@ -40,10 +40,10 @@ Ramulator supports three different usage modes.
   - `<num-cpuinst> <addr-read> <addr-writeback>`: For a line with three tokens, the third token is the decimal address of the 
         *writeback* request, which is the dirty cache-line eviction caused by the read request before it.
 
-3. **Gem5 Driven:** Ramulator runs as part of a full-system simulator (gem5 \[2\]) from which it receives memory request as they are generated.
+3. **Gem5 Driven:** Ramulator runs as part of a full-system simulator (gem5 \[6\]) from which it receives memory request as they are generated.
 
 For some of the DRAM standards, Ramulator is also capable of reporting
-power consumption by relying on DRAMPower \[3\] as the backend. 
+power consumption by relying on DRAMPower \[7\] as the backend. 
 
 [\[6\] The gem5 Simulator System.](http://www.gem5.org) <br>
 [\[7\] Chandrasekar et al. *DRAMPower: Open-Source DRAM Power & Energy Estimation Tool.* IEEE CAL 2015.](http://www.drampower.info)
@@ -51,8 +51,7 @@ power consumption by relying on DRAMPower \[3\] as the backend.
 
 ## Getting Started
 
-Ramulator requires a C++11 compiler (e.g., `clang++`) and standard
-library (e.g., `libc++`).
+Ramulator requires a C++11 compiler (e.g., `clang++`, `g++-5`).
 
 1. **Memory-Trace Driven**
 
@@ -66,17 +65,19 @@ library (e.g., `libc++`).
 
         $ cd ramulator
         $ make -j ramulator-cputrace
-        $ ./ramulator-dramtrace cpu.trace  # Report normalized IPC for all supported standards (baseline: DDR3)
-        DDR3: 1.00000
-        DDR4: 1.13072
-        LPDDR3: 0.79724
-        LPDDR4: 0.65283
-        GDDR5: 1.28148
-        WideIO: 0.18723
-        WideIO2: 0.92021
-        HBM: 0.77232
-        SALP: 0.91534
-        DSARP: 1.00000
+        $ ./ramulator-cputrace cpu.trace  # Report normalized IPC for all supported standards (baseline: DDR3)
+              DDR3: 1.00000
+              DDR4: 1.13072
+              SALP: 0.91534
+            LPDDR3: 0.79724
+            LPDDR4: 0.71784
+             GDDR5: 1.28148
+               HBM: 1.07453
+            WideIO: 0.65038
+           WideIO2: 0.95580
+             DSARP: 0.90104
+            ALDRAM: 0.91534
+            TLDRAM: 1.02367
         # NOTE: cpu.trace is a very short trace file provided only as an example.
 
 3. **Gem5 Driven**
@@ -144,3 +145,6 @@ DRAMPower \[7\] format. To do so, please set `bool record_cmd_trace = true;` in 
 - Kevin Chang (Carnegie Mellon University)
 - Donghyuk Lee (Carnegie Mellon University)
 - Vivek Seshadri (Carnegie Mellon University)
+- Saugata Ghose (Carnegie Mellon University)
+- Tianshi Li (Carnegie Mellon University)
+- @henryzh

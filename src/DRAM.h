@@ -11,6 +11,7 @@
 #include <type_traits>
 
 using namespace std;
+
 namespace ramulator
 {
 

@@ -7,6 +7,9 @@
 
 using namespace ramulator;
 
+namespace ramulator
+{
+
 template <>
 void MemoryFactory<LPDDR4>::validate(int channels, int ranks, map<string, string>& options) {
     assert(channels >= 2 && "LPDDR4 requires 2, 4, 8 ... channels");
@@ -63,3 +66,4 @@ MemoryBase *MemoryFactory<SALP>::create(map<string, string>& options, int cachel
     return (MemoryBase *)populate_memory(spec, channels, ranks);
 }
 
+}

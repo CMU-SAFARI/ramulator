@@ -27,6 +27,7 @@
 
 using namespace std;
 using namespace ramulator;
+
 namespace ramulator {
 
 template <typename T>
@@ -63,7 +64,7 @@ public:
   // dtor
   virtual ~Refresh() {
     // Clean up backlog
-    for (int i = 0; i < bank_refresh_backlog.size(); i++)
+    for (unsigned int i = 0; i < bank_refresh_backlog.size(); i++)
       delete bank_refresh_backlog[i];
   }
 
@@ -122,15 +123,16 @@ private:
     refreshed = clk;
   }
 
-  // DARP
+  // DSARP
   void early_inject_refresh();
   void wrp();
 };
 
-} /* namespace ramulator */
-
-// Declaration of this specialized tick_ref, so the compiler knows where to look
-// for this definition when controller calls it!
+// Declaration of specialized constructor and tick_ref, so the compiler knows
+// where to look for these definitions when controller calls them!
+template<> Refresh<DSARP>::Refresh(Controller<DSARP>* ctrl);
 template<> void Refresh<DSARP>::tick_ref();
+
+} /* namespace ramulator */
 
 #endif /* SRC_REFRESH_H_ */

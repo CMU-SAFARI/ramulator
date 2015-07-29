@@ -16,6 +16,7 @@
 
 using namespace std;
 using namespace ramulator;
+
 namespace ramulator {
 
 /**** DSARP specialization ****/
