@@ -3,8 +3,8 @@
 #include "ALDRAM.h"
 #include "TLDRAM.h"
 
-using namespace ramulator;
-
+namespace ramulator
+{
 
 static vector<int> get_offending_subarray(DRAM<SALP>* channel, vector<int> & addr_vec){
     int sa_id = 0;
@@ -115,3 +115,5 @@ void Controller<TLDRAM>::tick(){
     // remove request from queue
     queue->q.erase(req);
 }
+
+} /* namespace ramulator */

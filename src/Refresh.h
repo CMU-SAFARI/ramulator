@@ -127,10 +127,10 @@ private:
   void wrp();
 };
 
-} /* namespace ramulator */
 
 // Declaration of this specialized tick_ref, so the compiler knows where to look
 // for this definition when controller calls it!
 template<> void Refresh<DSARP>::tick_ref();
+} /* namespace ramulator */
 
 #endif /* SRC_REFRESH_H_ */
