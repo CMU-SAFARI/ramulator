@@ -41,6 +41,7 @@
 #include "Request.h"
 
 using namespace std;
+
 namespace ramulator
 {
 

@@ -15,6 +15,7 @@
 #include "Scheduler.h"
 
 using namespace std;
+
 namespace ramulator
 {
 
@@ -33,8 +34,8 @@ public:
 
     struct Queue {
         list<Request> q;
-        int max = 32;
-        int size() {return q.size();}
+        unsigned int max = 32;
+        unsigned int size() {return q.size();}
     };
 
     Queue readq;  // queue for read requests
@@ -64,7 +65,7 @@ public:
         if (record_cmd_trace){
             string prefix = cmd_trace_prefix + "chan-" + to_string(channel->id) + "-rank-";
             string suffix = ".cmdtrace";
-            for (int i = 0; i < channel->children.size(); i++)
+            for (unsigned int i = 0; i < channel->children.size(); i++)
                 cmd_trace_files[i].open(prefix + to_string(i) + suffix);
         }
     }

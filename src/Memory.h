@@ -11,6 +11,7 @@
 #include <tuple>
 
 using namespace std;
+
 namespace ramulator
 {
 
@@ -61,7 +62,7 @@ public:
         // The number of channels and ranks are set when a spec class is
         // initialized. However the initialization does not update the channel
         // and rank count in org_entry.count (*sz), and it's not supposed to.
-        for (int lev = 0; lev < addr_bits.size(); lev++) {
+        for (unsigned int lev = 0; lev < addr_bits.size(); lev++) {
             if (lev == int(T::Level::Channel))
               addr_bits[lev] = calc_log2(ctrls.size());
             else if (lev == int(T::Level::Rank))
