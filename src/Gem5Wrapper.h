@@ -21,6 +21,7 @@ public:
     ~Gem5Wrapper();
     void tick();
     bool send(Request req);
+    void finish(void);
 };
 
 } /*namespace ramulator*/

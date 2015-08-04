@@ -3,9 +3,10 @@
 using namespace std;
 using namespace ramulator;
 
-//Config::Config() {}
+Config::Config(const std::string& fname) {
+  parse(fname);
+}
 
-//Config::Config(const char* config_fname) : file(config_fname) 
 void Config::parse(const string& fname)
 {
     ifstream file(fname);
@@ -42,6 +43,20 @@ void Config::parse(const string& fname)
         assert(tokens.size() == 2 && "Only allow two tokens in one line");
 
         options[tokens[0]] = tokens[1];
+
+        if (tokens[0] == "channels") {
+          channels = atoi(tokens[1].c_str());
+        } else if (tokens[0] == "ranks") {
+          ranks = atoi(tokens[1].c_str());
+        } else if (tokens[0] == "subarrays") {
+          subarrays = atoi(tokens[1].c_str());
+        } else if (tokens[0] == "cpu_tick") {
+          cpu_tick = atoi(tokens[1].c_str());
+        } else if (tokens[0] == "mem_tick") {
+          mem_tick = atoi(tokens[1].c_str());
+        } else if (tokens[0] == "stats_file") {
+          stats_file = tokens[1];
+        }
     }
     file.close();
 }

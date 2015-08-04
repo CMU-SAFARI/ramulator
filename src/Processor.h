@@ -1,6 +1,7 @@
 #ifndef __PROCESSOR_H
 #define __PROCESSOR_H
 
+#include "Config.h"
 #include "Request.h"
 #include <iostream>
 #include <vector>
@@ -54,7 +55,7 @@ public:
     long retired = 0;
     function<bool(Request)> send;
 
-    Processor(const char* trace_fname, function<bool(Request)> send);
+    Processor(const Config& configs, const char* trace_fname, function<bool(Request)> send);
     void tick();
     void receive(Request& req);
     double calc_ipc();

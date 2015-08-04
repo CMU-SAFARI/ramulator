@@ -11,14 +11,12 @@ CXX := clang++
 # CXX := g++-5
 CXXFLAGS := -O3 -std=c++11 -g -Wall
 
-
 .PHONY: all clean depend
 
-
-all: depend ramulator-dramtrace ramulator-cputrace
+all: depend ramulator
 
 clean:
-	rm -f ramulator-dramtrace ramulator-cputrace $(SRCDIR)/*.o
+	rm -f ramulator
 	rm -rf $(OBJDIR)
 
 depend: $(OBJDIR)/.depend
@@ -33,12 +31,8 @@ ifneq ($(MAKECMDGOALS),clean)
 -include $(OBJDIR)/.depend
 endif
 
-
-ramulator-dramtrace: $(MAIN) $(OBJS) $(SRCDIR)/*.h | depend
-	$(CXX) $(CXXFLAGS) -DRAMULATOR_DRAMTRACE -o $@ $(MAIN) $(OBJS)
-
-ramulator-cputrace: $(MAIN) $(OBJS) $(SRCDIR)/*.h | depend
-	$(CXX) $(CXXFLAGS) -DRAMULATOR_CPUTRACE -o $@ $(MAIN) $(OBJS)
+ramulator: $(MAIN) $(OBJS) $(SRCDIR)/*.h | depend
+	$(CXX) $(CXXFLAGS) -DRAMULATOR -o $@ $(MAIN) $(OBJS)
 
 $(OBJS): | $(OBJDIR)
 

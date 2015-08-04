@@ -4,7 +4,7 @@
 using namespace std;
 using namespace ramulator;
 
-Processor::Processor(const char* trace_fname, function<bool(Request)> send)
+Processor::Processor(const Config& configs, const char* trace_fname, function<bool(Request)> send)
     : send(send), callback(bind(&Processor::receive, this, placeholders::_1)), trace(trace_fname)
 {
     more_reqs = trace.get_request(bubble_cnt, req_addr, req_type);

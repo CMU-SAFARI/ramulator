@@ -1,0 +1,7 @@
+*.swp
+
+# Compiled Object files
+obj/
+
+# Compiled target executable files
+ramulator

@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 
+#include "Config.h"
 #include "DRAM.h"
 #include "Refresh.h"
 #include "Request.h"
@@ -54,7 +55,7 @@ public:
     bool print_cmd_trace = false;
 
     /* Constructor */
-    Controller(DRAM<T>* channel) :
+    Controller(const Config& configs, DRAM<T>* channel) :
         channel(channel),
         scheduler(new Scheduler<T>(this)),
         rowpolicy(new RowPolicy<T>(this)),
@@ -62,7 +63,12 @@ public:
         refresh(new Refresh<T>(this)),
         cmd_trace_files(channel->children.size())
     {
+        record_cmd_trace = configs.record_cmd_trace();
+        print_cmd_trace = configs.print_cmd_trace();
         if (record_cmd_trace){
+            if (configs["cmd_trace_prefix"] != "") {
+              cmd_trace_prefix = configs["cmd_trace_prefix"];
+            }
             string prefix = cmd_trace_prefix + "chan-" + to_string(channel->id) + "-rank-";
             string suffix = ".cmdtrace";
             for (unsigned int i = 0; i < channel->children.size(); i++)

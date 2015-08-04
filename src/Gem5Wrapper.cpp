@@ -17,7 +17,7 @@
 
 using namespace ramulator;
 
-static map<string, function<MemoryBase *(map<string, string>&, int)> > name_to_func = {
+static map<string, function<MemoryBase *(const Config&, int)> > name_to_func = {
     {"DDR3", &MemoryFactory<DDR3>::create}, {"DDR4", &MemoryFactory<DDR4>::create},
     {"LPDDR3", &MemoryFactory<LPDDR3>::create}, {"LPDDR4", &MemoryFactory<LPDDR4>::create},
     {"GDDR5", &MemoryFactory<GDDR5>::create}, 
@@ -31,9 +31,9 @@ Gem5Wrapper::Gem5Wrapper(const string& config_file, int cacheline)
 {
     Config cfg;
     cfg.parse(config_file);
-    string& std_name = cfg.options["standard"];
+    const string& std_name = cfg["standard"];
     assert(name_to_func.find(std_name) != name_to_func.end() && "unrecognized standard name");
-    mem = name_to_func[std_name](cfg.options, cacheline);
+    mem = name_to_func[std_name](cfg, cacheline);
     tCK = mem->clk_ns();
 }
 
@@ -50,4 +50,8 @@ void Gem5Wrapper::tick()
 bool Gem5Wrapper::send(Request req)
 {
     return mem->send(req);
+}
+
+void Gem5Wrapper::finish(void) {
+    mem->finish();
 }
