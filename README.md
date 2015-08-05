@@ -82,6 +82,8 @@ Ramulator requires a C++11 compiler (e.g., `clang++`, `g++-5`).
 
 3. **Gem5 Driven**
 
+   *Requires SWIG 2.0.12+, gperftools (`libgoogle-perftools-dev` package on Ubuntu)*
+
         $ hg clone http://repo.gem5.org/gem5-stable
         $ cd gem5-stable
         $ hg update -c 10231  # Revert to stable version from 5/31/2014 (10231:0e86fac7254c)
