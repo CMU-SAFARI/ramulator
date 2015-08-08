@@ -90,13 +90,13 @@ template<typename T>
 void start_run(const Config& configs, T* spec, const char* file) {
   // initiate controller and memory
   int C = configs.get_channels(), R = configs.get_ranks();
+  // Check and Set channel, rank number
+  spec->set_channel_number(C);
+  spec->set_rank_number(R);
   std::vector<Controller<T>*> ctrls;
   for (int c = 0 ; c < C ; c++) {
     DRAM<T>* channel = new DRAM<T>(spec, T::Level::Channel);
     channel->id = c;
-    for (int r = 0 ; r < R ; r++) {
-      channel->insert(new DRAM<T>(spec, T::Level::Rank));
-    }
     Controller<T>* ctrl = new Controller<T>(configs, channel);
     ctrls.push_back(ctrl);
   }
@@ -151,7 +151,7 @@ int main(int argc, const char *argv[])
       start_run(configs, wio, file);
     } else if (standard == "WideIO2") {
       // total cap: 2GB, 1/2 of others
-      WideIO2* wio2 = new WideIO2(configs["org"], configs["speed"]);
+      WideIO2* wio2 = new WideIO2(configs["org"], configs["speed"], configs.get_channels());
       wio2->channel_width *= 2;
       start_run(configs, wio2, file);
     }

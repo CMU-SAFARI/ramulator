@@ -71,6 +71,15 @@ DSARP::DSARP(Org org, Speed speed, Type type, int n_sa) :
 DSARP::DSARP(const string& org_str, const string& speed_str, Type type, int n_sa) :
   DSARP(org_map[org_str], speed_map[speed_str], type, n_sa) {}
 
+void DSARP::set_channel_number(int channel) {
+  org_entry.count[int(Level::Channel)] = channel;
+}
+
+void DSARP::set_rank_number(int rank) {
+  org_entry.count[int(Level::Rank)] = rank;
+}
+
+
 void DSARP::init_speed()
 {
   /* Numbers are in DRAM cycles */

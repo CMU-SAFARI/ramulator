@@ -146,6 +146,8 @@ public:
         int count[int(Level::MAX)];
     } org_entry;
 
+    void set_channel_number(int channel);
+    void set_rank_number(int rank);
 
     /* Speed */
     enum class Speed : int

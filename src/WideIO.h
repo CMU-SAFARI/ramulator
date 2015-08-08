@@ -149,6 +149,9 @@ public:
         {2048, 128, {0, 1, 4, 1<<15, 1<<7}}
     }, org_entry;
 
+    void set_channel_number(int channel);
+    void set_rank_number(int rank);
+
     /* Speed */
     enum class Speed : int
     {

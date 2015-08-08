@@ -40,6 +40,14 @@ GDDR5::GDDR5(const string& org_str, const string& speed_str) :
 {
 }
 
+void GDDR5::set_channel_number(int channel) {
+  org_entry.count[int(Level::Channel)] = channel;
+}
+
+void GDDR5::set_rank_number(int rank) {
+  assert((rank == 1) && "GDDR5 rank number is fixed to 1.");
+}
+
 void GDDR5::init_speed()
 {
     const int REFIL_TABLE[int(Speed::MAX)] = {3900, 4388, 4875, 5363, 5850, 6338, 6825};

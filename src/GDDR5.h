@@ -151,6 +151,9 @@ public:
         {8<<10, 16, {0, 1, 4, 4, 1<<14, 1<<8}}, {8<<10, 32, {0, 1, 4, 4, 1<<14, 1<<7}}
     }, org_entry;
 
+    void set_channel_number(int channel);
+    void set_rank_number(int rank);
+
     /* Speed */
     enum class Speed : int
     {

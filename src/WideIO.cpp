@@ -37,6 +37,16 @@ WideIO::WideIO(const string& org_str, const string& speed_str) :
 {
 }
 
+void WideIO::set_channel_number(int channel) {
+  assert((channel == 4) && "The Wide I/O interface supports 4 physical and 4 logical channels.");
+  org_entry.count[int(Level::Channel)] = channel;
+}
+
+void WideIO::set_rank_number(int rank) {
+  assert((rank == 1) && "WideIO rank number is fixed to 1.");
+  org_entry.count[int(Level::Rank)] = rank;
+}
+
 void WideIO::init_speed()
 {
     const static int RFC_TABLE[int(Speed::MAX)][int(Org::MAX)] = {

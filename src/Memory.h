@@ -59,16 +59,8 @@ public:
         if (type != Type::RoBaRaCoCh && spec->standard_name.substr(0, 5) == "LPDDR")
             assert((sz[int(T::Level::Row)] & (sz[int(T::Level::Row)] - 1)) == 0);
 
-        // The number of channels and ranks are set when a spec class is
-        // initialized. However the initialization does not update the channel
-        // and rank count in org_entry.count (*sz), and it's not supposed to.
         for (unsigned int lev = 0; lev < addr_bits.size(); lev++) {
-            if (lev == int(T::Level::Channel))
-              addr_bits[lev] = calc_log2(ctrls.size());
-            else if (lev == int(T::Level::Rank))
-              addr_bits[lev] = calc_log2(ctrls[0]->channel->children.size());
-            else
-              addr_bits[lev] = calc_log2(sz[lev]);
+          addr_bits[lev] = calc_log2(sz[lev]);
         }
 
         addr_bits[int(T::Level::MAX) - 1] -= calc_log2(spec->prefetch_size);

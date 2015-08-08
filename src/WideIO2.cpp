@@ -40,7 +40,7 @@ WideIO2::WideIO2(Org org, Speed speed, int channels) :
                 org_entry.count[int(Level::Bank)] = 4;
                 org_entry.count[int(Level::Row)] = 1<<14;
                 org_entry.count[int(Level::Column)] = 1<<8;
-            } else assert(false);
+            } else assert(false && "The WideIO2 interface supports 4 or 8 physical channels.");
             break;
         default: assert(false);
     }
@@ -53,6 +53,16 @@ WideIO2::WideIO2(Org org, Speed speed, int channels) :
 WideIO2::WideIO2(const string& org_str, const string& speed_str, int channels) :
     WideIO2(org_map[org_str], speed_map[speed_str], channels)
 {
+}
+
+void WideIO2::set_channel_number(int channel) {
+  assert((channel == org_entry.count[int(Level::Channel)]) && "channel number must be consistent with spec initializaiton configuration.");
+  org_entry.count[int(Level::Channel)] = channel;
+}
+
+void WideIO2::set_rank_number(int rank) {
+  assert(((rank == 1) || (rank == 2)) && "WideIO2 supports single and dual rank configurations.");
+  org_entry.count[int(Level::Rank)] = rank;
 }
 
 void WideIO2::init_prereq()

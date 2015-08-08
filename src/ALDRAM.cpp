@@ -47,6 +47,14 @@ ALDRAM::ALDRAM(const string& org_str, const string& speed_str) :
 {
 }
 
+void ALDRAM::set_channel_number(int channel) {
+  org_entry.count[int(Level::Channel)] = channel;
+}
+
+void ALDRAM::set_rank_number(int rank) {
+  org_entry.count[int(Level::Rank)] = rank;
+}
+
 void ALDRAM::aldram_timing(Temp current_temperature)
 {
     for (int i = 0; i < int(Level::MAX); i++) {

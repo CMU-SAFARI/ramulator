@@ -36,6 +36,15 @@ HBM::HBM(const string& org_str, const string& speed_str) :
 {
 }
 
+void HBM::set_channel_number(int channel) {
+  org_entry.count[int(Level::Channel)] = channel;
+}
+
+void HBM::set_rank_number(int rank) {
+  org_entry.count[int(Level::Rank)] = rank;
+}
+
+
 void HBM::init_speed()
 {
     const static int RFC_TABLE[int(Speed::MAX)][int(Org::MAX)] = {

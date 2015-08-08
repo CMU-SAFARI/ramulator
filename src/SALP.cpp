@@ -56,6 +56,14 @@ SALP::SALP(const string& org_str, const string& speed_str, const string& type_st
 {
 }
 
+void SALP::set_channel_number(int channel) {
+  org_entry.count[int(Level::Channel)] = channel;
+}
+
+void SALP::set_rank_number(int rank) {
+  org_entry.count[int(Level::Rank)] = rank;
+}
+
 void SALP::init_speed()
 {
     // nRRD, nFAW
