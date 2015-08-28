@@ -145,9 +145,9 @@ public:
         int dq;
         int count[int(Level::MAX)];
     } org_table[int(Org::MAX)] = {
-        {1<<10, 128, {0, 0, 4, 2, 1<<13, 1<<6}},
-        {2<<10, 128, {0, 0, 4, 2, 1<<14, 1<<6}},
-        {4<<10, 128, {0, 0, 4, 4, 1<<14, 1<<6}},
+        {1<<10, 128, {0, 0, 4, 2, 1<<13, 1<<(6+1)}},
+        {2<<10, 128, {0, 0, 4, 2, 1<<14, 1<<(6+1)}},
+        {4<<10, 128, {0, 0, 4, 4, 1<<14, 1<<(6+1)}},
     }, org_entry;
 
     void set_channel_number(int channel);
@@ -160,7 +160,7 @@ public:
         MAX
     };
 
-    int prefetch_size = 4; // 4n prefetch DDR
+    int prefetch_size = 4; // burst length could be 2 and 4 (choose 4 here), 2n prefetch
     int channel_width = 128;
 
     struct SpeedEntry {
