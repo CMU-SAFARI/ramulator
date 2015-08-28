@@ -88,6 +88,7 @@ public:
     {
         req.addr_vec.resize(addr_bits.size());
         long addr = req.addr;
+        // Each transaction size is 2^tx_bits, so first clear the lowest tx_bits bits
         clear_lower_bits(addr, tx_bits);
 
         switch(int(type)){
