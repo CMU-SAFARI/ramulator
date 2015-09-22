@@ -88,7 +88,7 @@ public:
     {
         req.addr_vec.resize(addr_bits.size());
         long addr = req.addr;
-        assert(slice_lower_bits(addr, tx_bits) == 0); // check address alignment
+        clear_lower_bits(addr, tx_bits);
 
         switch(int(type)){
             case int(Type::ChRaBaRoCo):
@@ -135,6 +135,10 @@ private:
         int lbits = addr & ((1<<bits) - 1);
         addr >>= bits;
         return lbits;
+    }
+    void clear_lower_bits(long& addr, int bits)
+    {
+        addr >>= bits;
     }
 };
 
