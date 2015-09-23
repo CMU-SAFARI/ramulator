@@ -4,8 +4,10 @@
 #include "SpeedyController.h"
 #include "Memory.h"
 #include "DRAM.h"
+#include "Statistics.h"
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <stdlib.h>
 #include <functional>
 #include <map>
@@ -60,7 +62,12 @@ void run_dramtrace(const Config& configs, Memory<T, Controller>& memory, const c
         }
         memory.tick();
         clks ++;
+        Stats::curTick++; // memory clock, global, for Statistics
     }
+    // This a workaround for statistics set only initially lost in the end
+    memory.finish();
+    Stats::statlist.printall();
+
 }
 
 template <typename T>
@@ -71,11 +78,11 @@ void run_cputrace(const Config& configs, Memory<T, Controller>& memory, const ch
     auto send = bind(&Memory<T, Controller>::send, &memory, placeholders::_1);
     Processor proc(configs, file, send);
     for (long i = 0; ; i++) {
-      // if (i % 100000000 == 0) printf("%ld clocks\n", i);
-      proc.tick();
-      if (i % cpu_tick == (cpu_tick - 1))
-          for (int j = 0; j < mem_tick; j++)
-              memory.tick();
+        proc.tick();
+        Stats::curTick++; // processor clock, global, for Statistics
+        if (i % cpu_tick == (cpu_tick - 1))
+            for (int j = 0; j < mem_tick; j++)
+                memory.tick();
       if (configs.is_early_exit()) {
         if (proc.finished())
             break;
@@ -84,6 +91,9 @@ void run_cputrace(const Config& configs, Memory<T, Controller>& memory, const ch
             break;
       }
     }
+    // This a workaround for statistics set only initially lost in the end
+    memory.finish();
+    Stats::statlist.printall();
 }
 
 template<typename T>
@@ -97,10 +107,11 @@ void start_run(const Config& configs, T* spec, const char* file) {
   for (int c = 0 ; c < C ; c++) {
     DRAM<T>* channel = new DRAM<T>(spec, T::Level::Channel);
     channel->id = c;
+    channel->regStats("");
     Controller<T>* ctrl = new Controller<T>(configs, channel);
     ctrls.push_back(ctrl);
   }
-  Memory<T, Controller> memory(ctrls);
+  Memory<T, Controller> memory(configs, ctrls);
 
   if (configs["trace_type"] == "CPU") {
     run_cputrace(configs, memory, file);
@@ -112,7 +123,7 @@ void start_run(const Config& configs, T* spec, const char* file) {
 int main(int argc, const char *argv[])
 {
     if (argc < 2) {
-        printf("Usage: %s <configs-file> <cpu-trace> ...\n"
+        printf("Usage: %s <configs-file> [--stats <filename>] <cpu-trace-core>\n"
             "Example: %s ramulator-configs.cfg cpu.trace\n", argv[0], argv[0]);
         return 0;
     }
@@ -122,6 +133,12 @@ int main(int argc, const char *argv[])
 
     const std::string& standard = configs["standard"];
     assert(standard != "" || "DRAM standard should be specified.");
+
+    if (strcmp(argv[2], "--stats") == 0) {
+      Stats::statlist.output(argv[3]);
+    } else {
+      Stats::statlist.output(standard+"stats.txt");
+    }
 
     if (standard == "DDR3") {
       DDR3* ddr3 = new DDR3(configs["org"], configs["speed"]);

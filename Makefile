@@ -25,11 +25,12 @@ depend: $(OBJDIR)/.depend
 $(OBJDIR)/.depend: $(SRCS)
 	@mkdir -p $(OBJDIR)
 	@rm -f $(OBJDIR)/.depend
-	@$(foreach SRC, $(SRCS), $(CXX) $(CXXFLAGS) -MM -MT $(patsubst $(SRCDIR)/%.cpp, $(OBJDIR)/%.o, $(SRC)) $(SRC) >> $(OBJDIR)/.depend ;)
+	@$(foreach SRC, $(SRCS), $(CXX) $(CXXFLAGS) -DRAMULATOR -MM -MT $(patsubst $(SRCDIR)/%.cpp, $(OBJDIR)/%.o, $(SRC)) $(SRC) >> $(OBJDIR)/.depend ;)
 
 ifneq ($(MAKECMDGOALS),clean)
 -include $(OBJDIR)/.depend
 endif
+
 
 ramulator: $(MAIN) $(OBJS) $(SRCDIR)/*.h | depend
 	$(CXX) $(CXXFLAGS) -DRAMULATOR -o $@ $(MAIN) $(OBJS)
@@ -40,4 +41,4 @@ $(OBJDIR):
 	@mkdir -p $@
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.cpp
-	$(CXX) $(CXXFLAGS) -c -o $@ $<
+	$(CXX) $(CXXFLAGS) -DRAMULATOR -c -o $@ $<

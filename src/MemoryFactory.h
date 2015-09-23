@@ -43,7 +43,7 @@ public:
             channel->id = c;
             ctrls.push_back(new Controller<T>(configs, channel));
         }
-        return new Memory<T>(ctrls);
+        return new Memory<T>(configs, ctrls);
     }
 
     static void validate(int channels, int ranks, const Config& configs) {

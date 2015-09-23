@@ -31,6 +31,8 @@ GDDR5::GDDR5(Org org, Speed speed) :
 {
     init_speed();
     init_prereq();
+    init_rowhit(); // SAUGATA: added row hit function
+    init_rowopen();
     init_lambda();
     init_timing();
 }
@@ -141,6 +143,37 @@ void GDDR5::init_prereq()
         }};
 }
 
+// SAUGATA: added row hit check functions to see if the desired location is currently open
+void GDDR5::init_rowhit()
+{
+    // RD
+    rowhit[int(Level::Bank)][int(Command::RD)] = [] (DRAM<GDDR5>* node, Command cmd, int id) {
+        switch (int(node->state)) {
+            case int(State::Closed): return false;
+            case int(State::Opened):
+                if (node->row_state.find(id) != node->row_state.end())
+                    return true;
+                return false;
+            default: assert(false);
+        }};
+
+    // WR
+    rowhit[int(Level::Bank)][int(Command::WR)] = rowhit[int(Level::Bank)][int(Command::RD)];
+}
+
+void GDDR5::init_rowopen()
+{
+    // RD
+    rowopen[int(Level::Bank)][int(Command::RD)] = [] (DRAM<GDDR5>* node, Command cmd, int id) {
+        switch (int(node->state)) {
+            case int(State::Closed): return false;
+            case int(State::Opened): return true;
+            default: assert(false);
+        }};
+
+    // WR
+    rowopen[int(Level::Bank)][int(Command::WR)] = rowopen[int(Level::Bank)][int(Command::RD)];
+}
 
 void GDDR5::init_lambda()
 {

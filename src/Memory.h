@@ -23,6 +23,7 @@ public:
     virtual void tick() = 0;
     virtual bool send(Request req) = 0;
     virtual int pending_requests() = 0;
+    virtual void finish(void) = 0;
 };
 
 template <class T, template<typename> class Controller = Controller >
@@ -41,7 +42,7 @@ public:
 
     int tx_bits;
 
-    Memory(vector<Controller<T>*> ctrls)
+    Memory(const Config& configs, vector<Controller<T>*> ctrls)
         : ctrls(ctrls),
           spec(ctrls[0]->channel->spec),
           addr_bits(int(T::Level::MAX))
@@ -121,6 +122,9 @@ public:
         for (auto ctrl: ctrls)
             reqs += ctrl->readq.size() + ctrl->writeq.size() + ctrl->otherq.size() + ctrl->pending.size();
         return reqs;
+    }
+
+    void finish(void) {
     }
 
 private:

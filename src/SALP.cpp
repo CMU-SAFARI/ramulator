@@ -29,10 +29,10 @@ map<string, enum SALP::Type> SALP::type_map = {
     {"SALP-MASA", SALP::Type::MASA},
 };
 
-SALP::SALP(Org org, Speed speed, Type type, int n_sa) : 
+SALP::SALP(Org org, Speed speed, Type type, int n_sa) :
     type(type),
     n_sa(n_sa),
-    org_entry(org_table[int(org)]), 
+    org_entry(org_table[int(org)]),
     speed_entry(speed_table[int(speed)]),
     read_latency(speed_entry.nCL + speed_entry.nBL)
 {
@@ -47,7 +47,9 @@ SALP::SALP(Org org, Speed speed, Type type, int n_sa) :
     org_entry.count[int(Level::Row)] = long(org_entry.size) * (1<<20) / tmp;
     init_speed();
     init_prereq();
-    init_lambda();           
+    init_rowhit(); // SAUGATA: added row hit function
+    init_rowopen();
+    init_lambda();
     init_timing();
 }
 
@@ -157,14 +159,14 @@ void SALP::init_prereq()
                     case int(State::Opened):
                         if (node->row_state.find(id) != node->row_state.end()) return Command::SASEL;
                         else return Command::PRE;
-                    case int(State::Selected): 
+                    case int(State::Selected):
                         if (node->row_state.find(id) != node->row_state.end()) return cmd;
                         else return Command::PRE;
                     default: assert(false);
                 }};
             prereq[int(Level::SubArray)][int(Command::WR)] = prereq[int(Level::SubArray)][int(Command::RD)];
             prereq[int(Level::Rank)][int(Command::REF)] = [] (DRAM<SALP>* node, Command cmd, int id) {
-                for (auto bank : node->children) 
+                for (auto bank : node->children)
                     for (auto sa : bank->children){
                         if (sa->state == State::Closed)
                             continue;
@@ -193,6 +195,98 @@ void SALP::init_prereq()
             case int(State::SelfRefresh): return Command::SRE;
             default: assert(false);
         }};
+}
+
+// SAUGATA: added row hit check functions to see if the desired location is currently open
+void SALP::init_rowhit()
+{
+    switch(int(type)) {
+        case int(Type::SALP_1):
+            // RD
+            rowhit[int(Level::Bank)][int(Command::RD)] = [] (DRAM<SALP>* node, Command cmd, int id) {
+                switch (int(node->state)){
+                    case int(State::Closed): return false;
+                    case int(State::Opened):
+                        if (node->children[id]->row_state.find(id) != node->children[id]->row_state.end()) return true;
+                        else return false;
+                    default: assert(false);
+                }};
+            // WR
+            rowhit[int(Level::Bank)][int(Command::WR)] = rowhit[int(Level::Bank)][int(Command::RD)];
+            break;
+        case int(Type::SALP_2):
+            // RD
+            rowhit[int(Level::SubArray)][int(Command::RD)] = [] (DRAM<SALP>* node, Command cmd, int id) {
+                switch (int(node->state)){
+                    case int(State::Closed): return false;
+                    case int(State::Opened):
+                        if (node->row_state.find(id) != node->row_state.end()) return true;
+                        else return false;
+                    default: assert(false);
+                }};
+            // WR
+            rowhit[int(Level::SubArray)][int(Command::WR)] = rowhit[int(Level::SubArray)][int(Command::RD)];
+            break;
+        case int(Type::MASA):
+            // RD
+            rowhit[int(Level::SubArray)][int(Command::RD)] = [] (DRAM<SALP>* node, Command cmd, int id) {
+                switch (int(node->state)){
+                    case int(State::Closed): return false;
+                    case int(State::Opened):
+                        // opened but not selected still counts as a row hit
+                        if (node->row_state.find(id) != node->row_state.end()) return true;
+                        else return false;
+                    case int(State::Selected):
+                        if (node->row_state.find(id) != node->row_state.end()) return true;
+                        else return false;
+                    default: assert(false);
+                }};
+            // WR
+            rowhit[int(Level::SubArray)][int(Command::WR)] = rowhit[int(Level::SubArray)][int(Command::RD)];
+            break;
+        default: assert(false);
+    }
+}
+
+void SALP::init_rowopen()
+{
+    switch(int(type)) {
+        case int(Type::SALP_1):
+            // RD
+            rowopen[int(Level::Bank)][int(Command::RD)] = [] (DRAM<SALP>* node, Command cmd, int id) {
+                switch (int(node->state)){
+                    case int(State::Closed): return false;
+                    case int(State::Opened): return true;
+                    default: assert(false);
+                }};
+            // WR
+            rowopen[int(Level::Bank)][int(Command::WR)] = rowopen[int(Level::Bank)][int(Command::RD)];
+            break;
+        case int(Type::SALP_2):
+            // RD
+            rowopen[int(Level::SubArray)][int(Command::RD)] = [] (DRAM<SALP>* node, Command cmd, int id) {
+                switch (int(node->state)){
+                    case int(State::Closed): return false;
+                    case int(State::Opened): return true;
+                    default: assert(false);
+                }};
+            // WR
+            rowopen[int(Level::SubArray)][int(Command::WR)] = rowopen[int(Level::SubArray)][int(Command::RD)];
+            break;
+        case int(Type::MASA):
+            // RD
+            rowopen[int(Level::SubArray)][int(Command::RD)] = [] (DRAM<SALP>* node, Command cmd, int id) {
+                switch (int(node->state)){
+                    case int(State::Closed): return false;
+                    case int(State::Opened): return true;
+                    case int(State::Selected): return true;
+                    default: assert(false);
+                }};
+            // WR
+            rowopen[int(Level::SubArray)][int(Command::WR)] = rowopen[int(Level::SubArray)][int(Command::RD)];
+            break;
+        default: assert(false);
+    }
 }
 
 void SALP::init_lambda()
@@ -233,7 +327,7 @@ void SALP::init_lambda()
                 node->row_state.clear();};
             lambda[int(Level::SubArray)][int(Command::PRE_OTHER)] = lambda[int(Level::SubArray)][int(Command::PRE)];
             lambda[int(Level::Rank)][int(Command::PRER)] = [] (DRAM<SALP>* node, int id) {
-                for (auto bank : node->children) 
+                for (auto bank : node->children)
                     for (auto sa : bank->children) {
                         sa->state = State::Closed;
                         sa->row_state.clear();}};
@@ -244,7 +338,7 @@ void SALP::init_lambda()
                 node->state = State::Closed;
                 node->row_state.clear();};
             lambda[int(Level::Rank)][int(Command::PDE)] = [] (DRAM<SALP>* node, int id) {
-                for (auto bank : node->children) 
+                for (auto bank : node->children)
                     for (auto sa : bank->children) {
                         if (sa->state == State::Closed)
                             continue;
@@ -274,9 +368,9 @@ void SALP::init_lambda()
                 for (auto sa : node->children){
                     sa->state = State::Closed;
                     sa->row_state.clear();}};
-                
+
             lambda[int(Level::Rank)][int(Command::PRER)] = [] (DRAM<SALP>* node, int id) {
-                for (auto bank : node->children) 
+                for (auto bank : node->children)
                     for (auto sa : bank->children) {
                         sa->state = State::Closed;
                         sa->row_state.clear();}};
@@ -287,7 +381,7 @@ void SALP::init_lambda()
                 node->state = State::Closed;
                 node->row_state.clear();};
             lambda[int(Level::Rank)][int(Command::PDE)] = [] (DRAM<SALP>* node, int id) {
-                for (auto bank : node->children) 
+                for (auto bank : node->children)
                     for (auto sa : bank->children) {
                         if (sa->state == State::Closed)
                             continue;
@@ -311,7 +405,7 @@ void SALP::init_timing()
     SpeedEntry& s = speed_entry;
     vector<TimingEntry> *t;
 
-    /*** Channel ***/ 
+    /*** Channel ***/
     t = timing[int(Level::Channel)];
 
     // CAS <-> CAS
@@ -325,7 +419,7 @@ void SALP::init_timing()
     t[int(Command::WRA)].push_back({Command::WRA, 1, s.nBL});
 
 
-    /*** Rank ***/ 
+    /*** Rank ***/
     t = timing[int(Level::Rank)];
 
     // CAS <-> CAS
@@ -379,7 +473,7 @@ void SALP::init_timing()
     t[int(Command::PDX)].push_back({Command::RDA, 1, s.nXP});
     t[int(Command::PDX)].push_back({Command::WR, 1, s.nXP});
     t[int(Command::PDX)].push_back({Command::WRA, 1, s.nXP});
-    
+
     // CAS <-> SR: none (all banks have to be precharged)
 
     // RAS <-> RAS
@@ -419,7 +513,7 @@ void SALP::init_timing()
 
     // REF <-> SR
     t[int(Command::SRX)].push_back({Command::REF, 1, s.nXS});
-    
+
     // PD <-> PD
     t[int(Command::PDE)].push_back({Command::PDX, 1, s.nPD});
     t[int(Command::PDX)].push_back({Command::PDE, 1, s.nXP});
@@ -427,13 +521,13 @@ void SALP::init_timing()
     // PD <-> SR
     t[int(Command::PDX)].push_back({Command::SRE, 1, s.nXP});
     t[int(Command::SRX)].push_back({Command::PDE, 1, s.nXS});
-    
+
     // SR <-> SR
     t[int(Command::SRE)].push_back({Command::SRX, 1, s.nCKESR});
     t[int(Command::SRX)].push_back({Command::SRE, 1, s.nXS});
 
 
-    /*** Bank ***/ 
+    /*** Bank ***/
     t = timing[int(Level::Bank)];
     t[int(Command::PREB)].push_back({Command::ACT, 1, s.nRP});
     t[int(Command::ACT)].push_back({Command::PREB, 1, s.nRAS});

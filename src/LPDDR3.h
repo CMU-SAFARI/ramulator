@@ -114,6 +114,11 @@ public:
     /* Prerequisite */
     function<Command(DRAM<LPDDR3>*, Command cmd, int)> prereq[int(Level::MAX)][int(Command::MAX)];
 
+    // SAUGATA: added function object container for row hit status
+    /* Row hit */
+    function<bool(DRAM<LPDDR3>*, Command cmd, int)> rowhit[int(Level::MAX)][int(Command::MAX)];
+    function<bool(DRAM<LPDDR3>*, Command cmd, int)> rowopen[int(Level::MAX)][int(Command::MAX)];
+
     /* Timing */
     struct TimingEntry
     {
@@ -193,6 +198,8 @@ private:
     void init_speed();
     void init_lambda();
     void init_prereq();
+    void init_rowhit();  // SAUGATA: added function to check for row hits
+    void init_rowopen();
     void init_timing();
 };
 

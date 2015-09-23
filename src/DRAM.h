@@ -1,6 +1,7 @@
 #ifndef __DRAM_H
 #define __DRAM_H
 
+#include "Statistics.h"
 #include <iostream>
 #include <vector>
 #include <deque>
@@ -19,6 +20,11 @@ template <typename T>
 class DRAM
 {
 public:
+    ScalarStat total_active_cycles;
+    ScalarStat total_serving_requests;
+    ScalarStat total_refresh_cycles;
+    ScalarStat total_active_and_refresh_cycles;
+
     // Constructor
     DRAM(T* spec, typename T::Level level);
     ~DRAM();
@@ -50,11 +56,33 @@ public:
     // Check whether a command is ready to be scheduled
     bool check(typename T::Command cmd, const int* addr, long clk);
 
+    // Check whether a command is a row hit
+    bool check_row_hit(typename T::Command cmd, const int* addr);
+
+    // Check whether a row is open
+    bool check_row_open(typename T::Command cmd, const int* addr);
+
     // Return the earliest clock when a command is ready to be scheduled
     long get_next(typename T::Command cmd, const int* addr);
 
     // Update the timing/state of the tree, signifying that a command has been issued
     void update(typename T::Command cmd, const int* addr, long clk);
+    // Update statistics:
+
+    // Update the number of requests it serves currently
+    void update_serving_requests(const int* addr, int delta, long clk);
+
+    // TIANSHI: current serving requests count
+    int cur_serving_requests = 0;
+    long begin_of_serving = -1;
+    long end_of_serving = -1;
+    long begin_of_cur_reqcnt = -1;
+    long begin_of_refreshing = -1;
+    long end_of_refreshing = -1;
+    std::vector<std::pair<long, long>> refresh_intervals;
+
+    // register statistics
+    void regStats(const std::string& identifier);
 
 private:
     // Constructor
@@ -68,6 +96,12 @@ private:
     // Lookup table for which commands must be preceded by which other commands (i.e., "prerequisite")
     // E.g., a read command to a closed bank must be preceded by an activate command
     function<typename T::Command(DRAM<T>*, typename T::Command cmd, int)>* prereq;
+
+    // SAUGATA: added table for row hits
+    // Lookup table for whether a command is a row hit
+    // E.g., a read command to a closed bank must be preceded by an activate command
+    function<bool(DRAM<T>*, typename T::Command cmd, int)>* rowhit;
+    function<bool(DRAM<T>*, typename T::Command cmd, int)>* rowopen;
 
     // Lookup table between commands and the state transitions they trigger
     // E.g., an activate command to a closed bank opens both the bank and the row
@@ -83,13 +117,50 @@ private:
 }; /* class DRAM */
 
 
+// register statistics
+template <typename T>
+void DRAM<T>::regStats(const std::string& identifier) {
+    total_active_cycles
+        .name("total_active_cycles" + identifier + "_" + to_string(id))
+        .desc("Total active cycles_for_level_" + identifier + "_" + to_string(id))
+        .precision(0)
+        ;
+    total_serving_requests
+        .name("total_serving_requests" + identifier + "_" + to_string(id))
+        .desc("The sum of serving read/write requests per cycle for level " + identifier + "_" + to_string(id))
+        .precision(0)
+        ;
+    total_refresh_cycles
+        .name("total_refresh_cycles" + identifier + "_" + to_string(id))
+        .desc("The sum of cycles that is under refresh per cycle for level " + identifier + "_" + to_string(id))
+        .precision(0)
+        ;
+    total_active_and_refresh_cycles
+        .name("total_active_and_refresh_cycles" + identifier + "_" + to_string(id))
+        .desc("The sum of cycles that are active and under refresh per cycle for level " + identifier + "_" + to_string(id))
+        .precision(0)
+        ;
+
+    if (!children.size()) {
+      return;
+    }
+
+    // recursively register children statistics
+    for (auto child : children) {
+      child->regStats(identifier + "_" + to_string(id));
+    }
+}
+
 // Constructor
 template <typename T>
 DRAM<T>::DRAM(T* spec, typename T::Level level) :
     spec(spec), level(level), id(0), parent(NULL)
 {
+
     state = spec->start[(int)level];
     prereq = spec->prereq[int(level)];
+    rowhit = spec->rowhit[int(level)];
+    rowopen = spec->rowopen[int(level)];
     lambda = spec->lambda[int(level)];
     timing = spec->timing[int(level)];
 
@@ -119,6 +190,7 @@ DRAM<T>::DRAM(T* spec, typename T::Level level) :
         child->id = i;
         children.push_back(child);
     }
+
 }
 
 template <typename T>
@@ -169,6 +241,38 @@ bool DRAM<T>::check(typename T::Command cmd, const int* addr, long clk)
 
     // recursively check my child
     return children[child_id]->check(cmd, addr, clk);
+}
+
+// SAUGATA: added function to check whether a command is a row hit
+// Check row hits
+template <typename T>
+bool DRAM<T>::check_row_hit(typename T::Command cmd, const int* addr)
+{
+    int child_id = addr[int(level)+1];
+    if (rowhit[int(cmd)]) {
+        return rowhit[int(cmd)](this, cmd, child_id);  // stop recursion: there is a row hit at this level
+    }
+
+    if (child_id < 0 || !children.size())
+        return false; // stop recursion: there were no row hits at any level
+
+    // recursively check for row hits at my child
+    return children[child_id]->check_row_hit(cmd, addr);
+}
+
+template <typename T>
+bool DRAM<T>::check_row_open(typename T::Command cmd, const int* addr)
+{
+    int child_id = addr[int(level)+1];
+    if (rowopen[int(cmd)]) {
+        return rowopen[int(cmd)](this, cmd, child_id);  // stop recursion: there is a row hit at this level
+    }
+
+    if (child_id < 0 || !children.size())
+        return false; // stop recursion: there were no row hits at any level
+
+    // recursively check for row hits at my child
+    return children[child_id]->check_row_open(cmd, addr);
 }
 
 template <typename T>
@@ -230,7 +334,7 @@ void DRAM<T>::update_timing(typename T::Command cmd, const int* addr, long clk)
 
     // I am a target node
     if (prev[int(cmd)].size()) {
-        prev[int(cmd)].pop_back();
+        prev[int(cmd)].pop_back();  // FIXME TIANSHI why pop back?
         prev[int(cmd)].push_front(clk); // update history
     }
 
@@ -244,6 +348,16 @@ void DRAM<T>::update_timing(typename T::Command cmd, const int* addr, long clk)
 
         long future = past + t.val;
         next[int(t.cmd)] = max(next[int(t.cmd)], future); // update future
+        // TIANSHI: for refresh statistics
+        if (spec->is_refreshing(cmd) && spec->is_opening(t.cmd)) {
+          assert(past == clk);
+          begin_of_refreshing = clk;
+          end_of_refreshing = max(end_of_refreshing, next[int(t.cmd)]);
+          total_refresh_cycles += end_of_refreshing - clk;
+          if (cur_serving_requests > 0) {
+            refresh_intervals.push_back(make_pair(begin_of_refreshing, end_of_refreshing));
+          }
+        }
     }
 
     // Some commands have timings that are higher that their scope levels, thus
@@ -254,6 +368,48 @@ void DRAM<T>::update_timing(typename T::Command cmd, const int* addr, long clk)
     // recursively update *all* of my children
     for (auto child : children)
         child->update_timing(cmd, addr, clk);
+
+}
+
+template <typename T>
+void DRAM<T>::update_serving_requests(const int* addr, int delta, long clk) {
+  assert(id == addr[int(level)]);
+  assert(delta == 1 || delta == -1);
+  // update total serving requests
+  if (begin_of_cur_reqcnt != -1 && cur_serving_requests > 0) {
+    total_serving_requests += (clk - begin_of_cur_reqcnt) * cur_serving_requests;
+    total_active_cycles += clk - begin_of_cur_reqcnt;
+  }
+  // update begin of current request number
+  begin_of_cur_reqcnt = clk;
+  cur_serving_requests += delta;
+  assert(cur_serving_requests >= 0);
+
+  if (delta == 1 && cur_serving_requests == 1) {
+    // transform from inactive to active
+    begin_of_serving = clk;
+    if (end_of_refreshing > begin_of_serving) {
+      total_active_and_refresh_cycles += end_of_refreshing - begin_of_serving;
+    }
+  } else if (cur_serving_requests == 0) {
+    // transform from active to inactive
+    assert(begin_of_serving != -1);
+    assert(delta == -1);
+    total_active_cycles += clk - begin_of_cur_reqcnt;
+    end_of_serving = clk;
+
+    for (const auto& ref: refresh_intervals) {
+      total_active_and_refresh_cycles += min(end_of_serving, ref.second) - ref.first;
+    }
+    refresh_intervals.clear();
+  }
+
+  int child_id = addr[int(level) + 1];
+  // We only count the level bank or the level higher than bank
+  if (child_id < 0 || !children.size() || (int(level) > int(T::Level::Bank)) ) {
+    return;
+  }
+  children[child_id]->update_serving_requests(addr, delta, clk);
 }
 
 } /* namespace ramulator */
