@@ -3,6 +3,7 @@
 
 #include "Config.h"
 #include "Request.h"
+#include "Statistics.h"
 #include <iostream>
 #include <vector>
 #include <fstream>
@@ -70,6 +71,11 @@ private:
     long req_addr;
     Request::Type req_type;
     bool more_reqs;
+
+    ScalarStat memory_access_cycles;
+    ScalarStat cpu_inst;
+    ScalarStat cpu_cycles;
+    long last = 0;
 };
 
 }

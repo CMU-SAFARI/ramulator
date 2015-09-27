@@ -3,6 +3,7 @@
 
 #include "DRAM.h"
 #include "Request.h"
+#include "Statistics.h"
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -22,6 +23,9 @@ class SpeedyController
 // A FR-FCFS Open Row Controller, optimized for simulation speed.
 // Not For SALP-2
 {
+protected:
+  ScalarStat row_hit;
+  ScalarStat row_miss;
 private:
     class compair_depart_clk{
     public:
@@ -70,6 +74,19 @@ public:
         readq.reserve(queue_capacity);
         writeq.reserve(queue_capacity);
         otherq.reserve(queue_capacity);
+
+        // regStats
+
+        row_hit
+            .name("row_hit_channel_"+to_string(channel->id))
+            .desc("Number of row hits")
+            .precision(0)
+            ;
+        row_miss
+            .name("row_miss_channel_"+to_string(channel->id))
+            .desc("Number of row misses")
+            .precision(0)
+            ;
     }
 
     ~SpeedyController(){
@@ -152,6 +169,12 @@ public:
         schedule(q);
     }
 
+    bool is_row_hit(Request& req)
+    {
+        typename T::Command cmd = get_first_cmd(req);
+        return channel->check_row_hit(cmd, req.addr_vec.data());
+    }
+
 private:
 
     static bool compair_first_clk(const request_info& lhs, const request_info& rhs) {
@@ -202,6 +225,16 @@ private:
         long first_clk = get<2>(q[0]);
 
         if (first_clk > clk) return;
+
+        if (req.is_first_command) {
+            req.is_first_command = false;
+            if (req.type == Request::Type::READ || req.type == Request::Type::WRITE) {
+                if (is_row_hit(req))
+                    ++row_hit;
+                else
+                    ++row_miss;
+            }
+        }
 
         issue_cmd(first_cmd, req.addr_vec.data());
 

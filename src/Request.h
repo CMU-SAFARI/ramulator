@@ -12,9 +12,12 @@ namespace ramulator
 class Request
 {
 public:
+    bool is_first_command;
     long addr;
     // long addr_row;
     vector<int> addr_vec;
+    // specify which core this request sent from, for virtual address translation
+    int coreid;
 
     enum class Type
     {
@@ -27,17 +30,22 @@ public:
         MAX
     } type;
 
-    long arrive;
+    long arrive = -1;
     long depart;
     function<void(Request&)> callback; // call back with more info
 
-    Request(long addr, Type type, function<void(Request&)> callback)
-        : addr(addr), type(type), callback(callback) {}
+    Request(long addr, Type type, int coreid = 0)
+        : is_first_command(true), addr(addr), coreid(coreid), type(type),
+      callback([](Request& req){}) {}
 
-    Request(vector<int>& addr_vec, Type type, function<void(Request&)> callback)
-        : addr_vec(addr_vec), type(type), callback(callback) {}
+    Request(long addr, Type type, function<void(Request&)> callback, int coreid = 0)
+        : is_first_command(true), addr(addr), coreid(coreid), type(type), callback(callback) {}
 
-    Request(){}
+    Request(vector<int>& addr_vec, Type type, function<void(Request&)> callback, int coreid = 0)
+        : is_first_command(true), addr_vec(addr_vec), coreid(coreid), type(type), callback(callback) {}
+
+    Request()
+        : is_first_command(true), coreid(0) {}
 };
 
 } /*namespace ramulator*/

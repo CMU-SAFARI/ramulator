@@ -8,6 +8,23 @@ Processor::Processor(const Config& configs, const char* trace_fname, function<bo
     : send(send), callback(bind(&Processor::receive, this, placeholders::_1)), trace(trace_fname)
 {
     more_reqs = trace.get_request(bubble_cnt, req_addr, req_type);
+
+    // regStats
+    memory_access_cycles.name("memory_access_cycles")
+                        .desc("cycle number in memory clock domain that there is at least one request in the queue of memory controller")
+                        .precision(0)
+                        ;
+    memory_access_cycles = 0;
+    cpu_inst.name("cpu_instructions")
+            .desc("commited cpu instruction number")
+            .precision(0)
+            ;
+    cpu_inst = 0;
+    cpu_cycles.name("cpu_cycles")
+              .desc("CPU cycle of the whole execution")
+              .precision(0)
+              ;
+    cpu_cycles = 0;
 }
 
 
@@ -19,6 +36,7 @@ double Processor::calc_ipc()
 void Processor::tick() 
 {
     clk++;
+    cpu_cycles++;
 
     retired += window.retire();
 
@@ -32,6 +50,7 @@ void Processor::tick()
         window.insert(true, -1);
         inserted++;
         bubble_cnt--;
+        cpu_inst++;
     }
 
     if (req_type == Request::Type::READ) {
@@ -45,6 +64,7 @@ void Processor::tick()
         //cout << "Inserted: " << clk << "\n";
 
         window.insert(false, req_addr);
+        cpu_inst++;
         more_reqs = trace.get_request(bubble_cnt, req_addr, req_type);
         return;
     }
@@ -53,6 +73,7 @@ void Processor::tick()
         assert(req_type == Request::Type::WRITE);
         Request req(req_addr, req_type, callback);
         if (!send(req)) return;
+        cpu_inst++;
     }
 
     more_reqs = trace.get_request(bubble_cnt, req_addr, req_type);
@@ -65,6 +86,10 @@ bool Processor::finished()
 void Processor::receive(Request& req) 
 {
     window.set_ready(req.addr);
+    if (req.arrive != -1 && req.depart > last) {
+      memory_access_cycles += (req.depart - max(last, req.arrive));
+      last = req.depart;
+    }
 }
 
 

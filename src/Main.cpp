@@ -129,16 +129,18 @@ int main(int argc, const char *argv[])
     }
 
     Config configs(argv[1]);
-    const char* file = argv[2];
 
     const std::string& standard = configs["standard"];
     assert(standard != "" || "DRAM standard should be specified.");
 
+    int trace_start = 2;
     if (strcmp(argv[2], "--stats") == 0) {
       Stats::statlist.output(argv[3]);
+      trace_start = 4;
     } else {
       Stats::statlist.output(standard+"stats.txt");
     }
+    const char* file = argv[trace_start];
 
     if (standard == "DDR3") {
       DDR3* ddr3 = new DDR3(configs["org"], configs["speed"]);

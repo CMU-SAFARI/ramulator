@@ -14,6 +14,7 @@
 #include "Refresh.h"
 #include "Request.h"
 #include "Scheduler.h"
+#include "Statistics.h"
 
 using namespace std;
 
@@ -23,6 +24,29 @@ namespace ramulator
 template <typename T>
 class Controller
 {
+protected:
+    // For counting bandwidth
+    ScalarStat read_data_amount;
+    ScalarStat write_data_amount;
+
+    ScalarStat read_row_hit;
+    ScalarStat read_row_miss;
+    ScalarStat read_row_conflict;
+    ScalarStat write_row_hit;
+    ScalarStat write_row_miss;
+    ScalarStat write_row_conflict;
+
+    ScalarStat read_latency_sum;
+    ScalarStat req_queue_length_sum;
+    ScalarStat act_cmd_count;
+    ScalarStat read_act_cmd_count;
+    ScalarStat non_auto_precharge_count;
+    ScalarStat read_non_auto_precharge_count;
+    ScalarStat wait_issue_time_sum;
+    ScalarStat read_wait_issue_time_sum;
+    ScalarStat write_wait_issue_time_sum;
+    ScalarStat read_req_queue_length_sum;
+    ScalarStat write_req_queue_length_sum;
 public:
     /* Member Variables */
     long clk = 0;
@@ -74,6 +98,118 @@ public:
             for (unsigned int i = 0; i < channel->children.size(); i++)
                 cmd_trace_files[i].open(prefix + to_string(i) + suffix);
         }
+
+        // regStats
+
+        read_row_hit
+            .name("read_row_hit_channel_"+to_string(channel->id))
+            .desc("Number of row hits for read request per channel")
+            .precision(0)
+            ;
+        read_row_miss
+            .name("read_row_miss_channel_"+to_string(channel->id))
+            .desc("Number of row misses for read request per channel")
+            .precision(0)
+            ;
+        read_row_conflict
+            .name("read_row_conflict_channel_"+to_string(channel->id))
+            .desc("Number of row conflicts for read request per channel")
+            .precision(0)
+            ;
+
+        write_row_hit
+            .name("write_row_hit_channel_"+to_string(channel->id))
+            .desc("Number of row hits for write request per channel")
+            .precision(0)
+            ;
+        write_row_miss
+            .name("write_row_miss_channel_"+to_string(channel->id))
+            .desc("Number of row misses for write request per channel")
+            .precision(0)
+            ;
+        write_row_conflict
+            .name("write_row_conflict_channel_"+to_string(channel->id))
+            .desc("Number of row conflicts for write request per channel")
+            .precision(0)
+            ;
+
+        read_data_amount
+            .name("read_data_amount_"+to_string(channel->id))
+            .desc("The total read data amount per channel")
+            .precision(0)
+            ;
+        write_data_amount
+            .name("write_data_amount_"+to_string(channel->id))
+            .desc("The total write data amount per channel")
+            .precision(0)
+            ;
+
+        read_latency_sum
+            .name("read_latency_sum_"+to_string(channel->id))
+            .desc("The memory latency sum for all read requests in this channel")
+            .precision(0)
+            ;
+
+        req_queue_length_sum
+            .name("req_queue_length_sum_"+to_string(channel->id))
+            .desc("Sum of read and write queue length per cycle per channel.")
+            .precision(0)
+            ;
+
+        read_req_queue_length_sum
+            .name("read_req_queue_length_sum_"+to_string(channel->id))
+            .desc("Sum of read queue length per cycle per channel.")
+            .precision(0)
+            ;
+
+        write_req_queue_length_sum
+            .name("write_req_queue_length_sum_"+to_string(channel->id))
+            .desc("Sum of write queue length per cycle per channel.")
+            .precision(0)
+            ;
+
+        act_cmd_count
+            .name("act_cmd_count_"+to_string(channel->id))
+            .desc("Number of ACT command per channel")
+            .precision(0)
+            ;
+
+        read_act_cmd_count
+            .name("read_act_cmd_count_"+to_string(channel->id))
+            .desc("Number of ACT command by read request per channel")
+            .precision(0)
+            ;
+
+        non_auto_precharge_count
+            .name("non_auto_precharge_count"+to_string(channel->id))
+            .desc("Number of non auto precharge count per channel")
+            .precision(0)
+            ;
+
+        read_non_auto_precharge_count
+            .name("read_non_auto_precharge_count"+to_string(channel->id))
+            .desc("Number of non auto precharge by read requests per channel")
+            .precision(0)
+            ;
+
+        wait_issue_time_sum
+            .name("wait_issue_time_sum"+to_string(channel->id))
+            .desc("The total time that a R/W request is waiting to be issued per channel.")
+            .precision(0)
+            ;
+
+        read_wait_issue_time_sum
+            .name("read_wait_issue_time_sum"+to_string(channel->id))
+            .desc("The total time that a READ request is waiting to be issued per channel.")
+            .precision(0)
+            ;
+
+        write_wait_issue_time_sum
+            .name("write_wait_issue_time_sum"+to_string(channel->id))
+            .desc("The total time that a WRITE request is waiting to be issued per channel.")
+            .precision(0)
+            ;
+
     }
 
     ~Controller(){
@@ -119,11 +255,20 @@ public:
     void tick()
     {
         clk++;
+        req_queue_length_sum += readq.size() + writeq.size();
+        read_req_queue_length_sum += readq.size();
+        write_req_queue_length_sum += writeq.size();
 
         /*** 1. Serve completed reads ***/
         if (pending.size()) {
             Request& req = pending[0];
             if (req.depart <= clk) {
+                if (req.depart - req.arrive > 1) { // this request really accessed a row
+                  read_latency_sum += req.depart - req.arrive;
+                  channel->update_serving_requests(
+                      req.addr_vec.data(), -1, clk);
+                }
+                // FIXME update req.depart with clk?
                 req.callback(req);
                 pending.pop_front();
             }
@@ -160,8 +305,52 @@ public:
             return;  // nothing more to be done this cycle
         }
 
+        if (req->is_first_command) {
+            req->is_first_command = false;
+            if (req->type == Request::Type::READ || req->type == Request::Type::WRITE) {
+              wait_issue_time_sum += clk - req->arrive;
+              if (req->type == Request::Type::READ) {
+                read_wait_issue_time_sum += clk - req->arrive;
+              } else {
+                write_wait_issue_time_sum += clk - req->arrive;
+              }
+              channel->update_serving_requests(req->addr_vec.data(), 1, clk);
+            }
+            int tx = (channel->spec->prefetch_size * channel->spec->channel_width / 8);
+            if (req->type == Request::Type::READ) {
+                if (is_row_hit(req)) {
+                    ++read_row_hit;
+                } else if (is_row_open(req)) {
+                    ++read_row_conflict;
+                } else {
+                    ++read_row_miss;
+                }
+              read_data_amount += tx;
+            } else if (req->type == Request::Type::WRITE) {
+              if (is_row_hit(req)) {
+                  ++write_row_hit;
+              } else if (is_row_open(req)) {
+                  ++write_row_conflict;
+              } else {
+                  ++write_row_miss;
+              }
+              write_data_amount += tx;
+            }
+        }
+
         // issue command on behalf of request
         auto cmd = get_first_cmd(req);
+        if (cmd == T::Command::PRE) {
+          non_auto_precharge_count++;
+          if (req->type == Request::Type::READ) {
+            read_non_auto_precharge_count++;
+          }
+        } else if (cmd == T::Command::ACT) {
+          act_cmd_count++;
+          if (req->type == Request::Type::READ) {
+            read_act_cmd_count++;
+          }
+        }
         issue_cmd(cmd, get_addr_vec(cmd, req));
 
         // check whether this is the last command (which finishes the request)
@@ -172,6 +361,10 @@ public:
         if (req->type == Request::Type::READ) {
             req->depart = clk + channel->spec->read_latency;
             pending.push_back(*req);
+        }
+
+        if (req->type == Request::Type::WRITE) {
+            channel->update_serving_requests(req->addr_vec.data(), -1, clk);
         }
 
         // remove request from queue
@@ -189,8 +382,42 @@ public:
         return channel->check(cmd, addr_vec.data(), clk);
     }
 
+    bool is_row_hit(list<Request>::iterator req)
+    {
+        // cmd must be decided by the request type, not the first cmd
+        typename T::Command cmd = channel->spec->translate[int(req->type)];
+        return channel->check_row_hit(cmd, req->addr_vec.data());
+    }
+
+    bool is_row_hit(typename T::Command cmd, const vector<int>& addr_vec)
+    {
+        return channel->check_row_hit(cmd, addr_vec.data());
+    }
+
+    bool is_row_open(list<Request>::iterator req)
+    {
+        // cmd must be decided by the request type, not the first cmd
+        typename T::Command cmd = channel->spec->translate[int(req->type)];
+        return channel->check_row_open(cmd, req->addr_vec.data());
+    }
+
+    bool is_row_open(typename T::Command cmd, const vector<int>& addr_vec)
+    {
+        return channel->check_row_open(cmd, addr_vec.data());
+    }
+
     void update_temp(ALDRAM::Temp current_temperature)
     {
+    }
+
+    // For telling whether this channel is busying in processing read or write
+    bool is_active() {
+      return (channel->cur_serving_requests > 0);
+    }
+
+    // For telling whether this channel is under refresh
+    bool is_refresh() {
+      return clk <= channel->end_of_refreshing;
     }
 
 private:
