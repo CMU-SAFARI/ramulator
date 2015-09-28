@@ -24,8 +24,8 @@ class SpeedyController
 // Not For SALP-2
 {
 protected:
-  ScalarStat row_hit;
-  ScalarStat row_miss;
+  ScalarStat row_hits;
+  ScalarStat row_misses;
 private:
     class compair_depart_clk{
     public:
@@ -77,13 +77,13 @@ public:
 
         // regStats
 
-        row_hit
-            .name("row_hit_channel_"+to_string(channel->id))
+        row_hits
+            .name("row_hits_channel_"+to_string(channel->id))
             .desc("Number of row hits")
             .precision(0)
             ;
-        row_miss
-            .name("row_miss_channel_"+to_string(channel->id))
+        row_misses
+            .name("row_misses_channel_"+to_string(channel->id))
             .desc("Number of row misses")
             .precision(0)
             ;
@@ -172,7 +172,7 @@ public:
     bool is_row_hit(Request& req)
     {
         typename T::Command cmd = get_first_cmd(req);
-        return channel->check_row_hit(cmd, req.addr_vec.data());
+        return channel->check_row_hits(cmd, req.addr_vec.data());
     }
 
 private:
@@ -230,9 +230,9 @@ private:
             req.is_first_command = false;
             if (req.type == Request::Type::READ || req.type == Request::Type::WRITE) {
                 if (is_row_hit(req))
-                    ++row_hit;
+                    ++row_hits;
                 else
-                    ++row_miss;
+                    ++row_misses;
             }
         }
 

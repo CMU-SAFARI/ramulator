@@ -26,26 +26,27 @@ class Controller
 {
 protected:
     // For counting bandwidth
-    ScalarStat read_data_amount;
-    ScalarStat write_data_amount;
+    ScalarStat read_transaction_byte;
+    ScalarStat write_transaction_byte;
 
-    ScalarStat read_row_hit;
-    ScalarStat read_row_miss;
-    ScalarStat read_row_conflict;
-    ScalarStat write_row_hit;
-    ScalarStat write_row_miss;
-    ScalarStat write_row_conflict;
+    ScalarStat row_hits;
+    ScalarStat row_misses;
+    ScalarStat row_conflicts;
+    ScalarStat read_row_hits;
+    ScalarStat read_row_misses;
+    ScalarStat read_row_conflicts;
+    ScalarStat write_row_hits;
+    ScalarStat write_row_misses;
+    ScalarStat write_row_conflicts;
 
+    ScalarStat read_latency_avg;
     ScalarStat read_latency_sum;
+
+    ScalarStat req_queue_length_avg;
     ScalarStat req_queue_length_sum;
-    ScalarStat act_cmd_count;
-    ScalarStat read_act_cmd_count;
-    ScalarStat non_auto_precharge_count;
-    ScalarStat read_non_auto_precharge_count;
-    ScalarStat wait_issue_time_sum;
-    ScalarStat read_wait_issue_time_sum;
-    ScalarStat write_wait_issue_time_sum;
+    ScalarStat read_req_queue_length_avg;
     ScalarStat read_req_queue_length_sum;
+    ScalarStat write_req_queue_length_avg;
     ScalarStat write_req_queue_length_sum;
 public:
     /* Member Variables */
@@ -101,113 +102,107 @@ public:
 
         // regStats
 
-        read_row_hit
-            .name("read_row_hit_channel_"+to_string(channel->id))
-            .desc("Number of row hits for read request per channel")
+        row_hits
+            .name("row_hits_channel_"+to_string(channel->id))
+            .desc("Number of row hits per channel")
             .precision(0)
             ;
-        read_row_miss
-            .name("read_row_miss_channel_"+to_string(channel->id))
-            .desc("Number of row misses for read request per channel")
+        row_misses
+            .name("row_misses_channel_"+to_string(channel->id))
+            .desc("Number of row misses per channel")
             .precision(0)
             ;
-        read_row_conflict
-            .name("read_row_conflict_channel_"+to_string(channel->id))
-            .desc("Number of row conflicts for read request per channel")
-            .precision(0)
-            ;
-
-        write_row_hit
-            .name("write_row_hit_channel_"+to_string(channel->id))
-            .desc("Number of row hits for write request per channel")
-            .precision(0)
-            ;
-        write_row_miss
-            .name("write_row_miss_channel_"+to_string(channel->id))
-            .desc("Number of row misses for write request per channel")
-            .precision(0)
-            ;
-        write_row_conflict
-            .name("write_row_conflict_channel_"+to_string(channel->id))
-            .desc("Number of row conflicts for write request per channel")
+        row_conflicts
+            .name("row_conflicts_channel_"+to_string(channel->id))
+            .desc("Number of row conflicts per channel")
             .precision(0)
             ;
 
-        read_data_amount
-            .name("read_data_amount_"+to_string(channel->id))
-            .desc("The total read data amount per channel")
+        read_row_hits
+            .name("read_row_hits_channel_"+to_string(channel->id))
+            .desc("Number of row hits for read requests per channel")
             .precision(0)
             ;
-        write_data_amount
-            .name("write_data_amount_"+to_string(channel->id))
-            .desc("The total write data amount per channel")
+        read_row_misses
+            .name("read_row_misses_channel_"+to_string(channel->id))
+            .desc("Number of row misses for read requests per channel")
+            .precision(0)
+            ;
+        read_row_conflicts
+            .name("read_row_conflicts_channel_"+to_string(channel->id))
+            .desc("Number of row conflicts for read requests per channel")
+            .precision(0)
+            ;
+
+        write_row_hits
+            .name("write_row_hits_channel_"+to_string(channel->id))
+            .desc("Number of row hits for write requests per channel")
+            .precision(0)
+            ;
+        write_row_misses
+            .name("write_row_misses_channel_"+to_string(channel->id))
+            .desc("Number of row misses for write requests per channel")
+            .precision(0)
+            ;
+        write_row_conflicts
+            .name("write_row_conflicts_channel_"+to_string(channel->id))
+            .desc("Number of row conflicts for write requests per channel")
+            .precision(0)
+            ;
+
+        read_transaction_byte
+            .name("read_transaction_byte_"+to_string(channel->id))
+            .desc("The total byte of read transaction per channel")
+            .precision(0)
+            ;
+        write_transaction_byte
+            .name("write_transaction_byte_"+to_string(channel->id))
+            .desc("The total byte of write transaction per channel")
             .precision(0)
             ;
 
         read_latency_sum
             .name("read_latency_sum_"+to_string(channel->id))
-            .desc("The memory latency sum for all read requests in this channel")
+            .desc("The memory latency cycles (in memory time domain) sum for all read requests in this channel")
             .precision(0)
+            ;
+        read_latency_avg
+            .name("read_latency_avg_"+to_string(channel->id))
+            .desc("The average memory latency cycles (in memory time domain) per request for all read requests in this channel")
+            .precision(6)
             ;
 
         req_queue_length_sum
             .name("req_queue_length_sum_"+to_string(channel->id))
-            .desc("Sum of read and write queue length per cycle per channel.")
+            .desc("Sum of read and write queue length per memory cycle per channel.")
             .precision(0)
+            ;
+        req_queue_length_avg
+            .name("req_queue_length_avg_"+to_string(channel->id))
+            .desc("Average of read and write queue length per memory cycle per channel.")
+            .precision(6)
             ;
 
         read_req_queue_length_sum
             .name("read_req_queue_length_sum_"+to_string(channel->id))
-            .desc("Sum of read queue length per cycle per channel.")
+            .desc("Read queue length sum per memory cycle per channel.")
             .precision(0)
+            ;
+        read_req_queue_length_avg
+            .name("read_req_queue_length_avg_"+to_string(channel->id))
+            .desc("Read queue length average per memory cycle per channel.")
+            .precision(6)
             ;
 
         write_req_queue_length_sum
             .name("write_req_queue_length_sum_"+to_string(channel->id))
-            .desc("Sum of write queue length per cycle per channel.")
+            .desc("Write queue length sum per memory cycle per channel.")
             .precision(0)
             ;
-
-        act_cmd_count
-            .name("act_cmd_count_"+to_string(channel->id))
-            .desc("Number of ACT command per channel")
-            .precision(0)
-            ;
-
-        read_act_cmd_count
-            .name("read_act_cmd_count_"+to_string(channel->id))
-            .desc("Number of ACT command by read request per channel")
-            .precision(0)
-            ;
-
-        non_auto_precharge_count
-            .name("non_auto_precharge_count"+to_string(channel->id))
-            .desc("Number of non auto precharge count per channel")
-            .precision(0)
-            ;
-
-        read_non_auto_precharge_count
-            .name("read_non_auto_precharge_count"+to_string(channel->id))
-            .desc("Number of non auto precharge by read requests per channel")
-            .precision(0)
-            ;
-
-        wait_issue_time_sum
-            .name("wait_issue_time_sum"+to_string(channel->id))
-            .desc("The total time that a R/W request is waiting to be issued per channel.")
-            .precision(0)
-            ;
-
-        read_wait_issue_time_sum
-            .name("read_wait_issue_time_sum"+to_string(channel->id))
-            .desc("The total time that a READ request is waiting to be issued per channel.")
-            .precision(0)
-            ;
-
-        write_wait_issue_time_sum
-            .name("write_wait_issue_time_sum"+to_string(channel->id))
-            .desc("The total time that a WRITE request is waiting to be issued per channel.")
-            .precision(0)
+        write_req_queue_length_avg
+            .name("write_req_queue_length_avg_"+to_string(channel->id))
+            .desc("Write queue length average per memory cycle per channel.")
+            .precision(6)
             ;
 
     }
@@ -221,6 +216,15 @@ public:
         for (auto& file : cmd_trace_files)
             file.close();
         cmd_trace_files.clear();
+    }
+
+    void finish(int read_req, int write_req, int dram_cycles) {
+      read_latency_avg = read_latency_sum.value() / read_req;
+      req_queue_length_avg = req_queue_length_sum.value() / dram_cycles;
+      read_req_queue_length_avg = read_req_queue_length_sum.value() / dram_cycles;
+      write_req_queue_length_avg = write_req_queue_length_sum.value() / dram_cycles;
+      // call finish function of each channel
+      channel->finish(dram_cycles);
     }
 
     /* Member Functions */
@@ -308,49 +312,38 @@ public:
         if (req->is_first_command) {
             req->is_first_command = false;
             if (req->type == Request::Type::READ || req->type == Request::Type::WRITE) {
-              wait_issue_time_sum += clk - req->arrive;
-              if (req->type == Request::Type::READ) {
-                read_wait_issue_time_sum += clk - req->arrive;
-              } else {
-                write_wait_issue_time_sum += clk - req->arrive;
-              }
               channel->update_serving_requests(req->addr_vec.data(), 1, clk);
             }
             int tx = (channel->spec->prefetch_size * channel->spec->channel_width / 8);
             if (req->type == Request::Type::READ) {
                 if (is_row_hit(req)) {
-                    ++read_row_hit;
+                    ++read_row_hits;
+                    ++row_hits;
                 } else if (is_row_open(req)) {
-                    ++read_row_conflict;
+                    ++read_row_conflicts;
+                    ++row_conflicts;
                 } else {
-                    ++read_row_miss;
+                    ++read_row_misses;
+                    ++row_misses;
                 }
-              read_data_amount += tx;
+              read_transaction_byte += tx;
             } else if (req->type == Request::Type::WRITE) {
               if (is_row_hit(req)) {
-                  ++write_row_hit;
+                  ++write_row_hits;
+                  ++row_hits;
               } else if (is_row_open(req)) {
-                  ++write_row_conflict;
+                  ++write_row_conflicts;
+                  ++row_conflicts;
               } else {
-                  ++write_row_miss;
+                  ++write_row_misses;
+                  ++row_misses;
               }
-              write_data_amount += tx;
+              write_transaction_byte += tx;
             }
         }
 
         // issue command on behalf of request
         auto cmd = get_first_cmd(req);
-        if (cmd == T::Command::PRE) {
-          non_auto_precharge_count++;
-          if (req->type == Request::Type::READ) {
-            read_non_auto_precharge_count++;
-          }
-        } else if (cmd == T::Command::ACT) {
-          act_cmd_count++;
-          if (req->type == Request::Type::READ) {
-            read_act_cmd_count++;
-          }
-        }
         issue_cmd(cmd, get_addr_vec(cmd, req));
 
         // check whether this is the last command (which finishes the request)

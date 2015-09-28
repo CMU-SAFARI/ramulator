@@ -44,15 +44,17 @@ protected:
   ScalarStat num_read_requests;
   ScalarStat num_write_requests;
   ScalarStat ramulator_active_cycles;
-  ScalarStat ramulator_refresh_cycles;
-  ScalarStat ramulator_busy_cycles;
   VectorStat incoming_requests_per_channel;
+  VectorStat incoming_read_reqs_per_channel;
+  VectorStat incoming_write_reqs_per_channel;
 
-  ScalarStat physical_page_replacement;
   ScalarStat maximum_bandwidth;
   ScalarStat in_queue_req_num_sum;
   ScalarStat in_queue_read_req_num_sum;
   ScalarStat in_queue_write_req_num_sum;
+  ScalarStat in_queue_req_num_avg;
+  ScalarStat in_queue_read_req_num_avg;
+  ScalarStat in_queue_write_req_num_avg;
 
   long max_address;
 public:
@@ -128,24 +130,20 @@ public:
             .name("incoming_requests_per_channel")
             .desc("Number of incoming requests to each DRAM channel")
             ;
+        incoming_read_reqs_per_channel
+            .init(sz[int(T::Level::Channel)])
+            .name("incoming_read_reqs_per_channel")
+            .desc("Number of incoming read requests to each DRAM channel")
+            ;
+        incoming_write_reqs_per_channel
+            .init(sz[int(T::Level::Channel)])
+            .name("incoming_write_reqs_per_channel")
+            .desc("Number of incoming write requests to each DRAM channel")
+            ;
+
         ramulator_active_cycles
             .name("ramulator_active_cycles")
             .desc("The total number of cycles that the DRAM part is active (serving R/W)")
-            .precision(0)
-            ;
-        ramulator_refresh_cycles
-            .name("ramulator_refresh_cycles")
-            .desc("The total number of cycles that the DRAM part is under refresh")
-            .precision(0)
-            ;
-        ramulator_busy_cycles
-            .name("ramulator_busy_cycles")
-            .desc("The total number of cycles that the DRAM part is active or under refresh")
-            .precision(0)
-            ;
-        physical_page_replacement
-            .name("physical_page_replacement")
-            .desc("The number of times that physical page replacement happens.")
             .precision(0)
             ;
         maximum_bandwidth
@@ -168,6 +166,21 @@ public:
             .desc("Sum of write queue length")
             .precision(0)
             ;
+        in_queue_req_num_avg
+            .name("in_queue_req_num_avg")
+            .desc("Average of read/write queue length per memory cycle")
+            .precision(6)
+            ;
+        in_queue_read_req_num_avg
+            .name("in_queue_read_req_num_avg")
+            .desc("Average of read queue length per memory cycle")
+            .precision(6)
+            ;
+        in_queue_write_req_num_avg
+            .name("in_queue_write_req_num_avg")
+            .desc("Average of write queue length per memory cycle")
+            .precision(6)
+            ;
 
     }
 
@@ -188,20 +201,12 @@ public:
         ++num_dram_cycles;
 
         bool is_active = false;
-        bool is_refresh = false;
         for (auto ctrl : ctrls) {
           is_active = is_active || ctrl->is_active();
-          is_refresh = is_refresh || ctrl->is_refresh();
           ctrl->tick();
         }
         if (is_active) {
           ramulator_active_cycles++;
-        }
-        if (is_refresh) {
-          ramulator_refresh_cycles++;
-        }
-        if (is_active || is_refresh) {
-          ramulator_busy_cycles++;
         }
         int cur_req_num = 0;
         int cur_que_req_num = 0;
@@ -245,9 +250,11 @@ public:
             ++num_incoming_requests;
             if (req.type == Request::Type::READ) {
               ++num_read_requests;
+              ++incoming_read_reqs_per_channel[req.addr_vec[int(T::Level::Channel)]];
             }
             if (req.type == Request::Type::WRITE) {
               ++num_write_requests;
+              ++incoming_write_reqs_per_channel[req.addr_vec[int(T::Level::Channel)]];
             }
             ++incoming_requests_per_channel[req.addr_vec[int(T::Level::Channel)]];
             return true;
@@ -268,6 +275,17 @@ public:
       dram_capacity = max_address;
       int *sz = spec->org_entry.count;
       maximum_bandwidth = spec->speed_entry.rate * 1e6 * spec->channel_width * sz[int(T::Level::Channel)] / 8;
+      int dram_cycles = num_dram_cycles.value();
+      for (auto ctrl : ctrls) {
+        int read_reqs = int(incoming_read_reqs_per_channel[ctrl->channel->id].value());
+        int write_reqs = int(incoming_write_reqs_per_channel[ctrl->channel->id].value());
+        ctrl->finish(read_reqs, write_reqs, dram_cycles);
+      }
+
+      // finalize average queueing requests
+      in_queue_req_num_avg = in_queue_req_num_sum.value() / dram_cycles;
+      in_queue_read_req_num_avg = in_queue_read_req_num_sum.value() / dram_cycles;
+      in_queue_write_req_num_avg = in_queue_write_req_num_sum.value() / dram_cycles;
     }
 
 private:

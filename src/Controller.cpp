@@ -54,11 +54,19 @@ void Controller<ALDRAM>::update_temp(ALDRAM::Temp current_temperature){
 template <>
 void Controller<TLDRAM>::tick(){
     clk++;
+    req_queue_length_sum += readq.size() + writeq.size();
+    read_req_queue_length_sum += readq.size();
+    write_req_queue_length_sum += writeq.size();
 
     /*** 1. Serve completed reads ***/
     if (pending.size()) {
         Request& req = pending[0];
         if (req.depart <= clk) {
+          if (req.depart - req.arrive > 1) {
+                  read_latency_sum += req.depart - req.arrive;
+                  channel->update_serving_requests(
+                      req.addr_vec.data(), -1, clk);
+          }
             req.callback(req);
             pending.pop_front();
         }
@@ -95,6 +103,39 @@ void Controller<TLDRAM>::tick(){
         return;  // nothing more to be done this cycle
     }
 
+    if (req->is_first_command) {
+        req->is_first_command = false;
+        if (req->type == Request::Type::READ || req->type == Request::Type::WRITE) {
+          channel->update_serving_requests(req->addr_vec.data(), 1, clk);
+        }
+        int tx = (channel->spec->prefetch_size * channel->spec->channel_width / 8);
+        if (req->type == Request::Type::READ) {
+            if (is_row_hit(req)) {
+                ++read_row_hits;
+                ++row_hits;
+            } else if (is_row_open(req)) {
+                ++read_row_conflicts;
+                ++row_conflicts;
+            } else {
+                ++read_row_misses;
+                ++row_misses;
+            }
+          read_transaction_byte += tx;
+        } else if (req->type == Request::Type::WRITE) {
+          if (is_row_hit(req)) {
+              ++write_row_hits;
+              ++row_hits;
+          } else if (is_row_open(req)) {
+              ++write_row_conflicts;
+              ++row_conflicts;
+          } else {
+              ++write_row_misses;
+              ++row_misses;
+          }
+          write_transaction_byte += tx;
+        }
+    }
+
     /*** 5. Change a read request to a migration request ***/
     if (req->type == Request::Type::READ) {
         req->type = Request::Type::EXTENSION;
@@ -112,6 +153,9 @@ void Controller<TLDRAM>::tick(){
     if (req->type == Request::Type::READ || req->type == Request::Type::EXTENSION) {
         req->depart = clk + channel->spec->read_latency;
         pending.push_back(*req);
+    }
+    if (req->type == Request::Type::WRITE) {
+        channel->update_serving_requests(req->addr_vec.data(), -1, clk);
     }
 
     // remove request from queue

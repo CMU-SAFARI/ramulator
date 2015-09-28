@@ -41,6 +41,7 @@ public:
         for (int c = 0; c < channels; c++){
             DRAM<T>* channel = new DRAM<T>(spec, T::Level::Channel);
             channel->id = c;
+            channel->regStats("");
             ctrls.push_back(new Controller<T>(configs, channel));
         }
         return new Memory<T>(configs, ctrls);
