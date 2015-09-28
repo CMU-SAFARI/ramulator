@@ -8,6 +8,9 @@
 #include "Config.h"
 #include "Memory.h"
 
+#include "WideIO2.h"
+#include "SALP.h"
+
 using namespace std;
 
 namespace ramulator
@@ -68,6 +71,11 @@ public:
         return (MemoryBase *)populate_memory(configs, spec, channels, ranks);
     }
 };
+
+template <>
+MemoryBase *MemoryFactory<WideIO2>::create(const Config& configs, int cacheline);
+template <>
+MemoryBase *MemoryFactory<SALP>::create(const Config& configs, int cacheline);
 
 } /*namespace ramulator*/
 
