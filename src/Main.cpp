@@ -151,8 +151,8 @@ int main(int argc, const char *argv[])
       stats_out = argv[4];
       trace_start = 5;
     } else {
-      Stats::statlist.output(standard+"stats.txt");
-      stats_out = standard + string("stats.txt");
+      Stats::statlist.output(standard+".stats");
+      stats_out = standard + string(".stats");
     }
     const char* file = argv[trace_start];
 

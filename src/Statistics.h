@@ -38,8 +38,6 @@
   All of the stats that you create will be named "ramulator.<your name>"
   automatically, and will be dumped at the end of simulation into the gem5
   stats file.
-
-  -SAUGATA
 */
 
 namespace ramulator {

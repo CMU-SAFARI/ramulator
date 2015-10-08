@@ -1,6 +1,7 @@
 #ifndef __SPEEDYCONTROLLER_H
 #define __SPEEDYCONTROLLER_H
 
+#include "Config.h"
 #include "DRAM.h"
 #include "Request.h"
 #include "Statistics.h"
@@ -62,9 +63,11 @@ public:
     long refreshed = 0;  // last time refresh requests were generated
 
     /* Constructor */
-    SpeedyController(DRAM<T>* channel) :
+    SpeedyController(const Config& configs, DRAM<T>* channel) :
         channel(channel)
     {
+        record_cmd_trace = configs.record_cmd_trace();
+        print_cmd_trace = configs.print_cmd_trace();
         if (record_cmd_trace){
             string prefix = cmd_trace_prefix + "chan-" + to_string(channel->id) + "-rank-";
             string suffix = ".cmdtrace";
