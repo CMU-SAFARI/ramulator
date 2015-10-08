@@ -40,6 +40,15 @@ public:
         return false;
       }
     }
+
+    void add (const std::string& name, const std::string& value) {
+      if (!contains(name)) {
+        options.insert(make_pair(name, value));
+      } else {
+        printf("ramulator::Config::add options[%s] already set.\n", name.c_str());
+      }
+    }
+
     int get_channels() const {return channels;}
     int get_subarrays() const {return subarrays;}
     int get_ranks() const {return ranks;}

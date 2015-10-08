@@ -123,7 +123,7 @@ void start_run(const Config& configs, T* spec, const char* file) {
 int main(int argc, const char *argv[])
 {
     if (argc < 2) {
-        printf("Usage: %s <configs-file> [--stats <filename>] <trace-filename>\n"
+        printf("Usage: %s <configs-file> --mode=cpu,dram [--stats <filename>] <trace-filename>\n"
             "Example: %s ramulator-configs.cfg cpu.trace\n", argv[0], argv[0]);
         return 0;
     }
@@ -133,12 +133,26 @@ int main(int argc, const char *argv[])
     const std::string& standard = configs["standard"];
     assert(standard != "" || "DRAM standard should be specified.");
 
-    int trace_start = 2;
-    if (strcmp(argv[2], "--stats") == 0) {
-      Stats::statlist.output(argv[3]);
-      trace_start = 4;
+    char *trace_type = strstr(argv[2], "=");
+    trace_type++;
+    if (strcmp(trace_type, "cpu") == 0) {
+      configs.add("trace_type", "CPU");
+    } else if (strcmp(trace_type, "mem") == 0) {
+      configs.add("trace_type", "DRAM");
+    } else {
+      printf("invalid trace type: %s\n", trace_type);
+      assert(false);
+    }
+
+    int trace_start = 3;
+    string stats_out;
+    if (strcmp(argv[3], "--stats") == 0) {
+      Stats::statlist.output(argv[4]);
+      stats_out = argv[4];
+      trace_start = 5;
     } else {
       Stats::statlist.output(standard+"stats.txt");
+      stats_out = standard + string("stats.txt");
     }
     const char* file = argv[trace_start];
 
@@ -185,6 +199,8 @@ int main(int argc, const char *argv[])
       TLDRAM* tldram = new TLDRAM(configs["org"], configs["speed"], configs.get_subarrays());
       start_run(configs, tldram, file);
     }
+
+    printf("Simulation done. Statistics written to %s\n", stats_out.c_str());
 
     return 0;
 }
