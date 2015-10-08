@@ -53,32 +53,14 @@ power consumption by relying on DRAMPower \[7\] as the backend.
 
 Ramulator requires a C++11 compiler (e.g., `clang++`, `g++-5`).
 
-1. **Memory-Trace Driven**
+1. **Standalone Version (Memory-Trace Driven or CPU-Trace Driven)**
 
         $ cd ramulator
-        $ make -j ramulator-dramtrace
-        $ ./ramulator-dramtrace dram.trace 1 1  # 1 channel, 1 rank (default: DDR3)
-        Simulation done 51 clocks [63.750ns], 3 reads [2.805 GB/s], 2 writes [1.870 GB/s]
-        # NOTE: dram.trace is a very short trace file provided only as an example.
-
-2. **CPU-Trace Driven**
-
-        $ cd ramulator
-        $ make -j ramulator-cputrace
-        $ ./ramulator-cputrace cpu.trace  # Report normalized IPC for all supported standards (baseline: DDR3)
-              DDR3: 1.00000
-              DDR4: 1.13072
-              SALP: 0.91534
-            LPDDR3: 0.79724
-            LPDDR4: 0.71784
-             GDDR5: 1.28148
-               HBM: 1.07453
-            WideIO: 0.65038
-           WideIO2: 0.95580
-             DSARP: 0.90104
-            ALDRAM: 0.91534
-            TLDRAM: 1.02367
-        # NOTE: cpu.trace is a very short trace file provided only as an example.
+        $ make -j
+        $ ./ramulator configs/standalone/DDR3-config.cfg cpu.trace # trace type, memory specification, etc. are specified in config file.
+        # ./ramulator configs/standalone/DDR3-config.cfg --stats stats.txt cpu.trace (specify your own target of statistics output)
+        # NOTE: cpu.trace and dram.trace are two very short trace files provided only as examples.
+        # NOTE: please refer to configuration files in `configs/standalone` as examples. CPU-Trace driven mode needs more arguments configured, which are marked in comments. Gem5 driven mode can share the same config file as Memory-Trace driven mode.
 
 3. **Gem5 Driven**
 
@@ -94,6 +76,96 @@ Ramulator requires a C++11 compiler (e.g., `clang++`, `g++-5`).
         # Compile gem5
         # Run gem5 with --mem-type=ramulator and --ramulator-config=DDR3
 
+## Statistics
+
+Ramulator supports adding statistics in the same way as gem5. Currently supported statistics type are:
+
+  * `ScalarStat`
+  * `VectorStat`
+  * `AverageStat` (TODO: `print` function)
+  * `AverageVectorStat` (TODO: `print` function)
+  * `DistributionStat` (TODO: `print` function)
+  * `HistogramStat` (TODO: `print` function)
+  * `StandardDeviation` (TODO: `print` function)
+  * `AverageDeviation` (TODO: `print` function)
+
+You can specify the output file for statistics in command line arguments, or use the default name `STANDARDNAMEstats.txt` (e.g. `DDR3stats.txt`)
+
+**NOTE**: When implementing your own statistics in ramulator, please avoid generating redundant copy of a statistics object. Don't placing statistics object in STL containers that will adjust the size automatically (e.g, vector), which will cause duplicate statistics printed in the output file.
+
+### Currently implemented statistics list (further information is in the `desc` attribute):
+
+`src/Controller.h`:
+
+```c++
+ScalarStat read_transaction_byte;
+ScalarStat write_transaction_byte;
+ScalarStat row_hits;
+ScalarStat row_misses;
+ScalarStat row_conflicts;
+ScalarStat read_row_hits;
+ScalarStat read_row_misses;
+ScalarStat read_row_conflicts;
+ScalarStat write_row_hits;
+ScalarStat write_row_misses;
+ScalarStat write_row_conflicts;
+ScalarStat read_latency_avg;
+ScalarStat read_latency_sum;
+ScalarStat req_queue_length_avg;
+ScalarStat req_queue_length_sum;
+ScalarStat read_req_queue_length_avg;
+ScalarStat read_req_queue_length_sum;
+ScalarStat write_req_queue_length_avg;
+ScalarStat write_req_queue_length_sum;
+```
+
+`src/DRAM.h`:
+
+```c++
+ScalarStat active_cycles;
+ScalarStat refresh_cycles;
+ScalarStat busy_cycles;
+ScalarStat active_refresh_overlap_cycles;
+ScalarStat serving_requests;
+ScalarStat average_serving_requests;
+```
+
+`src/Memory.h`:
+
+```c++
+ScalarStat dram_capacity;
+ScalarStat num_dram_cycles;
+ScalarStat num_incoming_requests;
+ScalarStat num_read_requests;
+ScalarStat num_write_requests;
+ScalarStat ramulator_active_cycles;
+ScalarStat maximum_bandwidth;
+ScalarStat in_queue_req_num_sum;
+ScalarStat in_queue_read_req_num_sum;
+ScalarStat in_queue_write_req_num_sum;
+ScalarStat in_queue_req_num_avg;
+ScalarStat in_queue_read_req_num_avg;
+ScalarStat in_queue_write_req_num_avg;
+
+VectorStat incoming_requests_per_channel;
+VectorStat incoming_read_reqs_per_channel;
+VectorStat incoming_write_reqs_per_channel;
+```
+
+`src/Processor.h`:
+
+```c++
+ScalarStat memory_access_cycles;
+ScalarStat cpu_inst;
+ScalarStat cpu_cycles;
+```
+
+`src/SpeedyController.h`:
+
+```c++
+ScalarStat row_hits;
+ScalarStat row_misses;
+```
 
 ## Reproducing Results from Paper (Kim et al. \[1\])
 
