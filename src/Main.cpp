@@ -123,7 +123,7 @@ void start_run(const Config& configs, T* spec, const char* file) {
 int main(int argc, const char *argv[])
 {
     if (argc < 2) {
-        printf("Usage: %s <configs-file> [--stats <filename>] <cpu-trace-core>\n"
+        printf("Usage: %s <configs-file> [--stats <filename>] <trace-filename>\n"
             "Example: %s ramulator-configs.cfg cpu.trace\n", argv[0], argv[0]);
         return 0;
     }
