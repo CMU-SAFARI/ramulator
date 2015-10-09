@@ -99,6 +99,12 @@ public:
     }
 
     /* Member Functions */
+
+    void finish(int read_req, int write_req, int dram_cycles) {
+      // call finish function of each channel
+      channel->finish(dram_cycles);
+    }
+
     bool enqueue(Request& req)
     {
         request_queue& q =
@@ -175,7 +181,7 @@ public:
     bool is_row_hit(Request& req)
     {
         typename T::Command cmd = get_first_cmd(req);
-        return channel->check_row_hits(cmd, req.addr_vec.data());
+        return channel->check_row_hit(cmd, req.addr_vec.data());
     }
 
 private:
