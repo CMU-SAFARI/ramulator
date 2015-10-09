@@ -25,12 +25,13 @@ class Ramulator(Sim):
   def __init__(self):
     super(Ramulator, self).__init__('Ramulator', 'ramulator')
   def argv(self, trc):
-    return ['./ramulator-dramtrace', trc]
+    return ['./ramulator', 'configs/DDR3-config.cfg', '--mode=mem', trc]
   def parse_clk(self, stdout):
+    stdout = open("DDR3.stats")
     stdout.seek(0)
     for l in stdout.readlines():
-      if l.startswith('Simulation done'):
-        return int(l.split()[2])
+      if 'ramulator.dram_cycles' in l:
+        return int(l.split()[1])
 
 class DRAMSim2(Sim):
   def __init__(self):
@@ -133,7 +134,7 @@ def main(n_reqs, rw, rec):
   for f in tmps.itervalues():
     f.file.seek(0)
   traces.append(tmps)
-  print 'Ramdom trace created'
+  print 'Random trace created'
 
   tmps = {name: tempfile.NamedTemporaryFile() for name in trace_names}
   gen_stream(make_cb(tmps), n_reqs, rw)
