@@ -133,7 +133,7 @@ int main(int argc, const char *argv[])
     const std::string& standard = configs["standard"];
     assert(standard != "" || "DRAM standard should be specified.");
 
-    char *trace_type = strstr(argv[2], "=");
+    const char *trace_type = strstr(argv[2], "=");
     trace_type++;
     if (strcmp(trace_type, "cpu") == 0) {
       configs.add("trace_type", "CPU");
