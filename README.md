@@ -74,10 +74,10 @@ Ramulator requires a C++11 compiler (e.g., `clang++`, `g++-5`).
 
         $ cd ramulator
         $ make -j
-        $ ./ramulator --mode=dram configs/DDR3-config.cfg dram.trace
+        $ ./ramulator configs/DDR3-config.cfg --mode=mem dram.trace
         Simulation done. Statistics written to DDR3.stats
         # NOTE: dram.trace is a very short trace file provided only as an example.
-        $ ./ramulator --mode=dram --stats my_output.txt configs/DDR3-config.cfg dram.trace
+        $ ./ramulator configs/DDR3-config.cfg --mode=mem --stats my_output.txt dram.trace
         Simulation done. Statistics written to my_output.txt
         # NOTE: optional --stats flag changes the statistics output filename
 
@@ -85,10 +85,10 @@ Ramulator requires a C++11 compiler (e.g., `clang++`, `g++-5`).
 
         $ cd ramulator
         $ make -j
-        $ ./ramulator --mode=cpu configs/DDR3-config.cfg cpu.trace
+        $ ./ramulator configs/DDR3-config.cfg --mode=cpu cpu.trace
         Simulation done. Statistics written to DDR3.stats
         # NOTE: cpu.trace is a very short trace file provided only as an example.
-        $ ./ramulator --mode=cpu --stats my_output.txt configs/DDR3-config.cfg cpu.trace
+        $ ./ramulator configs/DDR3-config.cfg --mode=cpu --stats my_output.txt cpu.trace
         Simulation done. Statistics written to my_output.txt
         # NOTE: optional --stats flag changes the statistics output filename
 
