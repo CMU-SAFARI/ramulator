@@ -137,7 +137,7 @@ int main(int argc, const char *argv[])
     trace_type++;
     if (strcmp(trace_type, "cpu") == 0) {
       configs.add("trace_type", "CPU");
-    } else if (strcmp(trace_type, "mem") == 0) {
+    } else if (strcmp(trace_type, "dram") == 0) {
       configs.add("trace_type", "DRAM");
     } else {
       printf("invalid trace type: %s\n", trace_type);
