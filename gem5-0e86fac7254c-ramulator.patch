@@ -1,6 +1,6 @@
 diff -crbN --exclude build --exclude '*.pyc' gem5-stable-clean/SConstruct gem5-stable-ramulator/SConstruct
 *** gem5-stable-clean/SConstruct	2014-10-13 11:46:36.781764500 -0400
---- gem5-stable-ramulator/SConstruct	2015-06-26 17:54:09.220044774 -0400
+--- gem5-stable-ramulator/SConstruct	2015-10-26 22:52:01.220044774 -0400
 ***************
 *** 215,220 ****
 --- 215,224 ----
@@ -34,7 +34,7 @@ diff -crbN --exclude build --exclude '*.pyc' gem5-stable-clean/SConstruct gem5-s
 !     if main['GCC']:
 !         main.Append(CCFLAGS=['-Wall', '-Wno-sign-compare', '-Wundef', '-Wno-unused-variable', '-Wno-parentheses', '-Wno-deprecated'])
 !     else:
-!         main.Append(CCFLAGS=['-Wall', '-Wno-sign-compare', '-Wundef', '-Wno-unused-private-field', '-Wno-deprecated-register', '-Wno-undefined-bool-conversion'])
+!         main.Append(CCFLAGS=['-Wall', '-Wno-sign-compare', '-Wundef', '-Wno-unused-private-field', '-Wno-deprecated-register', '-Wno-undefined-bool-conversion', '-Wno-unused-function'])
       # We always compile using C++11, but only gcc >= 4.7 and clang 3.1
       # actually use that name, so we stick with c++0x
 !     # RAMULATOR: support newer compilers by using c++11
