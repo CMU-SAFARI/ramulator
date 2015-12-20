@@ -124,10 +124,19 @@ void SALP::init_prereq()
                 switch (int(node->state)){
                     case int(State::Closed): return Command::ACT;
                     case int(State::Opened):
-                        if (node->children[id]->row_state.find(id) != node->children[id]->row_state.end()) return cmd;
-                        else return Command::PREB;
+                        return Command::MAX;
                     default: assert(false);}};
             prereq[int(Level::Bank)][int(Command::WR)] = prereq[int(Level::Bank)][int(Command::RD)];
+            prereq[int(Level::SubArray)][int(Command::RD)] = [] (DRAM<SALP>* node, Command cmd, int id) {
+              if (node->row_state.find(id) != node->row_state.end()) {
+                return cmd;
+              } else if (node->row_state.size()) {
+                return Command::PRE;
+              } else {
+                return Command::PRE_OTHER;
+              }
+            };
+            prereq[int(Level::SubArray)][int(Command::WR)] = prereq[int(Level::SubArray)][int(Command::RD)];
             prereq[int(Level::Rank)][int(Command::REF)] = [] (DRAM<SALP>* node, Command cmd, int id) {
                 for (auto bank : node->children) {
                     if (bank->state == State::Closed)
@@ -141,9 +150,18 @@ void SALP::init_prereq()
                 switch (int(node->state)){
                     case int(State::Closed): return Command::ACT;
                     case int(State::Opened):
-                        if (node->row_state.find(id) != node->row_state.end()) return cmd;
-                        else if (node->row_state.size()) return Command::PRE; // precharge this subarray
-                        else return Command::PRE_OTHER; // precharge the other subarray
+                        if (node->row_state.find(id) != node->row_state.end()) {
+                          for (auto sa : node->parent->children) {
+                              if (sa != node && sa->state == State::Opened) {
+                                  return Command::PRE_OTHER;
+                              }
+                          }
+                          return cmd;
+                        } else {
+                          // if this subarray has another row open, close it
+                          // first
+                          return Command::PRE;
+                        }
                     default: assert(false);}};
             prereq[int(Level::SubArray)][int(Command::WR)] = prereq[int(Level::SubArray)][int(Command::RD)];
             prereq[int(Level::Rank)][int(Command::REF)] = [] (DRAM<SALP>* node, Command cmd, int id) {
@@ -206,16 +224,17 @@ void SALP::init_rowhit()
     switch(int(type)) {
         case int(Type::SALP_1):
             // RD
-            rowhit[int(Level::Bank)][int(Command::RD)] = [] (DRAM<SALP>* node, Command cmd, int id) {
-                switch (int(node->state)){
-                    case int(State::Closed): return false;
-                    case int(State::Opened):
-                        if (node->children[id]->row_state.find(id) != node->children[id]->row_state.end()) return true;
-                        else return false;
-                    default: assert(false);
-                }};
+            rowhit[int(Level::SubArray)][int(Command::RD)] = [] (DRAM<SALP>* node, Command cmd, int id) {
+              switch (int(node->state)) {
+                case int(State::Closed): return false;
+                case int(State::Opened):
+                  if (node->row_state.find(id) != node->row_state.end())  return true;
+                  else return false;
+                default: assert(false);
+              }
+            };
             // WR
-            rowhit[int(Level::Bank)][int(Command::WR)] = rowhit[int(Level::Bank)][int(Command::RD)];
+            rowhit[int(Level::SubArray)][int(Command::WR)] = rowhit[int(Level::SubArray)][int(Command::RD)];
             break;
         case int(Type::SALP_2):
             // RD
@@ -298,18 +317,29 @@ void SALP::init_lambda()
         case int(Type::SALP_1):
             lambda[int(Level::Bank)][int(Command::ACT)] = [] (DRAM<SALP>* node, int id) {
                 node->state = State::Opened;
-                node->children[id]->row_state[id] = State::Opened;};
+            };
+            lambda[int(Level::SubArray)][int(Command::ACT)] = [] (DRAM<SALP>* node, int id) {
+              node->state = State::Opened;
+              node->row_state[id] = State::Opened;
+            };
             lambda[int(Level::Bank)][int(Command::PRE)] = [] (DRAM<SALP>* node, int id) {
                 node->state = State::Closed;
-                node->children[id]->row_state.clear();};
-            lambda[int(Level::Bank)][int(Command::PREB)] = lambda[int(Level::Bank)][int(Command::PRE)];
+                // For SALP_1, we stick to original design that allows
+                // only one row in a bank open, so here close subarray id
+                // is equivalent to close the whole bank
+                node->children[id]->state = State::Closed;
+                node->children[id]->row_state.clear();
+                };
+            lambda[int(Level::Bank)][int(Command::PRE_OTHER)] = lambda[int(Level::Bank)][int(Command::PRE)];
             lambda[int(Level::Rank)][int(Command::PRER)] = [] (DRAM<SALP>* node, int id) {
                 for (auto bank : node->children) {
                     bank->state = State::Closed;
-                    for (auto sa : bank->children)
-                        sa->row_state.clear();}};
+                    for (auto sa : bank->children){
+                        sa->state = State::Closed;
+                        sa->row_state.clear();}}};
             lambda[int(Level::Bank)][int(Command::RDA)] = [] (DRAM<SALP>* node, int id) {
                 node->state = State::Closed;
+                node->children[id]->state = State::Closed;
                 node->children[id]->row_state.clear();};
             lambda[int(Level::Bank)][int(Command::WRA)] = lambda[int(Level::Bank)][int(Command::RDA)];
             lambda[int(Level::Rank)][int(Command::PDE)] = [] (DRAM<SALP>* node, int id) {
@@ -367,10 +397,6 @@ void SALP::init_lambda()
             lambda[int(Level::SubArray)][int(Command::PRE)] = [] (DRAM<SALP>* node, int id) {
                 node->state = State::Closed;
                 node->row_state.clear();};
-            lambda[int(Level::Bank)][int(Command::PREB)] = [] (DRAM<SALP>* node, int id) {
-                for (auto sa : node->children){
-                    sa->state = State::Closed;
-                    sa->row_state.clear();}};
 
             lambda[int(Level::Rank)][int(Command::PRER)] = [] (DRAM<SALP>* node, int id) {
                 for (auto bank : node->children)
@@ -488,7 +514,6 @@ void SALP::init_timing()
 
     // RAS <-> REF
     t[int(Command::PRE)].push_back({Command::REF, 1, s.nRP});
-    t[int(Command::PREB)].push_back({Command::REF, 1, s.nRP});
     t[int(Command::PRER)].push_back({Command::REF, 1, s.nRP});
     t[int(Command::PRE_OTHER)].push_back({Command::REF, 1, s.nRP});
     t[int(Command::REF)].push_back({Command::ACT, 1, s.nRFC});
@@ -497,12 +522,10 @@ void SALP::init_timing()
     t[int(Command::ACT)].push_back({Command::PDE, 1, 1});
     t[int(Command::PDX)].push_back({Command::ACT, 1, s.nXP});
     t[int(Command::PDX)].push_back({Command::PRE, 1, s.nXP});
-    t[int(Command::PDX)].push_back({Command::PREB, 1, s.nXP});
     t[int(Command::PDX)].push_back({Command::PRER, 1, s.nXP});
 
     // RAS <-> SR
     t[int(Command::PRE)].push_back({Command::SRE, 1, s.nRP});
-    t[int(Command::PREB)].push_back({Command::SRE, 1, s.nRP});
     t[int(Command::PRER)].push_back({Command::SRE, 1, s.nRP});
     t[int(Command::PRE_OTHER)].push_back({Command::SRE, 1, s.nRP});
     t[int(Command::SRX)].push_back({Command::ACT, 1, s.nXS});
@@ -532,10 +555,23 @@ void SALP::init_timing()
 
     /*** Bank ***/
     t = timing[int(Level::Bank)];
-    t[int(Command::PREB)].push_back({Command::ACT, 1, s.nRP});
-    t[int(Command::ACT)].push_back({Command::PREB, 1, s.nRAS});
-    t[int(Command::RD)].push_back({Command::PREB, 1, s.nRTP});
-    t[int(Command::WR)].push_back({Command::PREB, 1, s.nCWL + s.nBL + s.nWR});
+
+    switch(int(type)) {
+        case int(Type::SALP_1):
+          // memory controller doesn't specify a row to precharge,
+          // all subarrays are precharged together, so we should check
+          // whether other activation/column access are still ongoing.
+          t[int(Command::ACT)].push_back({Command::PRE, 1, s.nRAS});
+          t[int(Command::RD)].push_back({Command::PRE, 1, s.nRTP});
+          t[int(Command::WR)].push_back({Command::PRE, 1, s.nCWL + s.nBL + s.nWR,});
+          t[int(Command::ACT)].push_back({Command::PRE_OTHER, 1, s.nRAS});
+          t[int(Command::RD)].push_back({Command::PRE_OTHER, 1, s.nRTP});
+          t[int(Command::WR)].push_back({Command::PRE_OTHER, 1, s.nCWL + s.nBL + s.nWR,});
+        case int(Type::SALP_2):
+        case int(Type::MASA):
+        break;
+        default: assert(false);
+    }
 
     /*** SubArray ***/
     t = timing[int(Level::SubArray)];
@@ -557,11 +593,54 @@ void SALP::init_timing()
     t[int(Command::ACT)].push_back({Command::PRE, 1, s.nRAS});
     t[int(Command::PRE)].push_back({Command::ACT, 1, s.nRP});
 
+    switch(int(type)) {
+        case int(Type::SALP_1):
+        case int(Type::SALP_2):
+        break;
+        case int(Type::MASA):
+          t[int(Command::SASEL)].push_back({Command::RD, 1, s.nSCD});
+          t[int(Command::SASEL)].push_back({Command::RDA, 1, s.nSCD});
+          t[int(Command::SASEL)].push_back({Command::WR, 1, s.nSCD});
+          t[int(Command::SASEL)].push_back({Command::WRA, 1, s.nSCD});
+        break;
+        default: assert(false);
+    }
+
+    // sibling subarray constraints
+    switch(int(type)) {
+        case int(Type::SALP_1):
+          t[int(Command::PRE)].push_back({Command::ACT, 1, s.nPA, true});
+          t[int(Command::PRE_OTHER)].push_back({Command::ACT, 1, s.nPA, true});
+          // for auto precharge command
+          t[int(Command::ACT)].push_back({Command::ACT, 1, s.nRC - s.nRP + s.nPA, true});
+          t[int(Command::RDA)].push_back({Command::ACT, 1, s.nRTP + s.nPA, true});
+          t[int(Command::WRA)].push_back({Command::ACT, 1, s.nCWL + s.nBL + s.nWR + s.nPA, true});
+        break;
+
+        case int(Type::SALP_2):
+          t[int(Command::ACT)].push_back({Command::ACT, 1, s.nRCD + s.nRA, true});
+          t[int(Command::RD)].push_back({Command::ACT, 1, s.nRA, true});
+          t[int(Command::RDA)].push_back({Command::ACT, 1, s.nRA, true});
+          t[int(Command::WR)].push_back({Command::ACT, 1, s.nWA, true});
+          t[int(Command::WRA)].push_back({Command::ACT, 1, s.nWA, true});
+        break;
+        case int(Type::MASA):
+          t[int(Command::RD)].push_back({Command::ACT, 1, s.nRA, true});
+          t[int(Command::RDA)].push_back({Command::ACT, 1, s.nRA, true});
+          t[int(Command::WR)].push_back({Command::ACT, 1, s.nWA, true});
+          t[int(Command::WRA)].push_back({Command::ACT, 1, s.nWA, true});
+
+          t[int(Command::RD)].push_back({Command::SASEL, 1, s.nRA, true});
+          t[int(Command::RDA)].push_back({Command::SASEL, 1, s.nRA, true});
+          t[int(Command::WR)].push_back({Command::SASEL, 1, s.nWA, true});
+          t[int(Command::WRA)].push_back({Command::SASEL, 1, s.nWA, true});
+
+          t[int(Command::RD)].push_back({Command::RD, 1, s.nRA, true});
+          t[int(Command::RDA)].push_back({Command::RDA, 1, s.nRA, true});
+          t[int(Command::WR)].push_back({Command::WR, 1, s.nWA, true});
+          t[int(Command::WRA)].push_back({Command::WRA, 1, s.nWA, true});
+        break;
+        default: assert(false);
+    }
     // between sibling subarrays
-    t[int(Command::PRE)].push_back({Command::ACT, 1, s.nPA, true});
-    t[int(Command::RD)].push_back({Command::ACT, 1, s.nRA, true});
-    t[int(Command::RDA)].push_back({Command::ACT, 1, s.nRTP + s.nPA, true});
-    t[int(Command::WR)].push_back({Command::ACT, 1, s.nWA, true});
-    t[int(Command::WRA)].push_back({Command::ACT, 1, s.nCWL + s.nBL + s.nWR + s.nPA, true});
-    t[int(Command::PRE)].push_back({Command::ACT, 1, s.nPA, true});
 }
