@@ -41,6 +41,9 @@ SALP::SALP(Org org, Speed speed, Type type, int n_sa) :
         case int(Type::SALP_2): standard_name = "SALP-2"; break;
         case int(Type::MASA):   standard_name = "SALP-MASA"; break;
     }
+    if (type == Type::SALP_1) {
+      scope[int(Command::PRE)] = Level::Bank;
+    }
     assert(n_sa && n_sa <= 128 && (n_sa & (n_sa-1)) == 0); // is power of 2, within [1, 128]
     org_entry.count[int(Level::SubArray)] = n_sa;
     long tmp = long(org_entry.dq) * org_entry.count[int(Level::Bank)] * n_sa * org_entry.count[int(Level::Column)];
