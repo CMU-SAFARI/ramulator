@@ -124,7 +124,7 @@ int main(int argc, const char *argv[])
 {
     if (argc < 2) {
         printf("Usage: %s <configs-file> --mode=cpu,dram [--stats <filename>] <trace-filename>\n"
-            "Example: %s ramulator-configs.cfg cpu.trace\n", argv[0], argv[0]);
+            "Example: %s ramulator-configs.cfg --mode=cpu cpu.trace\n", argv[0], argv[0]);
         return 0;
     }
 
