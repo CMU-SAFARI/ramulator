@@ -104,6 +104,7 @@ void Controller<TLDRAM>::tick(){
     }
 
     if (req->is_first_command) {
+        int coreid = req->coreid;
         req->is_first_command = false;
         if (req->type == Request::Type::READ || req->type == Request::Type::WRITE) {
           channel->update_serving_requests(req->addr_vec.data(), 1, clk);
@@ -111,28 +112,28 @@ void Controller<TLDRAM>::tick(){
         int tx = (channel->spec->prefetch_size * channel->spec->channel_width / 8);
         if (req->type == Request::Type::READ) {
             if (is_row_hit(req)) {
-                ++read_row_hits;
+                ++read_row_hits[coreid];
                 ++row_hits;
             } else if (is_row_open(req)) {
-                ++read_row_conflicts;
+                ++read_row_conflicts[coreid];
                 ++row_conflicts;
             } else {
-                ++read_row_misses;
+                ++read_row_misses[coreid];
                 ++row_misses;
             }
-          read_transaction_byte += tx;
+          read_transaction_bytes += tx;
         } else if (req->type == Request::Type::WRITE) {
           if (is_row_hit(req)) {
-              ++write_row_hits;
+              ++write_row_hits[coreid];
               ++row_hits;
           } else if (is_row_open(req)) {
-              ++write_row_conflicts;
+              ++write_row_conflicts[coreid];
               ++row_conflicts;
           } else {
-              ++write_row_misses;
+              ++write_row_misses[coreid];
               ++row_misses;
           }
-          write_transaction_byte += tx;
+          write_transaction_bytes += tx;
         }
     }
 

@@ -48,7 +48,7 @@ void run_dramtrace(const Config& configs, Memory<T, Controller>& memory, const c
 
     while (!end || memory.pending_requests()){
         if (!end && !stall){
-            end = !trace.get_request(addr, type);
+            end = !trace.get_dramtrace_request(addr, type);
         }
 
         if (!end){
@@ -71,24 +71,30 @@ void run_dramtrace(const Config& configs, Memory<T, Controller>& memory, const c
 }
 
 template <typename T>
-void run_cputrace(const Config& configs, Memory<T, Controller>& memory, const char * file)
+void run_cputrace(const Config& configs, Memory<T, Controller>& memory, const std::vector<const char *>& files)
 {
     int cpu_tick = configs.get_cpu_tick();
     int mem_tick = configs.get_mem_tick();
     auto send = bind(&Memory<T, Controller>::send, &memory, placeholders::_1);
-    Processor proc(configs, file, send);
+    Processor proc(configs, files, send, memory);
     for (long i = 0; ; i++) {
         proc.tick();
         Stats::curTick++; // processor clock, global, for Statistics
         if (i % cpu_tick == (cpu_tick - 1))
             for (int j = 0; j < mem_tick; j++)
                 memory.tick();
-      if (configs.is_early_exit()) {
-        if (proc.finished())
-            break;
+      if (configs.calc_weighted_speedup()) {
+        if (proc.has_reached_limit()) {
+          break;
+        }
       } else {
-        if (proc.finished() && (memory.pending_requests() == 0))
-            break;
+        if (configs.is_early_exit()) {
+          if (proc.finished())
+              break;
+        } else {
+          if (proc.finished() && (memory.pending_requests() == 0))
+              break;
+        }
       }
     }
     // This a workaround for statistics set only initially lost in the end
@@ -97,7 +103,7 @@ void run_cputrace(const Config& configs, Memory<T, Controller>& memory, const ch
 }
 
 template<typename T>
-void start_run(const Config& configs, T* spec, const char* file) {
+void start_run(const Config& configs, T* spec, const vector<const char*>& files) {
   // initiate controller and memory
   int C = configs.get_channels(), R = configs.get_ranks();
   // Check and Set channel, rank number
@@ -113,18 +119,19 @@ void start_run(const Config& configs, T* spec, const char* file) {
   }
   Memory<T, Controller> memory(configs, ctrls);
 
+  assert(files.size() != 0);
   if (configs["trace_type"] == "CPU") {
-    run_cputrace(configs, memory, file);
+    run_cputrace(configs, memory, files);
   } else if (configs["trace_type"] == "DRAM") {
-    run_dramtrace(configs, memory, file);
+    run_dramtrace(configs, memory, files[0]);
   }
 }
 
 int main(int argc, const char *argv[])
 {
     if (argc < 2) {
-        printf("Usage: %s <configs-file> --mode=cpu,dram [--stats <filename>] <trace-filename>\n"
-            "Example: %s ramulator-configs.cfg --mode=cpu cpu.trace\n", argv[0], argv[0]);
+        printf("Usage: %s <configs-file> --mode=cpu,dram [--stats <filename>] <trace-filename1> <trace-filename2>\n"
+            "Example: %s ramulator-configs.cfg --mode=cpu cpu.trace cpu.trace\n", argv[0], argv[0]);
         return 0;
     }
 
@@ -154,50 +161,51 @@ int main(int argc, const char *argv[])
       Stats::statlist.output(standard+".stats");
       stats_out = standard + string(".stats");
     }
-    const char* file = argv[trace_start];
+    std::vector<const char*> files(&argv[trace_start], &argv[argc]);
+    configs.set_core_num(argc - trace_start);
 
     if (standard == "DDR3") {
       DDR3* ddr3 = new DDR3(configs["org"], configs["speed"]);
-      start_run(configs, ddr3, file);
+      start_run(configs, ddr3, files);
     } else if (standard == "DDR4") {
       DDR4* ddr4 = new DDR4(configs["org"], configs["speed"]);
-      start_run(configs, ddr4, file);
+      start_run(configs, ddr4, files);
     } else if (standard == "SALP-MASA") {
       SALP* salp8 = new SALP(configs["org"], configs["speed"], "SALP-MASA", configs.get_subarrays());
-      start_run(configs, salp8, file);
+      start_run(configs, salp8, files);
     } else if (standard == "LPDDR3") {
       LPDDR3* lpddr3 = new LPDDR3(configs["org"], configs["speed"]);
-      start_run(configs, lpddr3, file);
+      start_run(configs, lpddr3, files);
     } else if (standard == "LPDDR4") {
       // total cap: 2GB, 1/2 of others
       LPDDR4* lpddr4 = new LPDDR4(configs["org"], configs["speed"]);
-      start_run(configs, lpddr4, file);
+      start_run(configs, lpddr4, files);
     } else if (standard == "GDDR5") {
       GDDR5* gddr5 = new GDDR5(configs["org"], configs["speed"]);
-      start_run(configs, gddr5, file);
+      start_run(configs, gddr5, files);
     } else if (standard == "HBM") {
       HBM* hbm = new HBM(configs["org"], configs["speed"]);
-      start_run(configs, hbm, file);
+      start_run(configs, hbm, files);
     } else if (standard == "WideIO") {
       // total cap: 1GB, 1/4 of others
       WideIO* wio = new WideIO(configs["org"], configs["speed"]);
-      start_run(configs, wio, file);
+      start_run(configs, wio, files);
     } else if (standard == "WideIO2") {
       // total cap: 2GB, 1/2 of others
       WideIO2* wio2 = new WideIO2(configs["org"], configs["speed"], configs.get_channels());
       wio2->channel_width *= 2;
-      start_run(configs, wio2, file);
+      start_run(configs, wio2, files);
     }
     // Various refresh mechanisms
       else if (standard == "DSARP") {
       DSARP* dsddr3_dsarp = new DSARP(configs["org"], configs["speed"], DSARP::Type::DSARP, configs.get_subarrays());
-      start_run(configs, dsddr3_dsarp, file);
+      start_run(configs, dsddr3_dsarp, files);
     } else if (standard == "ALDRAM") {
       ALDRAM* aldram = new ALDRAM(configs["org"], configs["speed"]);
-      start_run(configs, aldram, file);
+      start_run(configs, aldram, files);
     } else if (standard == "TLDRAM") {
       TLDRAM* tldram = new TLDRAM(configs["org"], configs["speed"], configs.get_subarrays());
-      start_run(configs, tldram, file);
+      start_run(configs, tldram, files);
     }
 
     printf("Simulation done. Statistics written to %s\n", stats_out.c_str());
