@@ -28,7 +28,7 @@ Accesses.* HPCA 2014.](http://dx.doi.org/10.1109/HPCA.2014.6835946)
 
 ## Usage
 
-Ramulator supports three different usage modes.
+Ramulator supports four different usage modes.
 
 1. **Memory Trace Driven:** Ramulator directly reads memory traces from a
   file, and simulates only the DRAM subsystem. Each line in the trace file 
@@ -40,10 +40,10 @@ Ramulator supports three different usage modes.
   - ...
 
 
-2. **CPU Trace Driven:** Ramulator directly reads instruction traces from a 
-  file, and simulates a simplified model of a "core" that generates memory 
-  requests to the DRAM subsystem. Each line in the trace file represents a 
-  memory request, and can have one of the following two formats.
+2. **CPU Trace Driven(Single-Threaded):** Ramulator directly reads instruction
+  traces from a file, and simulates a simplified model of a "core" that
+  generates memory requests to the DRAM subsystem. Each line in the trace file
+  represents a memory request, and can have one of the following two formats.
 
   - `<num-cpuinst> <addr-read>`: For a line with two tokens, the first token 
         represents the number of CPU (i.e., non-memory) instructions before
@@ -54,6 +54,8 @@ Ramulator supports three different usage modes.
         the third token is the decimal address of the *writeback* request, 
         which is the dirty cache-line eviction caused by the read request
         before it.
+
+2. **CPU Trace Driven(Multi-Program):** Ramulator also supports multi-program simulation mode. It reads multiple trace files and instantiates the same number of cores to execute those traces simultaneously. We have a configurable cache model that supports several modes: only L1 and L2 cache, only last level cache(shared by all cores) and all three levels, so the contention of memory requests at the last level cache can be correctly modeled and we can also simulate with traces not filtered by any cache model. Our memory translation mechanism can map the same original address from different cores to different physical addresses. Random translation is supported now and can be enabled in the config file.
 
 3. **gem5 Driven:** Ramulator runs as part of a full-system simulator (gem5
   \[6\]), from which it receives memory request as they are generated.
@@ -81,7 +83,7 @@ Ramulator requires a C++11 compiler (e.g., `clang++`, `g++-5`).
         Simulation done. Statistics written to my_output.txt
         # NOTE: optional --stats flag changes the statistics output filename
 
-2. **CPU Trace Driven**
+2. **CPU Trace Driven(Single-Threaded)**
 
         $ cd ramulator
         $ make -j
@@ -89,6 +91,18 @@ Ramulator requires a C++11 compiler (e.g., `clang++`, `g++-5`).
         Simulation done. Statistics written to DDR3.stats
         # NOTE: cpu.trace is a very short trace file provided only as an example.
         $ ./ramulator configs/DDR3-config.cfg --mode=cpu --stats my_output.txt cpu.trace
+        Simulation done. Statistics written to my_output.txt
+        # NOTE: optional --stats flag changes the statistics output filename
+
+2. **CPU Trace Driven(Multi-Program)**
+
+        $ cd ramulator
+        $ make -j
+        $ ./ramulator configs/DDR3-config.cfg --mode=cpu cpu.trace cpu.trace
+        Simulation done. Statistics written to DDR3.stats
+        # NOTE: Append all paths to trace files at the end of the command line, one for each core. The simulator will configure the core number accordingly.
+        # NOTE: SPEC traces provided in folder `cputraces` have been filtered by a two level cache model, If you want to simulate a system with the last level cache, please change cache option to L3 in configuration file.
+        $ ./ramulator configs/DDR3-config.cfg --mode=cpu --stats my_output.txt cpu.trace cpu.trace
         Simulation done. Statistics written to my_output.txt
         # NOTE: optional --stats flag changes the statistics output filename
 
