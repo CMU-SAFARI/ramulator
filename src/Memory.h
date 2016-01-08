@@ -48,6 +48,7 @@ protected:
   VectorStat num_write_requests;
   ScalarStat ramulator_active_cycles;
   VectorStat incoming_requests_per_channel;
+  VectorStat incoming_read_reqs_per_channel;
 
   ScalarStat physical_page_replacement;
   ScalarStat maximum_bandwidth;
@@ -163,6 +164,11 @@ public:
             .init(sz[int(T::Level::Channel)])
             .name("incoming_requests_per_channel")
             .desc("Number of incoming requests to each DRAM channel")
+            ;
+        incoming_read_reqs_per_channel
+            .init(sz[int(T::Level::Channel)])
+            .name("incoming_read_reqs_per_channel")
+            .desc("Number of incoming read requests to each DRAM channel")
             ;
 
         ramulator_active_cycles
@@ -300,6 +306,7 @@ public:
             ++num_incoming_requests;
             if (req.type == Request::Type::READ) {
               ++num_read_requests[coreid];
+              ++incoming_read_reqs_per_channel[req.addr_vec[int(T::Level::Channel)]];
             }
             if (req.type == Request::Type::WRITE) {
               ++num_write_requests[coreid];
@@ -323,6 +330,16 @@ public:
       dram_capacity = max_address;
       int *sz = spec->org_entry.count;
       maximum_bandwidth = spec->speed_entry.rate * 1e6 * spec->channel_width * sz[int(T::Level::Channel)] / 8;
+      long dram_cycles = num_dram_cycles.value();
+      for (auto ctrl : ctrls) {
+        long read_req = long(incoming_read_reqs_per_channel[ctrl->channel->id].value());
+        ctrl->finish(read_req, dram_cycles);
+      }
+
+      // finalize average queueing requests
+      in_queue_req_num_avg = in_queue_req_num_sum.value() / dram_cycles;
+      in_queue_read_req_num_avg = in_queue_read_req_num_sum.value() / dram_cycles;
+      in_queue_write_req_num_avg = in_queue_write_req_num_sum.value() / dram_cycles;
     }
 
     long page_allocator(long addr, int coreid) {

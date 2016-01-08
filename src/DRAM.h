@@ -87,7 +87,7 @@ public:
     // register statistics
     void regStats(const std::string& identifier);
 
-    void finish(int dram_cycles);
+    void finish(long dram_cycles);
 
 private:
     // Constructor
@@ -167,7 +167,7 @@ void DRAM<T>::regStats(const std::string& identifier) {
 }
 
 template <typename T>
-void DRAM<T>::finish(int dram_cycles) {
+void DRAM<T>::finish(long dram_cycles) {
   // finalize busy cycles
   busy_cycles = active_cycles.value() + refresh_cycles.value() - active_refresh_overlap_cycles.value();
 
