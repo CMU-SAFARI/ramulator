@@ -132,18 +132,20 @@ void DRAM<T>::regStats(const std::string& identifier) {
         ;
     refresh_cycles
         .name("refresh_cycles" + identifier + "_" + to_string(id))
-        .desc("(All-bank refresh only, only valid for rank level)The sum of cycles that is under refresh per memory cycle for level " + identifier + "_" + to_string(id))
+        .desc("(All-bank refresh only, only valid for rank level) The sum of cycles that is under refresh per memory cycle for level " + identifier + "_" + to_string(id))
         .precision(0)
+        .flags(Stats::nozero)
         ;
     busy_cycles
         .name("busy_cycles" + identifier + "_" + to_string(id))
-        .desc("The sum of cycles that the DRAM part is active or under refresh for level " + identifier + "_" + to_string(id))
+        .desc("(All-bank refresh only. busy cycles only include refresh time in rank level) The sum of cycles that the DRAM part is active or under refresh for level " + identifier + "_" + to_string(id))
         .precision(0)
         ;
     active_refresh_overlap_cycles
         .name("active_refresh_overlap_cycles" + identifier + "_" + to_string(id))
-        .desc("The sum of cycles that are both active and under refresh per memory cycle for level " + identifier + "_" + to_string(id))
+        .desc("(All-bank refresh only, only valid for rank level) The sum of cycles that are both active and under refresh per memory cycle for level " + identifier + "_" + to_string(id))
         .precision(0)
+        .flags(Stats::nozero)
         ;
     serving_requests
         .name("serving_requests" + identifier + "_" + to_string(id))
