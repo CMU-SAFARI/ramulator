@@ -5,6 +5,7 @@
 #include "Memory.h"
 #include "DRAM.h"
 #include "Statistics.h"
+#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -29,6 +30,18 @@
 
 using namespace std;
 using namespace ramulator;
+
+static int gcd(int u, int v) {
+  if (v > u) {
+    swap(u,v);
+  }
+  while (v != 0) {
+    int r = u % v;
+    u = v;
+    v = r;
+  }
+  return u;
+}
 
 template<typename T>
 void run_dramtrace(const Config& configs, Memory<T, Controller>& memory, const char* tracename) {
@@ -73,28 +86,44 @@ void run_dramtrace(const Config& configs, Memory<T, Controller>& memory, const c
 template <typename T>
 void run_cputrace(const Config& configs, Memory<T, Controller>& memory, const std::vector<const char *>& files)
 {
+    // time unit is ps
     int cpu_tick = configs.get_cpu_tick();
-    int mem_tick = configs.get_mem_tick();
+    int mem_tick = memory.clk_ns() * 1000;
+    int tick_gcd = gcd(cpu_tick, mem_tick);
+    printf("tick_gcd: %d\n", tick_gcd);
+    cpu_tick /= tick_gcd;
+    printf("cpu_tick: %d\n", cpu_tick);
+    mem_tick /= tick_gcd;
+    printf("mem_tick: %d\n", mem_tick);
+    long next_cpu_tick = cpu_tick - 1;
+    long next_mem_tick = mem_tick - 1;
+
     auto send = bind(&Memory<T, Controller>::send, &memory, placeholders::_1);
     Processor proc(configs, files, send, memory);
     for (long i = 0; ; i++) {
+      if (i == next_cpu_tick) {
+        next_cpu_tick += cpu_tick;
         proc.tick();
         Stats::curTick++; // processor clock, global, for Statistics
-        if (i % cpu_tick == (cpu_tick - 1))
-            for (int j = 0; j < mem_tick; j++)
-                memory.tick();
-      if (configs.calc_weighted_speedup()) {
-        if (proc.has_reached_limit()) {
-          break;
-        }
-      } else {
-        if (configs.is_early_exit()) {
-          if (proc.finished())
-              break;
+        if (configs.calc_weighted_speedup()) {
+          if (proc.has_reached_limit()) {
+            break;
+          }
         } else {
-          if (proc.finished() && (memory.pending_requests() == 0))
-              break;
+          if (configs.is_early_exit()) {
+            if (proc.finished())
+                break;
+          } else {
+            if (proc.finished() && (memory.pending_requests() == 0))
+                break;
+          }
         }
+//         printf("cpu tick: %ld\n", i/1000);
+      }
+      if (i == next_mem_tick) {
+        next_mem_tick += mem_tick;
+        memory.tick();
+//         printf("mem tick: %ld\n", i/1000);
       }
     }
     // This a workaround for statistics set only initially lost in the end

@@ -18,8 +18,7 @@ private:
     int channels;
     int ranks;
     int subarrays;
-    int cpu_tick;
-    int mem_tick;
+    int cpu_frequency;
     int core_num = 0;
     long expected_limit_insts = 0;
 
@@ -56,8 +55,7 @@ public:
     int get_channels() const {return channels;}
     int get_subarrays() const {return subarrays;}
     int get_ranks() const {return ranks;}
-    int get_cpu_tick() const {return cpu_tick;}
-    int get_mem_tick() const {return mem_tick;}
+    int get_cpu_tick() const {return int(1000000 / cpu_frequency);}
     int get_core_num() const {return core_num;}
     long get_expected_limit_insts() const {return expected_limit_insts;}
     bool has_l3_cache() const {

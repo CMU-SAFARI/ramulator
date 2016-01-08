@@ -50,10 +50,8 @@ void Config::parse(const string& fname)
           ranks = atoi(tokens[1].c_str());
         } else if (tokens[0] == "subarrays") {
           subarrays = atoi(tokens[1].c_str());
-        } else if (tokens[0] == "cpu_tick") {
-          cpu_tick = atoi(tokens[1].c_str());
-        } else if (tokens[0] == "mem_tick") {
-          mem_tick = atoi(tokens[1].c_str());
+        } else if (tokens[0] == "cpu_frequency") {
+          cpu_frequency = atoi(tokens[1].c_str());
         } else if (tokens[0] == "expected_limit_insts") {
           expected_limit_insts = atoi(tokens[1].c_str());
         }
