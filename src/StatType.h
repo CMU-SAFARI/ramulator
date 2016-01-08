@@ -20,6 +20,8 @@ class AverageVectorStat;
 
 namespace Stats {
 
+const double eps = 1e-8;
+
 typedef unsigned int size_type;
 typedef unsigned int off_type;
 typedef double Counter;
@@ -69,6 +71,7 @@ class StatBase {
   virtual Result total() const { return Result(); };
 
   virtual bool is_display() const  = 0;
+  virtual bool is_nozero() const = 0;
 };
 
 class StatList {
@@ -88,6 +91,9 @@ class StatList {
   void printall() {
     for(off_type i = 0 ; i < list.size() ; ++i) {
       if (!list[i]) {
+        continue;
+      }
+      if (list[i]->is_nozero() && list[i]->zero()) {
         continue;
       }
       if (list[i]->is_display()) {
@@ -163,6 +169,10 @@ class Stat : public StatBase {
   virtual bool is_display() const {
     return _flags.is_display();
   }
+
+  virtual bool is_nozero() const {
+    return _flags.is_nozero();
+  }
 };
 
 template <class ScalarType>
@@ -210,7 +220,7 @@ class ConstValue: public ScalarBase<ConstValue> {
   Counter value() const {return _value;}
   Result result() const {return (Result)_value;}
   Result total() const {return result();}
-  bool zero() const {return _value;}
+  bool zero() const {return (fabs(_value) < eps);}
   void prepare() {}
   void reset() {}
 };
@@ -239,7 +249,7 @@ class Scalar: public ScalarBase<Scalar> {
   void operator -= (const U &v) { _value -= v;}
 
 
-  virtual bool zero() const {return _value == Counter();}
+  virtual bool zero() const {return (fabs(_value) < eps);}
   void prepare() {}
   void reset() {_value = Counter();}
 
@@ -282,7 +292,7 @@ class Average: public ScalarBase<Average> {
   void operator -= (const U &v) { dec(v);}
 
 
-  bool zero() const { return total_val == 0.0; }
+  bool zero() const { return (fabs(total_val) < eps); }
   void prepare() {
     total_val += current * (curTick - last);
     last = curTick;
@@ -360,12 +370,7 @@ class VectorBase: public Stat<Derived> {
   }
 
   bool zero() const {
-    for (off_type i = 0 ; i < size() ; ++i) {
-      if (data[i].zero()) {
-        return false;
-      }
-    }
-    return true;
+    return (fabs(total()) < eps);
   }
 
   void prepare() {
@@ -463,7 +468,7 @@ class Distribution: public Stat<Distribution> {
 
   size_type size() const {return cvec.size();}
   bool zero() const {
-    return samples == Counter();
+    return (fabs(samples) < eps);
   }
   void prepare() {};
   void reset() {
@@ -544,7 +549,7 @@ class Histogram: public Stat<Histogram> {
   void sample(Counter val, int number);
 
   bool zero() const {
-    return samples == Counter();
+    return (fabs(samples) < eps);
   }
   void prepare() {}
   void reset() {
@@ -582,7 +587,7 @@ class StandardDeviation: public Stat<StandardDeviation> {
     samples += number;
   }
   size_type size() const {return 1;}
-  bool zero() const {return samples == Counter();}
+  bool zero() const {return (fabs(samples) < eps);}
   void prepare() {}
   void reset() {
     sum = Counter();
@@ -609,7 +614,7 @@ class AverageDeviation: public Stat<AverageDeviation> {
     squares += value * value;
   }
   size_type size() const {return 1;}
-  bool zero() const {return sum == Counter();}
+  bool zero() const {return (fabs(sum) < eps);}
   void prepare() {}
   void reset() {
     sum = Counter();
