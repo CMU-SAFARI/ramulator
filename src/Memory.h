@@ -253,6 +253,17 @@ public:
     void tick()
     {
         ++num_dram_cycles;
+        int cur_que_req_num = 0;
+        int cur_que_readreq_num = 0;
+        int cur_que_writereq_num = 0;
+        for (auto ctrl : ctrls) {
+          cur_que_req_num += ctrl->readq.size() + ctrl->writeq.size() + ctrl->pending.size();
+          cur_que_readreq_num += ctrl->readq.size() + ctrl->pending.size();
+          cur_que_writereq_num += ctrl->writeq.size();
+        }
+        in_queue_req_num_sum += cur_que_req_num;
+        in_queue_read_req_num_sum += cur_que_readreq_num;
+        in_queue_write_req_num_sum += cur_que_writereq_num;
 
         bool is_active = false;
         for (auto ctrl : ctrls) {
@@ -262,19 +273,6 @@ public:
         if (is_active) {
           ramulator_active_cycles++;
         }
-        int cur_req_num = 0;
-        int cur_que_req_num = 0;
-        int cur_que_readreq_num = 0;
-        int cur_que_writereq_num = 0;
-        for (auto ctrl : ctrls) {
-          cur_req_num += ctrl->channel->cur_serving_requests;
-          cur_que_req_num += ctrl->readq.size() + ctrl->writeq.size() + ctrl->pending.size();
-          cur_que_readreq_num += ctrl->readq.size() + ctrl->pending.size();
-          cur_que_writereq_num += ctrl->writeq.size();
-        }
-        in_queue_req_num_sum += cur_que_req_num;
-        in_queue_read_req_num_sum += cur_que_readreq_num;
-        in_queue_write_req_num_sum += cur_que_writereq_num;
     }
 
     bool send(Request req)
