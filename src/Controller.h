@@ -271,7 +271,7 @@ public:
         cmd_trace_files.clear();
     }
 
-    void finish(int read_req, int write_req, int dram_cycles) {
+    void finish(long read_req, long dram_cycles) {
       read_latency_avg = read_latency_sum.value() / read_req;
       req_queue_length_avg = req_queue_length_sum.value() / dram_cycles;
       read_req_queue_length_avg = read_req_queue_length_sum.value() / dram_cycles;
