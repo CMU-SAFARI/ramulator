@@ -15,6 +15,7 @@ class Config {
 
 private:
     std::map<std::string, std::string> options;
+    int stacks;
     int channels;
     int ranks;
     int subarrays;
@@ -52,6 +53,10 @@ public:
 
     void set_core_num(int _core_num) {core_num = _core_num;}
 
+    int get_int_value(const std::string& name) const {
+      return atoi(options[name].c_str());
+    }
+    int get_stacks() const {return stacks;}
     int get_channels() const {return channels;}
     int get_subarrays() const {return subarrays;}
     int get_ranks() const {return ranks;}

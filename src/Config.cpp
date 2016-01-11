@@ -44,7 +44,9 @@ void Config::parse(const string& fname)
 
         options[tokens[0]] = tokens[1];
 
-        if (tokens[0] == "channels") {
+        if (tokens[0] == "stacks") {
+          stacks = atoi(tokens[1].c_str());
+        } else if (tokens[0] == "channels") {
           channels = atoi(tokens[1].c_str());
         } else if (tokens[0] == "ranks") {
           ranks = atoi(tokens[1].c_str());

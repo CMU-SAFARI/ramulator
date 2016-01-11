@@ -156,6 +156,28 @@ void start_run(const Config& configs, T* spec, const vector<const char*>& files)
   }
 }
 
+template<>
+void start_run<HMC>(const Config& configs, T* spec, const vector<const char*>& files) {
+  int V = configs.get_vaults(), S = configs.get_stacks();
+  int total_vault_number = V * S;
+  std::vector<Controller<HMC>*> vault_ctrls;
+  for (int c = 0 ; c < total_vault_number ; ++c) {
+    DRAM<HMC>* vault = new DRAM<HMC>(spec, HMC::Level::Vault);
+    vault->id = c;
+    vault->regStats("");
+    Controller<HMC>* ctrl = new Controller<HMC>(configs, vault);
+    ctrls.push_back(ctrl);
+  }
+  Memory<HMC, Controller> memory(configs, vault_ctrls);
+
+  assert(files.size() != 0);
+  if (configs["trace_type"] == "CPU") {
+    run_cputrace(configs, memory, files);
+  } else if (configs["trace_type"] == "DRAM") {
+    run_dramtrace(configs, memory, files[0]);
+  }
+}
+
 int main(int argc, const char *argv[])
 {
     if (argc < 2) {
@@ -235,6 +257,12 @@ int main(int argc, const char *argv[])
     } else if (standard == "TLDRAM") {
       TLDRAM* tldram = new TLDRAM(configs["org"], configs["speed"], configs.get_subarrays());
       start_run(configs, tldram, files);
+    } else if (standard == "HMC") {
+      HMC* hmc = new HMC(configs["org"], configs["speed"], configs["maxblock"],
+          configs["link_width"], configs["lane_speed"],
+          configs.get_value("source_mode_host_links"),
+          configs.get_value("payload_flits"));
+      start_run(configs, hmc, files);
     }
 
     printf("Simulation done. Statistics written to %s\n", stats_out.c_str());
