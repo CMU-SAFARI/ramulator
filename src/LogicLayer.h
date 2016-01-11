@@ -49,7 +49,7 @@ class LinkMaster {
         printf("link->slave.extracted_token_count: %d, RTC: %d\n",
             link->slave.extracted_token_count, rtc);
         link->master.extracted_token_count -= rtc;
-        TRETPacket tret_packet(rtc);
+        Packet tret_packet(Packet::Type::TRET, rtc);
         send(tret_packet);
         next_packet_clk = clk +
             ceil(tret_packet.total_flits * logic_layer->one_flit_cycles);

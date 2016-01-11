@@ -136,7 +136,7 @@ public:
       }
     }
 
-    RequestPacket form_request_packet(const Request& req) {
+    Packet form_request_packet(const Request& req) {
       // All packets sent from host controller are Request packets
       int cub = req.addr / capacity_per_stack;
       int adrs = req.addr;
@@ -153,7 +153,8 @@ public:
         break;
         default: assert(false);
       }
-      RequestPacket packet(cub, adrs, tag, lng, slid, cmd);
+      Packet packet(Packet::Type::Request, cub, adrs, tag, lng, slid, cmd);
+      packet.req = req;
       // DEBUG:
       assert(packet.header.CUB.valid());
       assert(packet.header.ADRS.valid());
@@ -163,7 +164,7 @@ public:
       return packet;
     }
 
-    void receive(Packet packet) {
+    void receive(Packet& packet) {
       assert(packet.type == Request::Type::Response);
       tags_pools[packet.header.slid.value].push_back(packet.header.tag.value);
       Request& req = packet.req;

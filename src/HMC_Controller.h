@@ -66,6 +66,7 @@ public:
 
     // HMC
     Queue<Packet> response_packets_buffer;
+    map<pair<int, int>, Packet> incoming_packets_buffer;
 
     /* Constructor */
     Controller(const Config& configs, DRAM<T>* channel) :
@@ -106,9 +107,8 @@ public:
 
     bool receive (Packet& packet) {
       assert(packet.type == Packet::Type::Request);
-      Request& req = packet->req;
       int slid = packet.tail.slid.value;
-      return enqueue(req, slid);
+      return enqueue(packet, slid);
     }
 
     void finish(long read_req, long dram_cycles) {
@@ -125,14 +125,16 @@ public:
         }
     }
 
-    bool enqueue(Request& req, int slid)
+    bool enqueue(Packet& packet, int slid)
     {
+        Request& req = packet.req;
         Queue<Request>& queue = get_queue(req.type, slid);
         if (queue.max == queue.size())
             return false;
 
         req.arrive = clk;
         queue.q.push_back(req);
+        incoming_packets_buffer[make_pair(req.id, req.coreid)] = packet;
         // shortcut for read requests, if a write to same addr exists
         // necessary for coherence
         if (req.type == Request::Type::READ && find_if(writeq.q.begin(), writeq.q.end(),
@@ -144,6 +146,26 @@ public:
         return true;
     }
 
+    Packet form_response_packet(Request& req) {
+      // All packets sent from host controller are Request packets
+      const Packet& req_packet =
+          incoming_packets_buffer[make_pair(req.id, req.coreid)];
+      int cub = req_packet.header.cub;
+      int adrs = req_packet.header.adrs;
+      int tag = req_packet.header.tag;
+      int slid = req_packet.tail.slid;
+      int lng = req_packet.header.lng;
+      Packet::Command cmd = req_packet.header.cmd;
+      Packet packet(Packet::Type::Request, cub, tag, lng, slid, cmd);
+      packet.req = req;
+      // DEBUG:
+      assert(packet.header.CUB.valid());
+      assert(packet.header.TAG.valid()); // -1 also considered valid here...
+      assert(packet.tail.SLID.valid());
+      assert(packet.header.CMD.valid());
+      return packet;
+    }
+
     void tick()
     {
         clk++;
@@ -152,9 +174,11 @@ public:
         if (pending.size()) {
             Request& req = pending[0];
             if (req.depart <= clk) {
+                Packet packet = form_response_packet(req);
+                response_packets_buffer.q.push_back(req);
                 pending.pop_front();
-            }
-        }
+              }
+          }
 
         /*** 2. Refresh scheduler ***/
         refresh->tick_ref();
