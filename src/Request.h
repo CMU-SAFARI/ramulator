@@ -33,6 +33,8 @@ public:
 
     long arrive = -1;
     long depart;
+
+    int burst_count = 0;
     function<void(Request&)> callback; // call back with more info
 
     Request(long addr, Type type, int coreid = 0)
@@ -43,7 +45,7 @@ public:
         : is_first_command(true), addr(addr), coreid(coreid), type(type), callback(callback) {}
 
     Request(long addr, Type type, function<void(Request&)> callback, int reqid, int coreid)
-        : if_first_command(true), addr(addr), reqid(reqid), coreid(coreid), type(type), callback(callback) {}
+        : is_first_command(true), addr(addr), reqid(reqid), coreid(coreid), type(type), callback(callback) {}
 
     Request(vector<int>& addr_vec, Type type, function<void(Request&)> callback, int coreid = 0)
         : is_first_command(true), addr_vec(addr_vec), coreid(coreid), type(type), callback(callback) {}

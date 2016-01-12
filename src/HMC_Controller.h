@@ -9,49 +9,41 @@
 #include <string>
 #include <vector>
 
-#include "Config.h"
-#include "DRAM.h"
-#include "Packet.h"
-#include "Refresh.h"
-#include "Request.h"
+#include "Controller.h"
 #include "Scheduler.h"
-#include "Statistics.h"
 
-#include "ALDRAM.h"
 #include "HMC.h"
-#include "SALP.h"
-#include "TLDRAM.h"
+#include "Packet.h"
 
 using namespace std;
 
 namespace ramulator
 {
 
-template <typename HMC>
-class Controller
+template <>
+class Controller<HMC>
 {
 protected:
 
 public:
     /* Member Variables */
     long clk = 0;
-    DRAM<T>* channel;
+    DRAM<HMC>* channel;
 
-    Scheduler<T>* scheduler;  // determines the highest priority request whose commands will be issued
-    RowPolicy<T>* rowpolicy;  // determines the row-policy (e.g., closed-row vs. open-row)
-    RowTable<T>* rowtable;  // tracks metadata about rows (e.g., which are open and for how long)
-    Refresh<T>* refresh;
+    Scheduler<HMC>* scheduler;  // determines the highest priority request whose commands will be issued
+    RowPolicy<HMC>* rowpolicy;  // determines the row-policy (e.g., closed-row vs. open-row)
+    RowTable<HMC>* rowtable;  // tracks metadata about rows (e.g., which are open and for how long)
+    Refresh<HMC>* refresh;
 
-    template<typename Element>
     struct Queue {
-        list<Element> q;
+        list<Request> q;
         unsigned int max = 32; // TODO queue qize
         unsigned int size() {return q.size();}
     };
 
-    vector<Queue<Request>> readq;  // queue for read requests
-    vector<Queue<Request>> writeq;  // queue for write requests
-    Queue<Request> otherq;  // queue for all "other" requests (e.g., refresh)
+    Queue readq;  // queue for read requests
+    Queue writeq;  // queue for write requests
+    Queue otherq;  // queue for all "other" requests (e.g., refresh)
 
     deque<Request> pending;  // read requests that are about to receive data from DRAM
     bool write_mode = false;  // whether write requests should be prioritized over reads
@@ -65,16 +57,16 @@ public:
     bool print_cmd_trace = false;
 
     // HMC
-    Queue<Packet> response_packets_buffer;
+    deque<Packet> response_packets_buffer;
     map<pair<int, int>, Packet> incoming_packets_buffer;
 
     /* Constructor */
-    Controller(const Config& configs, DRAM<T>* channel) :
+    Controller(const Config& configs, DRAM<HMC>* channel) :
         channel(channel),
-        scheduler(new Scheduler<T>(this)),
-        rowpolicy(new RowPolicy<T>(this)),
-        rowtable(new RowTable<T>(this)),
-        refresh(new Refresh<T>(this)),
+        scheduler(new Scheduler<HMC>(this)),
+        rowpolicy(new RowPolicy<HMC>(this)),
+        rowtable(new RowTable<HMC>(this)),
+        refresh(new Refresh<HMC>(this)),
         cmd_trace_files(channel->children.size())
     {
         record_cmd_trace = configs.record_cmd_trace();
@@ -89,9 +81,6 @@ public:
                 cmd_trace_files[i].open(prefix + to_string(i) + suffix);
         }
 
-        readq.reset(channel->spec->source_links);
-        writeq.reset(channel->spec->source_links);
-        otherq.reset(spec->source_links);
     }
 
     ~Controller(){
@@ -106,9 +95,12 @@ public:
     }
 
     bool receive (Packet& packet) {
-      assert(packet.type == Packet::Type::Request);
-      int slid = packet.tail.slid.value;
-      return enqueue(packet, slid);
+      assert(packet.type == Packet::Type::REQUEST);
+      Request& req = packet.req;
+      req.burst_count = channel->spec->burst_count;
+      // buffer packet, for future response packet
+      incoming_packets_buffer[make_pair(req.reqid, req.coreid)] = packet;
+      return enqueue(req);
     }
 
     void finish(long read_req, long dram_cycles) {
@@ -116,25 +108,23 @@ public:
     }
 
     /* Member Functions */
-    Queue& get_queue(Request::Type type,  int slid)
+    Queue& get_queue(Request::Type type)
     {
         switch (int(type)) {
-            case int(Request::Type::READ): return readq[slid];
-            case int(Request::Type::WRITE): return writeq[slid];
+            case int(Request::Type::READ): return readq;
+            case int(Request::Type::WRITE): return writeq;
             default: return otherq;
         }
     }
 
-    bool enqueue(Packet& packet, int slid)
+    bool enqueue(Request& req)
     {
-        Request& req = packet.req;
-        Queue<Request>& queue = get_queue(req.type, slid);
+        Queue& queue = get_queue(req.type);
         if (queue.max == queue.size())
             return false;
 
         req.arrive = clk;
         queue.q.push_back(req);
-        incoming_packets_buffer[make_pair(req.id, req.coreid)] = packet;
         // shortcut for read requests, if a write to same addr exists
         // necessary for coherence
         if (req.type == Request::Type::READ && find_if(writeq.q.begin(), writeq.q.end(),
@@ -149,14 +139,13 @@ public:
     Packet form_response_packet(Request& req) {
       // All packets sent from host controller are Request packets
       const Packet& req_packet =
-          incoming_packets_buffer[make_pair(req.id, req.coreid)];
-      int cub = req_packet.header.cub;
-      int adrs = req_packet.header.adrs;
-      int tag = req_packet.header.tag;
-      int slid = req_packet.tail.slid;
-      int lng = req_packet.header.lng;
-      Packet::Command cmd = req_packet.header.cmd;
-      Packet packet(Packet::Type::Request, cub, tag, lng, slid, cmd);
+          incoming_packets_buffer[make_pair(req.reqid, req.coreid)];
+      int cub = req_packet.header.CUB.value;
+      int tag = req_packet.header.TAG.value;
+      int slid = req_packet.tail.SLID.value;
+      int lng = req_packet.header.LNG.value;
+      Packet::Command cmd = req_packet.header.CMD.value;
+      Packet packet(Packet::Type::RESPONSE, cub, tag, lng, slid, cmd);
       packet.req = req;
       // DEBUG:
       assert(packet.header.CUB.valid());
@@ -168,17 +157,18 @@ public:
 
     void tick()
     {
+        printf("use controller explicitly specialized for HMC_Contrller.h\n");
         clk++;
 
         /*** 1. Serve completed reads ***/
         if (pending.size()) {
-            Request& req = pending[0];
-            if (req.depart <= clk) {
-                Packet packet = form_response_packet(req);
-                response_packets_buffer.q.push_back(req);
-                pending.pop_front();
-              }
+          Request& req = pending[0];
+          if (req.depart <= clk) {
+            Packet packet = form_response_packet(req);
+            response_packets_buffer.push_back(packet);
+            pending.pop_front();
           }
+        }
 
         /*** 2. Refresh scheduler ***/
         refresh->tick_ref();
@@ -203,7 +193,7 @@ public:
         auto req = scheduler->get_head(queue->q);
         if (req == queue->q.end() || !is_ready(req)) {
             // we couldn't find a command to schedule -- let's try to be speculative
-            auto cmd = T::Command::PRE;
+            auto cmd = HMC::Command::PRE;
             vector<int> victim = rowpolicy->get_victim(cmd);
             if (!victim.empty()){
                 issue_cmd(cmd, victim);
@@ -222,23 +212,31 @@ public:
         // set a future completion time for read requests
         if (req->type == Request::Type::READ) {
             req->depart = clk + channel->spec->read_latency;
-            pending.push_back(*req);
+            --req->burst_count;
+            if (req->burst_count == 0) {
+              pending.push_back(*req);
+            }
         } else if (req->type == Request::Type::WRITE) {
-            Packet packet = form_response_packet(req);
-            response_packets_buffer.q.push_back(req);
+            --req->burst_count;
+            if (req->burst_count == 0) {
+              Packet packet = form_response_packet(*req);
+              response_packets_buffer.push_back(packet);
+            }
         }
 
         // remove request from queue
-        queue->q.erase(req);
+        if (req->burst_count == 0) {
+          queue->q.erase(req);
+        }
     }
 
     bool is_ready(list<Request>::iterator req)
     {
-        typename T::Command cmd = get_first_cmd(req);
+        typename HMC::Command cmd = get_first_cmd(req);
         return channel->check(cmd, req->addr_vec.data(), clk);
     }
 
-    bool is_ready(typename T::Command cmd, const vector<int>& addr_vec)
+    bool is_ready(typename HMC::Command cmd, const vector<int>& addr_vec)
     {
         return channel->check(cmd, addr_vec.data(), clk);
     }
@@ -246,11 +244,11 @@ public:
     bool is_row_hit(list<Request>::iterator req)
     {
         // cmd must be decided by the request type, not the first cmd
-        typename T::Command cmd = channel->spec->translate[int(req->type)];
+        typename HMC::Command cmd = channel->spec->translate[int(req->type)];
         return channel->check_row_hit(cmd, req->addr_vec.data());
     }
 
-    bool is_row_hit(typename T::Command cmd, const vector<int>& addr_vec)
+    bool is_row_hit(typename HMC::Command cmd, const vector<int>& addr_vec)
     {
         return channel->check_row_hit(cmd, addr_vec.data());
     }
@@ -258,11 +256,11 @@ public:
     bool is_row_open(list<Request>::iterator req)
     {
         // cmd must be decided by the request type, not the first cmd
-        typename T::Command cmd = channel->spec->translate[int(req->type)];
+        typename HMC::Command cmd = channel->spec->translate[int(req->type)];
         return channel->check_row_open(cmd, req->addr_vec.data());
     }
 
-    bool is_row_open(typename T::Command cmd, const vector<int>& addr_vec)
+    bool is_row_open(typename HMC::Command cmd, const vector<int>& addr_vec)
     {
         return channel->check_row_open(cmd, addr_vec.data());
     }
@@ -282,22 +280,17 @@ public:
     }
 
     void record_core(int coreid) {
-      record_read_hits[coreid] = read_row_hits[coreid];
-      record_read_misses[coreid] = read_row_misses[coreid];
-      record_read_conflicts[coreid] = read_row_conflicts[coreid];
-      record_write_hits[coreid] = write_row_hits[coreid];
-      record_write_misses[coreid] = write_row_misses[coreid];
-      record_write_conflicts[coreid] = write_row_conflicts[coreid];
+      // TODO record statistics
     }
 
 private:
-    typename T::Command get_first_cmd(list<Request>::iterator req)
+    typename HMC::Command get_first_cmd(list<Request>::iterator req)
     {
-        typename T::Command cmd = channel->spec->translate[int(req->type)];
+        typename HMC::Command cmd = channel->spec->translate[int(req->type)];
         return channel->decode(cmd, req->addr_vec.data());
     }
 
-    void issue_cmd(typename T::Command cmd, const vector<int>& addr_vec)
+    void issue_cmd(typename HMC::Command cmd, const vector<int>& addr_vec)
     {
         assert(is_ready(cmd, addr_vec));
         channel->update(cmd, addr_vec.data(), clk);
@@ -311,39 +304,23 @@ private:
             if (cmd_name == "PREA" || cmd_name == "REF")
                 file<<endl;
             else{
-                int bank_id = addr_vec[int(T::Level::Bank)];
+                int bank_id = addr_vec[int(HMC::Level::Bank)];
                 if (channel->spec->standard_name == "DDR4" || channel->spec->standard_name == "GDDR5")
-                    bank_id += addr_vec[int(T::Level::Bank) - 1] * channel->spec->org_entry.count[int(T::Level::Bank)];
+                    bank_id += addr_vec[int(HMC::Level::Bank) - 1] * channel->spec->org_entry.count[int(HMC::Level::Bank)];
                 file<<','<<bank_id<<endl;
             }
         }
         if (print_cmd_trace){
             printf("%5s %10ld:", channel->spec->command_name[int(cmd)].c_str(), clk);
-            for (int lev = 0; lev < int(T::Level::MAX); lev++)
+            for (int lev = 0; lev < int(HMC::Level::MAX); lev++)
                 printf(" %5d", addr_vec[lev]);
             printf("\n");
         }
     }
-    vector<int> get_addr_vec(typename T::Command cmd, list<Request>::iterator req){
+    vector<int> get_addr_vec(typename HMC::Command cmd, list<Request>::iterator req){
         return req->addr_vec;
     }
 };
-
-template <>
-vector<int> Controller<SALP>::get_addr_vec(
-    SALP::Command cmd, list<Request>::iterator req);
-
-template <>
-bool Controller<SALP>::is_ready(list<Request>::iterator req);
-
-template <>
-void Controller<ALDRAM>::update_temp(ALDRAM::Temp current_temperature);
-
-template <>
-void Controller<TLDRAM>::tick();
-
-template <>
-bool enqueue<HMC>(Packet& packet);
 
 } /*namespace ramulator*/
 

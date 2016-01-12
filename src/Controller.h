@@ -16,6 +16,8 @@
 #include "Scheduler.h"
 #include "Statistics.h"
 
+#include "HMC.h"
+
 #include "ALDRAM.h"
 #include "SALP.h"
 #include "TLDRAM.h"

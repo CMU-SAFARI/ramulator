@@ -5,6 +5,7 @@
 #include "Request.h"
 #include "MemoryFactory.h"
 #include "Memory.h"
+#include "HMC_Memory.h"
 #include "DDR3.h"
 #include "DDR4.h"
 #include "LPDDR3.h"
@@ -13,6 +14,7 @@
 #include "WideIO.h"
 #include "WideIO2.h"
 #include "HBM.h"
+#include "HMC.h"
 #include "SALP.h"
 
 using namespace ramulator;

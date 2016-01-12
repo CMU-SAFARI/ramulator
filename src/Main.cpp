@@ -2,7 +2,9 @@
 #include "Config.h"
 #include "Controller.h"
 #include "SpeedyController.h"
+#include "HMC_Controller.h"
 #include "Memory.h"
+#include "HMC_Memory.h"
 #include "DRAM.h"
 #include "Statistics.h"
 #include <algorithm>
@@ -24,6 +26,7 @@
 #include "WideIO.h"
 #include "WideIO2.h"
 #include "HBM.h"
+#include "HMC.h"
 #include "SALP.h"
 #include "ALDRAM.h"
 #include "TLDRAM.h"
@@ -157,8 +160,9 @@ void start_run(const Config& configs, T* spec, const vector<const char*>& files)
 }
 
 template<>
-void start_run<HMC>(const Config& configs, T* spec, const vector<const char*>& files) {
-  int V = configs.get_vaults(), S = configs.get_stacks();
+void start_run<HMC>(const Config& configs, HMC* spec, const vector<const char*>& files) {
+  int V = spec->org_entry.count[int(HMC::Level::Vault)];
+  int S = configs.get_stacks();
   int total_vault_number = V * S;
   std::vector<Controller<HMC>*> vault_ctrls;
   for (int c = 0 ; c < total_vault_number ; ++c) {
@@ -166,7 +170,7 @@ void start_run<HMC>(const Config& configs, T* spec, const vector<const char*>& f
     vault->id = c;
     vault->regStats("");
     Controller<HMC>* ctrl = new Controller<HMC>(configs, vault);
-    ctrls.push_back(ctrl);
+    vault_ctrls.push_back(ctrl);
   }
   Memory<HMC, Controller> memory(configs, vault_ctrls);
 
@@ -260,8 +264,8 @@ int main(int argc, const char *argv[])
     } else if (standard == "HMC") {
       HMC* hmc = new HMC(configs["org"], configs["speed"], configs["maxblock"],
           configs["link_width"], configs["lane_speed"],
-          configs.get_value("source_mode_host_links"),
-          configs.get_value("payload_flits"));
+          configs.get_int_value("source_mode_host_links"),
+          configs.get_int_value("payload_flits"));
       start_run(configs, hmc, files);
     }
 

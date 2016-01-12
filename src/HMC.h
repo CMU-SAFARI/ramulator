@@ -19,11 +19,17 @@ public:
     static string standard_name;
     enum class Org;
     enum class Speed;
-    HMC(Org org, Speed speed);
-    HMC(const string& org_str, const string& speed_str);
+    enum class MaxBlock;
+    enum class LinkWidth;
+    enum class LaneSpeed;
+    HMC(Org org, Speed speed, MaxBlock maxblock, LinkWidth linkwidth, LaneSpeed lanespeed, int source_links, int payload_flits);
+    HMC(const string& org_str, const string& speed_str, const string& maxblock_str, const string& linkwidth_str, const string& lanespeed_str, int source_links, int payload_flits);
     
     static map<string, enum Org> org_map;
     static map<string, enum Speed> speed_map;
+    static map<string, enum MaxBlock> maxblock_map;
+    static map<string, enum LinkWidth> linkwidth_map;
+    static map<string, enum LaneSpeed> lanespeed_map;
     /*** Level ***/
     enum class Level : int
     { 
@@ -152,9 +158,6 @@ public:
         {32<<10, 32, {32, 8, 2, 1<<11, 1<<16}}
     }, org_entry;
 
-    void set_channel_number(int channel);
-    void set_rank_number(int rank);
-
     /* Speed */
     enum class Speed : int
     {
@@ -197,18 +200,20 @@ public:
       HMC_Full_Width, HMC_Half_Width, HMC_Quarter_Width, MAX
     };
 
-    int link_width_table[int(Lane::MAX)] = { 16, 8, 4, };
+    int link_width_table[int(LinkWidth::MAX)] = { 16, 8, 4, };
     int link_width;
 
     enum class LaneSpeed: int {
-      HMC_12.5_Gbps, HMC_15_Gbps, HMC_25_Gbps, HMC_28_Gbps, HMC_30_Gbps, MAX
+      HMC_12_5_Gbps, HMC_15_Gbps, HMC_25_Gbps, HMC_28_Gbps, HMC_30_Gbps, MAX
     };
 
-    int lane_speed_table[int(LaneSpeed:MAX)] = { 12.5, 15, 25, 28, 30, };
-    int lane_speed;
+    double lane_speed_table[int(LaneSpeed::MAX)] = { 12.5, 15, 25, 28, 30, };
+    double lane_speed;
 
     int source_links = 0; // number of host links in source mode, must be power of 2
     int payload_flits = 4; // TODO to make it flexible
+
+    int burst_count = 0; // real_payload_flits / one_fetch_flits
     
     int max_tags = 1 << 11;
 

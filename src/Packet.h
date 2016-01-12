@@ -3,8 +3,21 @@
 
 #include "Request.h"
 
+#include <cassert>
+
+#include <map>
+
 namespace ramulator
 {
+
+static int cub_bits = 3;
+static int slid_bits = 3;
+static int adrs_bits = 34;
+static int tag_bits = 11;
+static int lng_bits = 5;
+static int cmd_bits = 7;
+static int rtc_bits = 3;
+
 class Packet {
  public:
   enum class Type {
@@ -25,13 +38,15 @@ class Packet {
     RD16, RD32, RD48, RD64, RD80, RD96, RD112, RD128, RD256,
     MAX
   };
-  class Datafield<ValueType> {
-   public:
+
+  template<typename ValueType>
+  struct Datafield {
+    Datafield<ValueType>() {}
     Datafield<ValueType>(ValueType value, int bit): value(value), bit(bit) {}
     ValueType value; // ValueType should be convertible to int
     int bit;
     bool valid() {
-      (int(value) < (1<<bit));
+      return (int(value) < (1<<bit));
     }
   };
 
@@ -47,7 +62,7 @@ class Packet {
  * Tail (LSBs on the left):
  * [ CRC | RTC | ERRSTAT | DINV | SEQ | FRP | RRP ]
  */
-  class Header {
+  struct Header {
     Datafield<int> CUB;
     Datafield<int> ADRS;
     Datafield<int> SLID;
@@ -56,7 +71,7 @@ class Packet {
     Datafield<Command> CMD;
   } header;
 
-  class Tail {
+  struct Tail {
     Datafield<int> RTC;
     Datafield<int> SLID;
   } tail;
@@ -68,23 +83,15 @@ class Packet {
   // keeps orginal req to facilitate further extraction
   Request req;
 
-  const int cub_bits = 3;
-  const int slid_bits = 3;
-  const int adrs_bits = 34;
-  const int tag_bits = 11;
-  const int lng_bits = 5;
-  const int cmd_bits = 7;
-  const int rtc_bits = 3;
-
   Packet() {}
   Packet(Type type, int CUB, int ADRS, int TAG, int LNG, int SLID, Command CMD):
       type(type) {
-    assert(type == Type::Request);
+    assert(type == Type::REQUEST);
     header.CUB = Datafield<int>(CUB, cub_bits);
     header.ADRS = Datafield<int>(ADRS, adrs_bits);
     header.TAG = Datafield<int>(TAG, tag_bits);
     header.LNG = Datafield<int>(LNG, lng_bits);
-    header.CMD = Datafield<int>(LNG, cmd_bits);
+    header.CMD = Datafield<Command>(CMD, cmd_bits);
 
     tail.RTC = Datafield<int>(0, rtc_bits);
     tail.SLID = Datafield<int>(SLID, slid_bits);
@@ -96,7 +103,7 @@ class Packet {
 
   Packet(Type type, int CUB, int TAG, int LNG, int SLID, Command CMD):
       type(type) {
-    assert(type == Type::Response);
+    assert(type == Type::RESPONSE);
     header.CUB = Datafield<int>(CUB, cub_bits);
     header.SLID = Datafield<int>(SLID, slid_bits);
     header.TAG = Datafield<int>(TAG, tag_bits);
@@ -112,8 +119,6 @@ class Packet {
 
   Packet(Type type, int RTC):type(type) {
     assert(type == Type::TRET);
-    tail.RTC.bits = rtc_bits;
-    tail.RTC.value = RTC;
     tail.RTC = Datafield<int>(RTC, rtc_bits);
 
     payload_flits = 0;
@@ -122,22 +127,9 @@ class Packet {
   }
 };
 
-map<int, Packet::Command> write_cmd_map = {
-  {1, Packet::Command::WR16}, {2, Packet::Command::WR32},
-  {3, Packet::Command::WR48}, {4, Packet::Command::WR64},
-  {5, Packet::Command::WR80}, {6, Packet::Command::WR96},
-  {7, Packet::Command::WR112}, {8, Packet::Command::WR128},
-  {16, Packet::Command::WR256},
-};
+extern std::map<int, enum Packet::Command> write_cmd_map;
 
-map<int, Packet::Command> read_cmd_map = {
-  {1, Packet::Command::RD16}, {2, Packet::Command::RD32},
-  {3, Packet::Command::RD48}, {4, Packet::Command::RD64},
-  {5, Packet::Command::RD80}, {6, Packet::Command::RD96},
-  {7, Packet::Command::RD112}, {8, Packet::Command::RD128},
-  {16, Packet::Command::RD256},
-};
-
+extern std::map<int, enum Packet::Command> read_cmd_map;
 } /*namespace ramulator*/
 
 #endif /*__PACKET_H*/

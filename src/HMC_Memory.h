@@ -3,6 +3,7 @@
 
 #include "HMC.h"
 #include "LogicLayer.h"
+#include "LogicLayer.cpp"
 #include "Memory.h"
 #include "Packet.h"
 
@@ -19,7 +20,7 @@ protected:
   long capacity_per_stack;
 public:
     enum class Type {
-        RoCoBaVaCo; // XXX The specification doesn't define row/column addressing
+        RoCoBaVaCo, // XXX The specification doesn't define row/column addressing
         MAX,
     } type = Type::RoCoBaVaCo;
 
@@ -109,15 +110,12 @@ public:
     }
 
     void record_core(int coreid) {
-      record_read_requests[coreid] = num_read_requests[coreid];
-      record_write_requests[coreid] = num_write_requests[coreid];
-      for (auto ctrl : ctrls) {
-        ctrl->record_core(coreid);
-      }
+      // TODO record statistics
     }
 
     void tick()
     {
+        printf("use memory explicitly specialized for HMC\n");
         for (auto ctrl : ctrls) {
           ctrl->tick();
         }
@@ -140,8 +138,8 @@ public:
       // All packets sent from host controller are Request packets
       int cub = req.addr / capacity_per_stack;
       int adrs = req.addr;
-      int slid = max_address & ((1 << spec->source_links) - 1) // max_address % spec->source_links
-      int tag = assign_tag(SLID); // may return -1 when no available tag // TODO recycle tags when request callback
+      int slid = max_address & ((1 << spec->source_links) - 1); // max_address % spec->source_links
+      int tag = assign_tag(slid); // may return -1 when no available tag // TODO recycle tags when request callback
       int lng = spec->payload_flits;
       Packet::Command cmd;
       switch (int(req.type)) {
@@ -153,7 +151,7 @@ public:
         break;
         default: assert(false);
       }
-      Packet packet(Packet::Type::Request, cub, adrs, tag, lng, slid, cmd);
+      Packet packet(Packet::Type::REQUEST, cub, adrs, tag, lng, slid, cmd);
       packet.req = req;
       // DEBUG:
       assert(packet.header.CUB.valid());
@@ -165,23 +163,24 @@ public:
     }
 
     void receive(Packet& packet) {
-      assert(packet.type == Request::Type::Response);
-      tags_pools[packet.header.slid.value].push_back(packet.header.tag.value);
+      assert(packet.type == Packet::Type::RESPONSE);
+      tags_pools[packet.header.SLID.value].push_back(packet.header.TAG.value);
       Request& req = packet.req;
-      req.callback(req);
+      if (req.type == Request::Type::READ) {
+        req.callback(req);
+      }
     }
 
     bool send(Request req)
     {
         req.addr_vec.resize(addr_bits.size());
         long addr = req.addr;
-        int coreid = req.coreid;
 
         // Each transaction size is 2^tx_bits, so first clear the lowest tx_bits bits
         clear_lower_bits(addr, tx_bits);
 
         switch(int(type)) {
-          case int(Type::RoCoBaVaCo):
+          case int(Type::RoCoBaVaCo): {
             int max_block_bits = spec->maxblock_entry.flit_num_bits;
             req.addr_vec[int(HMC::Level::Column)] =
                 slice_lower_bits(addr, max_block_bits);
@@ -195,17 +194,20 @@ public:
               req.addr_vec[int(HMC::Level::Column)] | (column_MSB_bits << max_block_bits);
             req.addr_vec[int(HMC::Level::Row)] =
                 slice_lower_bits(addr, addr_bits[int(HMC::Level::Row)]);
+          }
+          break;
           default:
               assert(false);
         }
 
         Packet packet = form_request_packet(req);
-        if (req.tag == -1) {
-          printf("tag for link %d not available\n", req.tail.slid.value);
+        if (packet.header.TAG.value == -1) {
+          printf("tag for link %d not available\n", packet.tail.SLID.value);
           return false;
         }
 
-        Link* link = links[req.tail.slid];
+        // TODO support multiple stacks
+        Link<HMC>* link = logic_layers[0]->host_links[packet.tail.SLID.value];
         if (packet.total_flits <= link->slave.available_space()) {
           link->slave.receive(packet);
           return true;
@@ -221,6 +223,62 @@ public:
             reqs += ctrl->readq.size() + ctrl->writeq.size() + ctrl->otherq.size() + ctrl->pending.size();
         return reqs;
     }
+
+    void finish(void) {
+    }
+
+    long page_allocator(long addr, int coreid) {
+        long virtual_page_number = addr >> 12;
+
+        switch(int(translation)) {
+            case int(Translation::None): {
+              return addr;
+            }
+            case int(Translation::Random): {
+                auto target = make_pair(coreid, virtual_page_number);
+                if(page_translation.find(target) == page_translation.end()) {
+                    // page doesn't exist, so assign a new page
+                    // make sure there are physical pages left to be assigned
+
+                    // if physical page doesn't remain, replace a previous assigned
+                    // physical page.
+                    if (!free_physical_pages_remaining) {
+                      long phys_page_to_read = lrand() % free_physical_pages.size();
+                      assert(free_physical_pages[phys_page_to_read] != -1);
+                      page_translation[target] = phys_page_to_read;
+                    } else {
+                        // assign a new page
+                        long phys_page_to_read = lrand() % free_physical_pages.size();
+                        // if the randomly-selected page was already assigned
+                        if(free_physical_pages[phys_page_to_read] != -1) {
+                            long starting_page_of_search = phys_page_to_read;
+
+                            do {
+                                // iterate through the list until we find a free page
+                                // TODO: does this introduce serious non-randomness?
+                                ++phys_page_to_read;
+                                phys_page_to_read %= free_physical_pages.size();
+                            }
+                            while((phys_page_to_read != starting_page_of_search) && free_physical_pages[phys_page_to_read] != -1);
+                        }
+
+                        assert(free_physical_pages[phys_page_to_read] == -1);
+
+                        page_translation[target] = phys_page_to_read;
+                        free_physical_pages[phys_page_to_read] = coreid;
+                        --free_physical_pages_remaining;
+                    }
+                }
+
+                // SAUGATA TODO: page size should not always be fixed to 4KB
+                return (page_translation[target] << 12) | (addr & ((1 << 12) - 1));
+            }
+            default:
+                assert(false);
+        }
+
+    }
+
 
 private:
 

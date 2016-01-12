@@ -54,7 +54,8 @@ public:
     void set_core_num(int _core_num) {core_num = _core_num;}
 
     int get_int_value(const std::string& name) const {
-      return atoi(options[name].c_str());
+      assert(options.find(name) != options.end() && "can't find this argument");
+      return atoi(options.find(name)->second.c_str());
     }
     int get_stacks() const {return stacks;}
     int get_channels() const {return channels;}

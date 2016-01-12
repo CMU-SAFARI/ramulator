@@ -8,6 +8,7 @@ using namespace std;
 using namespace ramulator;
 
 string HMC::standard_name = "HMC";
+const int bytes_per_flit = 16;
 
 map<string, enum HMC::Org> HMC::org_map = {
     {"HMC_4GB", HMC::Org::HMC_4GB}, {"HMC_8GB", HMC::Org::HMC_8GB},
@@ -31,7 +32,7 @@ map<string, enum HMC::LinkWidth> HMC::linkwidth_map = {
 };
 
 map<string, enum HMC::LaneSpeed> HMC::lanespeed_map = {
-    {"HMC_12.5_Gbps", HMC::LaneSpeed::HMC_12.5_Gbps},
+    {"HMC_12.5_Gbps", HMC::LaneSpeed::HMC_12_5_Gbps},
     {"HMC_15_Gbps", HMC::LaneSpeed::HMC_15_Gbps},
     {"HMC_25_Gbps", HMC::LaneSpeed::HMC_25_Gbps},
     {"HMC_28_Gbps", HMC::LaneSpeed::HMC_28_Gbps},
@@ -41,11 +42,12 @@ map<string, enum HMC::LaneSpeed> HMC::lanespeed_map = {
 HMC::HMC(Org org, Speed speed, MaxBlock maxblock, LinkWidth linkwidth,
     LaneSpeed lanespeed, int source_links, int payload_flits) :
     org_entry(org_table[int(org)]),speed_entry(speed_table[int(speed)]),
+    read_latency(speed_entry.nCL + speed_entry.nBL),
     maxblock_entry(maxblock_table[int(maxblock)]),
     link_width(link_width_table[int(linkwidth)]),
     lane_speed(lane_speed_table[int(lanespeed)]),
-    source_links(source_links), payload_flits(payload_flits)
-    read_latency(speed_entry.nCL + speed_entry.nBL)
+    source_links(source_links), payload_flits(payload_flits),
+    burst_count(payload_flits / ((prefetch_size * channel_width / 8)/ bytes_per_flit))
 {
     init_speed();
     init_prereq();
@@ -57,18 +59,10 @@ HMC::HMC(Org org, Speed speed, MaxBlock maxblock, LinkWidth linkwidth,
 
 HMC::HMC(const string& org_str, const string& speed_str,
     const string& maxblock_str, const string& linkwidth_str,
-    const string& lanespeed_str, int source_links) :
+    const string& lanespeed_str, int source_links, int payload_flits) :
     HMC(org_map[org_str], speed_map[speed_str], maxblock_map[maxblock_str],
-        linkwidth_map[linkwidth_str], lanespeed_map[lanespeed_str], source_links)
+        linkwidth_map[linkwidth_str], lanespeed_map[lanespeed_str], source_links, payload_flits)
 {
-}
-
-void HMC::set_channel_number(int channel) {
-  org_entry.count[int(Level::Channel)] = channel;
-}
-
-void HMC::set_rank_number(int rank) {
-  org_entry.count[int(Level::Rank)] = rank;
 }
 
 void HMC::init_speed()
@@ -79,7 +73,7 @@ void HMC::init_speed()
 void HMC::init_prereq()
 {
     // RD
-    prereq[int(Level::Rank)][int(Command::RD)] = [] (DRAM<HMC>* node, Command cmd, int id) {
+    prereq[int(Level::Vault)][int(Command::RD)] = [] (DRAM<HMC>* node, Command cmd, int id) {
         switch (int(node->state)) {
             case int(State::PowerUp): return Command::MAX;
             case int(State::ActPowerDown): return Command::PDX;
@@ -98,11 +92,11 @@ void HMC::init_prereq()
         }};
 
     // WR
-    prereq[int(Level::Rank)][int(Command::WR)] = prereq[int(Level::Rank)][int(Command::RD)];
+    prereq[int(Level::Vault)][int(Command::WR)] = prereq[int(Level::Vault)][int(Command::RD)];
     prereq[int(Level::Bank)][int(Command::WR)] = prereq[int(Level::Bank)][int(Command::RD)];
 
     // REF
-    prereq[int(Level::Rank)][int(Command::REF)] = [] (DRAM<HMC>* node, Command cmd, int id) {
+    prereq[int(Level::Vault)][int(Command::REF)] = [] (DRAM<HMC>* node, Command cmd, int id) {
         for (auto bank : node->children) {
             if (bank->state == State::Closed)
                 continue;
@@ -111,7 +105,7 @@ void HMC::init_prereq()
         return Command::REF;};
 
     // PD
-    prereq[int(Level::Rank)][int(Command::PDE)] = [] (DRAM<HMC>* node, Command cmd, int id) {
+    prereq[int(Level::Vault)][int(Command::PDE)] = [] (DRAM<HMC>* node, Command cmd, int id) {
         switch (int(node->state)) {
             case int(State::PowerUp): return Command::PDE;
             case int(State::ActPowerDown): return Command::PDE;
@@ -121,7 +115,7 @@ void HMC::init_prereq()
         }};
 
     // SR
-    prereq[int(Level::Rank)][int(Command::SRE)] = [] (DRAM<HMC>* node, Command cmd, int id) {
+    prereq[int(Level::Vault)][int(Command::SRE)] = [] (DRAM<HMC>* node, Command cmd, int id) {
         switch (int(node->state)) {
             case int(State::PowerUp): return Command::SRE;
             case int(State::ActPowerDown): return Command::PDX;
@@ -172,11 +166,11 @@ void HMC::init_lambda()
     lambda[int(Level::Bank)][int(Command::PRE)] = [] (DRAM<HMC>* node, int id) {
         node->state = State::Closed;
         node->row_state.clear();};
-    lambda[int(Level::Rank)][int(Command::PREA)] = [] (DRAM<HMC>* node, int id) {
+    lambda[int(Level::Vault)][int(Command::PREA)] = [] (DRAM<HMC>* node, int id) {
         for (auto bank : node->children) {
             bank->state = State::Closed;
             bank->row_state.clear();}};
-    lambda[int(Level::Rank)][int(Command::REF)] = [] (DRAM<HMC>* node, int id) {};
+    lambda[int(Level::Vault)][int(Command::REF)] = [] (DRAM<HMC>* node, int id) {};
     lambda[int(Level::Bank)][int(Command::RD)] = [] (DRAM<HMC>* node, int id) {};
     lambda[int(Level::Bank)][int(Command::WR)] = [] (DRAM<HMC>* node, int id) {};
     lambda[int(Level::Bank)][int(Command::RDA)] = [] (DRAM<HMC>* node, int id) {
@@ -185,7 +179,7 @@ void HMC::init_lambda()
     lambda[int(Level::Bank)][int(Command::WRA)] = [] (DRAM<HMC>* node, int id) {
         node->state = State::Closed;
         node->row_state.clear();};
-    lambda[int(Level::Rank)][int(Command::PDE)] = [] (DRAM<HMC>* node, int id) {
+    lambda[int(Level::Vault)][int(Command::PDE)] = [] (DRAM<HMC>* node, int id) {
         for (auto bank : node->children) {
             if (bank->state == State::Closed)
                 continue;
@@ -193,11 +187,11 @@ void HMC::init_lambda()
             return;
         }
         node->state = State::PrePowerDown;};
-    lambda[int(Level::Rank)][int(Command::PDX)] = [] (DRAM<HMC>* node, int id) {
+    lambda[int(Level::Vault)][int(Command::PDX)] = [] (DRAM<HMC>* node, int id) {
         node->state = State::PowerUp;};
-    lambda[int(Level::Rank)][int(Command::SRE)] = [] (DRAM<HMC>* node, int id) {
+    lambda[int(Level::Vault)][int(Command::SRE)] = [] (DRAM<HMC>* node, int id) {
         node->state = State::SelfRefresh;};
-    lambda[int(Level::Rank)][int(Command::SRX)] = [] (DRAM<HMC>* node, int id) {
+    lambda[int(Level::Vault)][int(Command::SRX)] = [] (DRAM<HMC>* node, int id) {
         node->state = State::PowerUp;};
 }
 
@@ -207,8 +201,8 @@ void HMC::init_timing()
     SpeedEntry& s = speed_entry;
     vector<TimingEntry> *t;
 
-    /*** Channel ***/
-    t = timing[int(Level::Channel)];
+    /*** Vault ***/
+    t = timing[int(Level::Vault)];
 
     // CAS <-> CAS
     t[int(Command::RD)].push_back({Command::RD, 1, s.nBL});
@@ -219,10 +213,6 @@ void HMC::init_timing()
     t[int(Command::WR)].push_back({Command::WRA, 1, s.nBL});
     t[int(Command::WRA)].push_back({Command::WR, 1, s.nBL});
     t[int(Command::WRA)].push_back({Command::WRA, 1, s.nBL});
-
-
-    /*** Rank ***/
-    t = timing[int(Level::Rank)];
 
     // CAS <-> CAS
     t[int(Command::RD)].push_back({Command::RD, 1, s.nCCD});
@@ -241,24 +231,6 @@ void HMC::init_timing()
     t[int(Command::WR)].push_back({Command::RDA, 1, s.nCWL + s.nBL + s.nWTR});
     t[int(Command::WRA)].push_back({Command::RD, 1, s.nCWL + s.nBL + s.nWTR});
     t[int(Command::WRA)].push_back({Command::RDA, 1, s.nCWL + s.nBL + s.nWTR});
-
-    // CAS <-> CAS (between sibling ranks)
-    t[int(Command::RD)].push_back({Command::RD, 1, s.nBL + s.nRTRS, true});
-    t[int(Command::RD)].push_back({Command::RDA, 1, s.nBL + s.nRTRS, true});
-    t[int(Command::RDA)].push_back({Command::RD, 1, s.nBL + s.nRTRS, true});
-    t[int(Command::RDA)].push_back({Command::RDA, 1, s.nBL + s.nRTRS, true});
-    t[int(Command::RD)].push_back({Command::WR, 1, s.nBL + s.nRTRS, true});
-    t[int(Command::RD)].push_back({Command::WRA, 1, s.nBL + s.nRTRS, true});
-    t[int(Command::RDA)].push_back({Command::WR, 1, s.nBL + s.nRTRS, true});
-    t[int(Command::RDA)].push_back({Command::WRA, 1, s.nBL + s.nRTRS, true});
-    t[int(Command::RD)].push_back({Command::WR, 1, s.nCL + s.nBL + s.nRTRS - s.nCWL, true});
-    t[int(Command::RD)].push_back({Command::WRA, 1, s.nCL + s.nBL + s.nRTRS - s.nCWL, true});
-    t[int(Command::RDA)].push_back({Command::WR, 1, s.nCL + s.nBL + s.nRTRS - s.nCWL, true});
-    t[int(Command::RDA)].push_back({Command::WRA, 1, s.nCL + s.nBL + s.nRTRS - s.nCWL, true});
-    t[int(Command::WR)].push_back({Command::RD, 1, s.nCWL + s.nBL + s.nRTRS - s.nCL, true});
-    t[int(Command::WR)].push_back({Command::RDA, 1, s.nCWL + s.nBL + s.nRTRS - s.nCL, true});
-    t[int(Command::WRA)].push_back({Command::RD, 1, s.nCWL + s.nBL + s.nRTRS - s.nCL, true});
-    t[int(Command::WRA)].push_back({Command::RDA, 1, s.nCWL + s.nBL + s.nRTRS - s.nCL, true});
 
     t[int(Command::RD)].push_back({Command::PREA, 1, s.nRTP});
     t[int(Command::WR)].push_back({Command::PREA, 1, s.nCWL + s.nBL + s.nWR});
