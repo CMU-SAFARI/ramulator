@@ -88,12 +88,20 @@ public:
           free_physical_pages.resize(free_physical_pages_remaining, -1);
         }
 
+        // HMC
         assert(spec->source_links > 0);
         tags_pools.resize(spec->source_links);
         for (auto tags_pool : tags_pools) {
           for (int i = 0 ; i < spec->max_tags ; ++i) {
             tags_pool.push_back(i);
           }
+        }
+
+        int stacks = configs.get_int_value("stacks");
+        for (int i = 0 ; i < stacks ; ++i) {
+          logic_layers.emplace_back(new LogicLayer<HMC>(configs, i, spec, ctrls,
+              this, std::bind(&Memory<HMC>::receive_packets, this,
+                              std::placeholders::_1)));
         }
     }
 
@@ -162,7 +170,7 @@ public:
       return packet;
     }
 
-    void receive(Packet& packet) {
+    void receive_packets(Packet& packet) {
       assert(packet.type == Packet::Type::RESPONSE);
       tags_pools[packet.header.SLID.value].push_back(packet.header.TAG.value);
       Request& req = packet.req;
@@ -207,7 +215,8 @@ public:
         }
 
         // TODO support multiple stacks
-        Link<HMC>* link = logic_layers[0]->host_links[packet.tail.SLID.value];
+        Link<HMC>* link =
+            logic_layers[0]->host_links[packet.tail.SLID.value].get();
         if (packet.total_flits <= link->slave.available_space()) {
           link->slave.receive(packet);
           return true;

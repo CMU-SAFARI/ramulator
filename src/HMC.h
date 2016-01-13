@@ -211,6 +211,7 @@ public:
     double lane_speed;
 
     int source_links = 0; // number of host links in source mode, must be power of 2
+    int pass_thru_links = 0;
     int payload_flits = 4; // TODO to make it flexible
 
     int burst_count = 0; // real_payload_flits / one_fetch_flits

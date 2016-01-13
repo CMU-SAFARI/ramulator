@@ -70,6 +70,7 @@ void Switch<T>::tick() {
     Packet& packet = link->slave.input_buffer.front();
     Request& req = packet.req;
     // from links to vaults
+    // TODO maybe reorder the requests (inter links) in case one vault is more busy
     if (packet.header.CUB.value == logic_layer->cub) {
       int vault_id = req.addr_vec[int(HMC::Level::Vault)];
       if (used_vaults.find(vault_id) != used_vaults.end()) {
@@ -95,7 +96,7 @@ void Switch<T>::tick() {
   for (auto vault_ctrl : vault_ctrls) {
     Packet& packet = vault_ctrl->response_packets_buffer.front();
     int slid = packet.header.SLID.value; // identify the target of transmission
-    Link<T>* link = logic_layer->host_links[slid];
+    Link<T>* link = logic_layer->host_links[slid].get();
     // TODO support multiple stacks
     assert(link->type == Link<T>::Type::HOST_SOURCE_MODE);
     if (used_links.find(slid) != used_links.end()) {

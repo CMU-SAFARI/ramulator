@@ -157,6 +157,7 @@ public:
 
     void tick()
     {
+        // FIXME back to back command (add back-to-back buffer)
         printf("use controller explicitly specialized for HMC_Contrller.h\n");
         clk++;
 
