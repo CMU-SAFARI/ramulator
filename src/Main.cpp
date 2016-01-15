@@ -164,6 +164,7 @@ void start_run<HMC>(const Config& configs, HMC* spec, const vector<const char*>&
   int V = spec->org_entry.count[int(HMC::Level::Vault)];
   int S = configs.get_stacks();
   int total_vault_number = V * S;
+  debug_hmc("total_vault_number: %d\n", total_vault_number);
   std::vector<Controller<HMC>*> vault_ctrls;
   for (int c = 0 ; c < total_vault_number ; ++c) {
     DRAM<HMC>* vault = new DRAM<HMC>(spec, HMC::Level::Vault);

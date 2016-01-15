@@ -71,8 +71,8 @@ public:
           capacity_per_stack *= sz[lev];
         }
         max_address = capacity_per_stack * configs.get_stacks();
-        printf("max_address: %lx\n", max_address);
-        printf("capacity_per_stack: %lx\n", capacity_per_stack);
+        debug_hmc("max_address: 0x%lx", max_address);
+        debug_hmc("capacity_per_stack: 0x%lx", capacity_per_stack);
 
         addr_bits[int(HMC::Level::MAX) - 1] -= calc_log2(spec->prefetch_size);
 
@@ -91,7 +91,7 @@ public:
         // HMC
         assert(spec->source_links > 0);
         tags_pools.resize(spec->source_links);
-        for (auto tags_pool : tags_pools) {
+        for (auto & tags_pool : tags_pools) {
           for (int i = 0 ; i < spec->max_tags ; ++i) {
             tags_pool.push_back(i);
           }
@@ -123,7 +123,6 @@ public:
 
     void tick()
     {
-        printf("use memory explicitly specialized for HMC\n");
         for (auto ctrl : ctrls) {
           ctrl->tick();
         }
@@ -144,9 +143,11 @@ public:
 
     Packet form_request_packet(const Request& req) {
       // All packets sent from host controller are Request packets
-      int cub = req.addr / capacity_per_stack;
-      int adrs = req.addr;
-      int slid = max_address & ((1 << spec->source_links) - 1); // max_address % spec->source_links
+      long addr = req.addr;
+      int cub = addr / capacity_per_stack;
+      long adrs = addr;
+      clear_lower_bits(addr, tx_bits);
+      int slid = addr % spec->source_links;
       int tag = assign_tag(slid); // may return -1 when no available tag // TODO recycle tags when request callback
       int lng = spec->payload_flits;
       Packet::Command cmd;
@@ -161,6 +162,11 @@ public:
       }
       Packet packet(Packet::Type::REQUEST, cub, adrs, tag, lng, slid, cmd);
       packet.req = req;
+      debug_hmc("cub: %d", cub);
+      debug_hmc("adrs: %lx", adrs);
+      debug_hmc("slid: %d", slid);
+      debug_hmc("lng: %d", lng);
+      debug_hmc("cmd: %d", int(cmd));
       // DEBUG:
       assert(packet.header.CUB.valid());
       assert(packet.header.ADRS.valid());
@@ -170,7 +176,11 @@ public:
       return packet;
     }
 
-    void receive_packets(Packet& packet) {
+    void receive_packets(Packet packet) {
+      debug_hmc("receive_packets");
+      if (packet.flow_control) {
+        return;
+      }
       assert(packet.type == Packet::Type::RESPONSE);
       tags_pools[packet.header.SLID.value].push_back(packet.header.TAG.value);
       Request& req = packet.req;
@@ -181,6 +191,7 @@ public:
 
     bool send(Request req)
     {
+        debug_hmc("receive request@host controller");
         req.addr_vec.resize(addr_bits.size());
         long addr = req.addr;
 
@@ -210,13 +221,16 @@ public:
 
         Packet packet = form_request_packet(req);
         if (packet.header.TAG.value == -1) {
-          printf("tag for link %d not available\n", packet.tail.SLID.value);
+          debug_hmc("tag for link %d not available", packet.tail.SLID.value);
           return false;
         }
 
         // TODO support multiple stacks
+        debug_hmc("link id: %d", packet.tail.SLID.value);
         Link<HMC>* link =
             logic_layers[0]->host_links[packet.tail.SLID.value].get();
+        debug_hmc("link->slave.available_space %d",
+            link->slave.available_space());
         if (packet.total_flits <= link->slave.available_space()) {
           link->slave.receive(packet);
           return true;

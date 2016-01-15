@@ -11,40 +11,51 @@ namespace ramulator {
 
 template<typename T>
 void LinkMaster<T>::send() {
+  debug_hmc("link master send");
   if (output_buffer.size() > 0 &&
       available_token_count >= output_buffer.front().total_flits) {
+    debug_hmc("send data packet @ link %d master", link->id);
     // send the head of output_buffer
-    Packet& packet = output_buffer.front();
+    Packet packet = output_buffer.front();
     output_buffer.pop_front();
-    // 1. change the RTC field in tail (TODO: change the RTC field when sending the exact FLIT)
+    // change the RTC field in tail (TODO: change the RTC field when sending the exact FLIT)
     int rtc = leftmostbit(link->slave.extracted_token_count);
-    printf("link->slave.extracted_token_count: %d, RTC: %d\n",
-        link->slave.extracted_token_count, rtc);
     link->slave.extracted_token_count -= rtc;
+    debug_hmc("link->slave.extracted_token_count: %d, RTC: %d",
+        link->slave.extracted_token_count, rtc);
+    packet.tail.RTC.value = rtc;
+
+    debug_hmc("packet.total_flits: %d", packet.total_flits);
     if (link->type != Link<T>::Type::HOST_SOURCE_MODE) {
       available_token_count -= packet.total_flits;
     }
-    packet.tail.RTC.value = rtc;
     send_via_link(packet);
-    // 3. update next_packet_clk
+    // update next_packet_clk
     next_packet_clk = clk +
         ceil(packet.total_flits * logic_layer->one_flit_cycles);
-    // TODO if send only one flit packet by fastest speed (16lanes * 30Gb/s = 480Gb/s), then the time to send == 128/480, == (128/480)/0.8 = 0.333333 mem cycle, which means in one memory cycle, the bandwidth allow us to send at most 3 flit, but we can only send one. That makes every flow control packet's size == 3 flit
+    debug_hmc("clk %ld", clk);
+    debug_hmc("next_packet_clk %ld", next_packet_clk);
   } else {
     // send flow control packet
+    debug_hmc("send flow control packet @ master");
     if (link->slave.extracted_token_count > 0) {
       int rtc = leftmostbit(link->slave.extracted_token_count);
-      printf("link->slave.extracted_token_count: %d, RTC: %d\n",
+      debug_hmc("link->slave.extracted_token_count: %d, RTC: %d",
           link->slave.extracted_token_count, rtc);
       link->slave.extracted_token_count -= rtc;
       Packet tret_packet(Packet::Type::TRET, rtc);
       send_via_link(tret_packet);
       next_packet_clk = clk +
           ceil(tret_packet.total_flits * logic_layer->one_flit_cycles);
+      debug_hmc("clk: %ld", clk);
+      debug_hmc("next_packet_clk %ld", next_packet_clk);
     } else {
       // send NULL packet here: no need to do anything
       // NULL packet has one flit
+      debug_hmc("send NULL packet @ link %d master", link->id);
       next_packet_clk = clk + ceil(logic_layer->one_flit_cycles);
+      debug_hmc("clk: %ld", clk);
+      debug_hmc("next_packet_clk %ld", next_packet_clk);
     }
   }
 }
@@ -52,21 +63,30 @@ void LinkMaster<T>::send() {
 template<typename T>
 void LinkSlave<T>::receive(Packet& packet) {
   if (packet.flow_control) {
+    debug_hmc("receive flow control packet @ link %d slave", link->id);
     int rtc = packet.tail.RTC.value;
     link->master.available_token_count += rtc;
     // drop this packet
   } else {
+    debug_hmc("receive data packet @ slave");
     int rtc = packet.tail.RTC.value;
     link->master.available_token_count += rtc;
     input_buffer.push_back(packet);
+    debug_hmc("input_buffer.size() %ld @ link %d slave",
+        input_buffer.size(), link->id);
   }
 }
 
 template<typename T>
 void Switch<T>::tick() {
+  clk++;
+  debug_hmc("@ clk: %ld stack %d", clk, logic_layer->cub);
   // one controller can only receive one packet per cycle
   std::set<int> used_vaults;
   for (auto link : logic_layer->host_links) {
+    if (link->slave.input_buffer.empty()) {
+      continue;
+    }
     Packet& packet = link->slave.input_buffer.front();
     Request& req = packet.req;
     // from links to vaults
@@ -80,6 +100,7 @@ void Switch<T>::tick() {
       auto ctrl = vault_ctrls[vault_id];
       if(ctrl->receive(packet)) {
         link->slave.extracted_token_count += packet.total_flits;
+        debug_hmc("extracted_token_count %d", link->slave.extracted_token_count);
         link->slave.input_buffer.pop_front();
       }
     } else { // from links to other stacks
@@ -94,6 +115,9 @@ void Switch<T>::tick() {
   // one link can only receive one packet per cycle
   std::set<int> used_links;
   for (auto vault_ctrl : vault_ctrls) {
+    if (vault_ctrl->response_packets_buffer.empty()) {
+      continue;
+    }
     Packet& packet = vault_ctrl->response_packets_buffer.front();
     int slid = packet.header.SLID.value; // identify the target of transmission
     Link<T>* link = logic_layer->host_links[slid].get();

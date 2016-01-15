@@ -46,7 +46,7 @@ class Packet {
     ValueType value; // ValueType should be convertible to int
     int bit;
     bool valid() {
-      return (int(value) < (1<<bit));
+      return (long(value) < (1ll<<bit));
     }
   };
 
@@ -64,7 +64,7 @@ class Packet {
  */
   struct Header {
     Datafield<int> CUB;
-    Datafield<int> ADRS;
+    Datafield<long> ADRS;
     Datafield<int> SLID;
     Datafield<int> TAG;
     Datafield<int> LNG;
@@ -84,11 +84,11 @@ class Packet {
   Request req;
 
   Packet() {}
-  Packet(Type type, int CUB, int ADRS, int TAG, int LNG, int SLID, Command CMD):
+  Packet(Type type, int CUB, long ADRS, int TAG, int LNG, int SLID, Command CMD):
       type(type) {
     assert(type == Type::REQUEST);
     header.CUB = Datafield<int>(CUB, cub_bits);
-    header.ADRS = Datafield<int>(ADRS, adrs_bits);
+    header.ADRS = Datafield<long>(ADRS, adrs_bits);
     header.TAG = Datafield<int>(TAG, tag_bits);
     header.LNG = Datafield<int>(LNG, lng_bits);
     header.CMD = Datafield<Command>(CMD, cmd_bits);

@@ -97,11 +97,12 @@ void HMC::init_prereq()
 
     // REF
     prereq[int(Level::Vault)][int(Command::REF)] = [] (DRAM<HMC>* node, Command cmd, int id) {
-        for (auto bank : node->children) {
-            if (bank->state == State::Closed)
-                continue;
-            return Command::PREA;
-        }
+        for (auto bg : node->children)
+            for (auto bank: bg->children) {
+                if (bank->state == State::Closed)
+                    continue;
+                return Command::PREA;
+            }
         return Command::REF;};
 
     // PD
@@ -167,9 +168,11 @@ void HMC::init_lambda()
         node->state = State::Closed;
         node->row_state.clear();};
     lambda[int(Level::Vault)][int(Command::PREA)] = [] (DRAM<HMC>* node, int id) {
-        for (auto bank : node->children) {
-            bank->state = State::Closed;
-            bank->row_state.clear();}};
+        for (auto bg : node->children)
+            for (auto bank : bg->children) {
+                bank->state = State::Closed;
+                bank->row_state.clear();
+            }};
     lambda[int(Level::Vault)][int(Command::REF)] = [] (DRAM<HMC>* node, int id) {};
     lambda[int(Level::Bank)][int(Command::RD)] = [] (DRAM<HMC>* node, int id) {};
     lambda[int(Level::Bank)][int(Command::WR)] = [] (DRAM<HMC>* node, int id) {};
@@ -180,12 +183,13 @@ void HMC::init_lambda()
         node->state = State::Closed;
         node->row_state.clear();};
     lambda[int(Level::Vault)][int(Command::PDE)] = [] (DRAM<HMC>* node, int id) {
-        for (auto bank : node->children) {
-            if (bank->state == State::Closed)
-                continue;
-            node->state = State::ActPowerDown;
-            return;
-        }
+        for (auto bg : node->children)
+            for (auto bank : bg->children) {
+                if (bank->state == State::Closed)
+                    continue;
+                node->state = State::ActPowerDown;
+                return;
+            }
         node->state = State::PrePowerDown;};
     lambda[int(Level::Vault)][int(Command::PDX)] = [] (DRAM<HMC>* node, int id) {
         node->state = State::PowerUp;};
@@ -201,7 +205,7 @@ void HMC::init_timing()
     SpeedEntry& s = speed_entry;
     vector<TimingEntry> *t;
 
-    /*** Vault ***/
+    /*** Channel ***/
     t = timing[int(Level::Vault)];
 
     // CAS <-> CAS
@@ -215,22 +219,22 @@ void HMC::init_timing()
     t[int(Command::WRA)].push_back({Command::WRA, 1, s.nBL});
 
     // CAS <-> CAS
-    t[int(Command::RD)].push_back({Command::RD, 1, s.nCCD});
-    t[int(Command::RD)].push_back({Command::RDA, 1, s.nCCD});
-    t[int(Command::RDA)].push_back({Command::RD, 1, s.nCCD});
-    t[int(Command::RDA)].push_back({Command::RDA, 1, s.nCCD});
-    t[int(Command::WR)].push_back({Command::WR, 1, s.nCCD});
-    t[int(Command::WR)].push_back({Command::WRA, 1, s.nCCD});
-    t[int(Command::WRA)].push_back({Command::WR, 1, s.nCCD});
-    t[int(Command::WRA)].push_back({Command::WRA, 1, s.nCCD});
-    t[int(Command::RD)].push_back({Command::WR, 1, s.nCL + s.nCCD + 2 - s.nCWL});
-    t[int(Command::RD)].push_back({Command::WRA, 1, s.nCL + s.nCCD + 2 - s.nCWL});
-    t[int(Command::RDA)].push_back({Command::WR, 1, s.nCL + s.nCCD + 2 - s.nCWL});
-    t[int(Command::RDA)].push_back({Command::WRA, 1, s.nCL + s.nCCD + 2 - s.nCWL});
-    t[int(Command::WR)].push_back({Command::RD, 1, s.nCWL + s.nBL + s.nWTR});
-    t[int(Command::WR)].push_back({Command::RDA, 1, s.nCWL + s.nBL + s.nWTR});
-    t[int(Command::WRA)].push_back({Command::RD, 1, s.nCWL + s.nBL + s.nWTR});
-    t[int(Command::WRA)].push_back({Command::RDA, 1, s.nCWL + s.nBL + s.nWTR});
+    t[int(Command::RD)].push_back({Command::RD, 1, s.nCCDS});
+    t[int(Command::RD)].push_back({Command::RDA, 1, s.nCCDS});
+    t[int(Command::RDA)].push_back({Command::RD, 1, s.nCCDS});
+    t[int(Command::RDA)].push_back({Command::RDA, 1, s.nCCDS});
+    t[int(Command::WR)].push_back({Command::WR, 1, s.nCCDS});
+    t[int(Command::WR)].push_back({Command::WRA, 1, s.nCCDS});
+    t[int(Command::WRA)].push_back({Command::WR, 1, s.nCCDS});
+    t[int(Command::WRA)].push_back({Command::WRA, 1, s.nCCDS});
+    t[int(Command::RD)].push_back({Command::WR, 1, s.nCL + s.nCCDS + 2 - s.nCWL});
+    t[int(Command::RD)].push_back({Command::WRA, 1, s.nCL + s.nCCDS + 2 - s.nCWL});
+    t[int(Command::RDA)].push_back({Command::WR, 1, s.nCL + s.nCCDS + 2 - s.nCWL});
+    t[int(Command::RDA)].push_back({Command::WRA, 1, s.nCL + s.nCCDS + 2 - s.nCWL});
+    t[int(Command::WR)].push_back({Command::RD, 1, s.nCWL + s.nBL + s.nWTRS});
+    t[int(Command::WR)].push_back({Command::RDA, 1, s.nCWL + s.nBL + s.nWTRS});
+    t[int(Command::WRA)].push_back({Command::RD, 1, s.nCWL + s.nBL + s.nWTRS});
+    t[int(Command::WRA)].push_back({Command::RDA, 1, s.nCWL + s.nBL + s.nWTRS});
 
     t[int(Command::RD)].push_back({Command::PREA, 1, s.nRTP});
     t[int(Command::WR)].push_back({Command::PREA, 1, s.nCWL + s.nBL + s.nWR});
@@ -248,7 +252,7 @@ void HMC::init_timing()
     // CAS <-> SR: none (all banks have to be precharged)
 
     // RAS <-> RAS
-    t[int(Command::ACT)].push_back({Command::ACT, 1, s.nRRD});
+    t[int(Command::ACT)].push_back({Command::ACT, 1, s.nRRDS});
     t[int(Command::ACT)].push_back({Command::ACT, 4, s.nFAW});
     t[int(Command::ACT)].push_back({Command::PREA, 1, s.nRAS});
     t[int(Command::PREA)].push_back({Command::ACT, 1, s.nRP});
@@ -291,6 +295,28 @@ void HMC::init_timing()
     t[int(Command::SRE)].push_back({Command::SRX, 1, s.nCKESR});
     t[int(Command::SRX)].push_back({Command::SRE, 1, s.nXS});
 
+    /*** Bank Group ***/
+    t = timing[int(Level::BankGroup)];
+    // CAS <-> CAS
+    t[int(Command::RD)].push_back({Command::RD, 1, s.nCCDL});
+    t[int(Command::RD)].push_back({Command::RDA, 1, s.nCCDL});
+    t[int(Command::RDA)].push_back({Command::RD, 1, s.nCCDL});
+    t[int(Command::RDA)].push_back({Command::RDA, 1, s.nCCDL});
+    t[int(Command::WR)].push_back({Command::WR, 1, s.nCCDL});
+    t[int(Command::WR)].push_back({Command::WRA, 1, s.nCCDL});
+    t[int(Command::WRA)].push_back({Command::WR, 1, s.nCCDL});
+    t[int(Command::WRA)].push_back({Command::WRA, 1, s.nCCDL});
+    t[int(Command::WR)].push_back({Command::WR, 1, s.nCCDL});
+    t[int(Command::WR)].push_back({Command::WRA, 1, s.nCCDL});
+    t[int(Command::WRA)].push_back({Command::WR, 1, s.nCCDL});
+    t[int(Command::WRA)].push_back({Command::WRA, 1, s.nCCDL});
+    t[int(Command::WR)].push_back({Command::RD, 1, s.nCWL + s.nBL + s.nWTRL});
+    t[int(Command::WR)].push_back({Command::RDA, 1, s.nCWL + s.nBL + s.nWTRL});
+    t[int(Command::WRA)].push_back({Command::RD, 1, s.nCWL + s.nBL + s.nWTRL});
+    t[int(Command::WRA)].push_back({Command::RDA, 1, s.nCWL + s.nBL + s.nWTRL});
+
+    // RAS <-> RAS
+    t[int(Command::ACT)].push_back({Command::ACT, 1, s.nRRDL});
 
     /*** Bank ***/
     t = timing[int(Level::Bank)];

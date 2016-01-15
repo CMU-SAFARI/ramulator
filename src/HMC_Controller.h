@@ -147,10 +147,14 @@ public:
       Packet::Command cmd = req_packet.header.CMD.value;
       Packet packet(Packet::Type::RESPONSE, cub, tag, lng, slid, cmd);
       packet.req = req;
+      debug_hmc("cub: %d", cub);
+      debug_hmc("slid: %d", slid);
+      debug_hmc("lng: %d", lng);
+      debug_hmc("cmd: %d", int(cmd));
       // DEBUG:
       assert(packet.header.CUB.valid());
       assert(packet.header.TAG.valid()); // -1 also considered valid here...
-      assert(packet.tail.SLID.valid());
+      assert(packet.header.SLID.valid());
       assert(packet.header.CMD.valid());
       return packet;
     }
@@ -158,7 +162,6 @@ public:
     void tick()
     {
         // FIXME back to back command (add back-to-back buffer)
-        printf("use controller explicitly specialized for HMC_Contrller.h\n");
         clk++;
 
         /*** 1. Serve completed reads ***/
@@ -293,6 +296,12 @@ private:
 
     void issue_cmd(typename HMC::Command cmd, const vector<int>& addr_vec)
     {
+        if (print_cmd_trace){
+            printf("%5s %10ld:", channel->spec->command_name[int(cmd)].c_str(), clk);
+            for (int lev = 0; lev < int(HMC::Level::MAX); lev++)
+                printf(" %5d", addr_vec[lev]);
+            printf("\n");
+        }
         assert(is_ready(cmd, addr_vec));
         channel->update(cmd, addr_vec.data(), clk);
         rowtable->update(cmd, addr_vec, clk);
@@ -310,12 +319,6 @@ private:
                     bank_id += addr_vec[int(HMC::Level::Bank) - 1] * channel->spec->org_entry.count[int(HMC::Level::Bank)];
                 file<<','<<bank_id<<endl;
             }
-        }
-        if (print_cmd_trace){
-            printf("%5s %10ld:", channel->spec->command_name[int(cmd)].c_str(), clk);
-            for (int lev = 0; lev < int(HMC::Level::MAX); lev++)
-                printf(" %5d", addr_vec[lev]);
-            printf("\n");
         }
     }
     vector<int> get_addr_vec(typename HMC::Command cmd, list<Request>::iterator req){

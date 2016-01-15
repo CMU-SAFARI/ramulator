@@ -287,6 +287,7 @@ void Refresh<HMC>::inject_refresh(bool b_ref_rank) {
     refresh_target(ctrl, ctrl->channel->id);
   }
   // TODO Bank-level refresh.
+  refreshed = clk;
 }
 
 } /* namespace ramulator */

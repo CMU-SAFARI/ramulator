@@ -8,6 +8,17 @@
 #include <string>
 #include <functional>
 
+#ifndef DEBUG_HMC
+#define debug_hmc(...)
+#else
+#define debug_hmc(...) do { \
+          printf("\033[36m[DEBUG HMC] %s ", __FUNCTION__); \
+          printf(__VA_ARGS__); \
+          printf("\033[0m\n"); \
+      } while (0)
+#endif
+
+
 using namespace std;
 
 namespace ramulator
@@ -111,7 +122,7 @@ public:
     {
         Opened, Closed, PowerUp, ActPowerDown, PrePowerDown, SelfRefresh, MAX
     } start[int(Level::MAX)] = {
-        State::MAX, State::PowerUp, State::Closed, State::Closed, State::MAX
+        State::PowerUp, State::MAX, State::Closed, State::Closed, State::MAX
     };
 
     /* Translate */
@@ -154,8 +165,8 @@ public:
         int dq;
         int count[int(Level::MAX)];
     } org_table[int(Org::MAX)] = {
-        {32<<10, 32, {32, 4, 2, 1<<11, 1<<16}},
-        {32<<10, 32, {32, 8, 2, 1<<11, 1<<16}}
+        {32<<10, 32, {32, 4, 2, 1<<16, 1<<6}},
+        {32<<10, 32, {32, 8, 2, 1<<16, 1<<6}}
     }, org_entry;
 
     /* Speed */
@@ -171,16 +182,17 @@ public:
     struct SpeedEntry {
         int rate;
         double freq, tCK;
-        int nBL, nCCD;
+        int nBL, nCCDS, nCCDL, nRTRS;
         int nCL, nRCD, nRP, nCWL;
         int nRAS, nRC;
-        int nRTP, nWTR, nWR;
-        int nRRD, nFAW;
+        int nRTP, nWTRS, nWTRL, nWR;
+        int nRRDS, nRRDL, nFAW;
         int nRFC, nREFI;
-        int nPD, nXP, nXPDLL;
-        int nCKESR, nXS, nXSDLL;
+        int nPD, nXP, nXPDLL; // XPDLL not found in DDR4??
+        int nCKESR, nXS, nXSDLL; // nXSDLL TBD (nDLLK), nXS = (tRFC+10ns)/tCK
     } speed_table[int(Speed::MAX)] = {
-        {2500, 1250, 1.25, 4, 4, 11,  11,  11, -1, 22, 33, -1, -1, 12, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+//         {2500, 1250, 0.8, 4, 4, 11,  11,  11, -1, 22, 33, -1, -1, 12, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+        {2400, (400.0/3)*9, (3/0.4)/9, 4, 4, 6, 2, 18, 18, 18, 12, 39, 57, 9, 3, 9, 18, 7, 8, 16, 192, 9360, 6, 8, 0, 7, 0, 0}
     }, speed_entry;
 
     int read_latency;
