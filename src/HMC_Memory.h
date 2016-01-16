@@ -20,9 +20,9 @@ protected:
   long capacity_per_stack;
 public:
     enum class Type {
-        RoCoBaVaCo, // XXX The specification doesn't define row/column addressing
+        RoCoBaVa, // XXX The specification doesn't define row/column addressing
         MAX,
-    } type = Type::RoCoBaVaCo;
+    } type = Type::RoCoBaVa;
 
     enum class Translation {
       None,
@@ -146,10 +146,12 @@ public:
       long addr = req.addr;
       int cub = addr / capacity_per_stack;
       long adrs = addr;
-      clear_lower_bits(addr, tx_bits);
+      int max_block_bits = spec->maxblock_entry.flit_num_bits;
+      clear_lower_bits(addr, max_block_bits);
       int slid = addr % spec->source_links;
       int tag = assign_tag(slid); // may return -1 when no available tag // TODO recycle tags when request callback
-      int lng = spec->payload_flits;
+      int lng = req.type == Request::Type::READ ?
+                                                1 : 1 +  spec->payload_flits;
       Packet::Command cmd;
       switch (int(req.type)) {
         case int(Request::Type::READ):
@@ -199,10 +201,10 @@ public:
         clear_lower_bits(addr, tx_bits);
 
         switch(int(type)) {
-          case int(Type::RoCoBaVaCo): {
+          case int(Type::RoCoBaVa): {
             int max_block_bits = spec->maxblock_entry.flit_num_bits;
             req.addr_vec[int(HMC::Level::Column)] =
-                slice_lower_bits(addr, max_block_bits);
+                slice_lower_bits(addr, max_block_bits - tx_bits);
             req.addr_vec[int(HMC::Level::Vault)] =
                 slice_lower_bits(addr, addr_bits[int(HMC::Level::Vault)]);
             req.addr_vec[int(HMC::Level::Bank)] =

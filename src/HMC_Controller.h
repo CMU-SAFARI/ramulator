@@ -143,7 +143,8 @@ public:
       int cub = req_packet.header.CUB.value;
       int tag = req_packet.header.TAG.value;
       int slid = req_packet.tail.SLID.value;
-      int lng = req_packet.header.LNG.value;
+      int lng = req.type == Request::Type::WRITE ?
+                1 : 1 + channel->spec->payload_flits;
       Packet::Command cmd = req_packet.header.CMD.value;
       Packet packet(Packet::Type::RESPONSE, cub, tag, lng, slid, cmd);
       packet.req = req;
@@ -215,9 +216,11 @@ public:
 
         // set a future completion time for read requests
         if (req->type == Request::Type::READ) {
-            req->depart = clk + channel->spec->read_latency;
             --req->burst_count;
             if (req->burst_count == 0) {
+              req->depart = clk + channel->spec->read_latency;
+              debug_hmc("req->depart: %ld, channel->spec->read_latency %d\n",
+                  req->depart, channel->spec->read_latency);
               pending.push_back(*req);
             }
         } else if (req->type == Request::Type::WRITE) {

@@ -205,7 +205,7 @@ public:
       int max_block_size;
       int flit_num_bits;
     } maxblock_table[int(MaxBlock::MAX)] = {
-      {32, 1}, {64, 2}, {128, 3}, {256, 4},
+      {32, 5}, {64, 6}, {128, 7}, {256, 8},
     }, maxblock_entry;
 
     enum class LinkWidth: int {

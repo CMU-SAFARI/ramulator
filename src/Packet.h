@@ -96,8 +96,8 @@ class Packet {
     tail.RTC = Datafield<int>(0, rtc_bits);
     tail.SLID = Datafield<int>(SLID, slid_bits);
 
-    payload_flits = LNG;
-    total_flits = payload_flits + 1;
+    payload_flits = LNG - 1;
+    total_flits = LNG;
     flow_control = false;
   }
 
@@ -112,8 +112,8 @@ class Packet {
 
     tail.RTC = Datafield<int>(0, rtc_bits);
 
-    payload_flits = LNG;
-    total_flits = payload_flits + 1;
+    payload_flits = LNG - 1;
+    total_flits = LNG;
     flow_control = false;
   }
 
