@@ -98,6 +98,8 @@ public:
       assert(packet.type == Packet::Type::REQUEST);
       Request& req = packet.req;
       req.burst_count = channel->spec->burst_count;
+      debug_hmc("req.burst_count %d", req.burst_count);
+      debug_hmc("req.reqid %d, req.coreid %d", req.reqid, req.coreid);
       // buffer packet, for future response packet
       incoming_packets_buffer[make_pair(req.reqid, req.coreid)] = packet;
       return enqueue(req);
@@ -219,8 +221,7 @@ public:
             --req->burst_count;
             if (req->burst_count == 0) {
               req->depart = clk + channel->spec->read_latency;
-              debug_hmc("req->depart: %ld, channel->spec->read_latency %d\n",
-                  req->depart, channel->spec->read_latency);
+              debug_hmc("req->depart: %ld\n", req->depart);
               pending.push_back(*req);
             }
         } else if (req->type == Request::Type::WRITE) {

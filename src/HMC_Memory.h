@@ -71,8 +71,6 @@ public:
           capacity_per_stack *= sz[lev];
         }
         max_address = capacity_per_stack * configs.get_stacks();
-        debug_hmc("max_address: 0x%lx", max_address);
-        debug_hmc("capacity_per_stack: 0x%lx", capacity_per_stack);
 
         addr_bits[int(HMC::Level::MAX) - 1] -= calc_log2(spec->prefetch_size);
 
@@ -179,7 +177,7 @@ public:
     }
 
     void receive_packets(Packet packet) {
-      debug_hmc("receive_packets");
+      debug_hmc("receive response packets@host controller");
       if (packet.flow_control) {
         return;
       }
@@ -193,7 +191,7 @@ public:
 
     bool send(Request req)
     {
-        debug_hmc("receive request@host controller");
+        debug_hmc("receive request packets@host controller");
         req.addr_vec.resize(addr_bits.size());
         long addr = req.addr;
 
@@ -228,11 +226,8 @@ public:
         }
 
         // TODO support multiple stacks
-        debug_hmc("link id: %d", packet.tail.SLID.value);
         Link<HMC>* link =
             logic_layers[0]->host_links[packet.tail.SLID.value].get();
-        debug_hmc("link->slave.available_space %d",
-            link->slave.available_space());
         if (packet.total_flits <= link->slave.available_space()) {
           link->slave.receive(packet);
           return true;

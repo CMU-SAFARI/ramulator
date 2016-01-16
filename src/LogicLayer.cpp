@@ -11,26 +11,25 @@ namespace ramulator {
 
 template<typename T>
 void LinkMaster<T>::send() {
-  debug_hmc("link master send");
   if (output_buffer.size() > 0 &&
       available_token_count >= output_buffer.front().total_flits) {
     debug_hmc("send data packet @ link %d master", link->id);
-    // send the head of output_buffer
+
     Packet packet = output_buffer.front();
     output_buffer.pop_front();
-    // change the RTC field in tail (TODO: change the RTC field when sending the exact FLIT)
     int rtc = leftmostbit(link->slave.extracted_token_count);
-    link->slave.extracted_token_count -= rtc;
     debug_hmc("link->slave.extracted_token_count: %d, RTC: %d",
         link->slave.extracted_token_count, rtc);
+    link->slave.extracted_token_count -= rtc;
     packet.tail.RTC.value = rtc;
 
     debug_hmc("packet.total_flits: %d", packet.total_flits);
+
     if (link->type != Link<T>::Type::HOST_SOURCE_MODE) {
       available_token_count -= packet.total_flits;
     }
     send_via_link(packet);
-    // update next_packet_clk
+
     next_packet_clk = clk +
         ceil(packet.total_flits * logic_layer->one_flit_cycles);
     debug_hmc("clk %ld", clk);
@@ -68,7 +67,7 @@ void LinkSlave<T>::receive(Packet& packet) {
     link->master.available_token_count += rtc;
     // drop this packet
   } else {
-    debug_hmc("receive data packet @ slave");
+    debug_hmc("receive data packet @ link %d slave", link->id);
     int rtc = packet.tail.RTC.value;
     link->master.available_token_count += rtc;
     input_buffer.push_back(packet);
@@ -87,21 +86,22 @@ void Switch<T>::tick() {
     if (link->slave.input_buffer.empty()) {
       continue;
     }
+    // TODO reorder the requests in one link when one vault is more busy
     Packet& packet = link->slave.input_buffer.front();
     Request& req = packet.req;
     // from links to vaults
-    // TODO maybe reorder the requests (inter links) in case one vault is more busy
     if (packet.header.CUB.value == logic_layer->cub) {
       int vault_id = req.addr_vec[int(HMC::Level::Vault)];
       if (used_vaults.find(vault_id) != used_vaults.end()) {
         continue; // This port has been occupied in this cycle
       }
-      used_vaults.insert(vault_id);
       auto ctrl = vault_ctrls[vault_id];
       if(ctrl->receive(packet)) {
         link->slave.extracted_token_count += packet.total_flits;
-        debug_hmc("extracted_token_count %d", link->slave.extracted_token_count);
         link->slave.input_buffer.pop_front();
+        debug_hmc("extracted_token_count %d", link->slave.extracted_token_count);
+        debug_hmc("forward packet to vault %d", vault_id);
+        used_vaults.insert(vault_id);
       }
     } else { // from links to other stacks
       // TODO: support multiple stacks
@@ -121,15 +121,14 @@ void Switch<T>::tick() {
     Packet& packet = vault_ctrl->response_packets_buffer.front();
     int slid = packet.header.SLID.value; // identify the target of transmission
     Link<T>* link = logic_layer->host_links[slid].get();
-    // TODO support multiple stacks
     assert(link->type == Link<T>::Type::HOST_SOURCE_MODE);
     if (used_links.find(slid) != used_links.end()) {
       continue; // This port has been occupied in this cycle
     }
-    used_links.insert(slid);
     if (packet.total_flits <= link->master.available_space()) {
       link->master.output_buffer.push_back(packet);
       vault_ctrl->response_packets_buffer.pop_front();
+      used_links.insert(slid);
     }
   }
 }
@@ -137,16 +136,11 @@ void Switch<T>::tick() {
 template<typename T>
 void LogicLayer<T>::tick() {
   for (auto link : host_links) {
-  // all link master: send one packet
     link->master.tick();
-  // all link slave: receive (driven by corresponding master)
   }
   for (auto link : pass_thru_links) {
-  // all link master: send one packet
     link->master.tick();
-  // all link slave: receive (driven by corresponding master)
   }
-  // switch: extract packets from both sides
   xbar.tick();
 }
 

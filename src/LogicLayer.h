@@ -33,7 +33,6 @@ class LinkMaster {
       Link<T>* link, LogicLayer<T>* logic_layer):
       send_via_link(receive_from_link), link(link), logic_layer(logic_layer),
       available_token_count(link->slave.buffer_max) {
-    debug_hmc("available_token_count: %d", available_token_count);
   }
 
   void send();
@@ -130,9 +129,6 @@ class LogicLayer {
   std::vector<std::shared_ptr<Link<T>>> host_links;
   std::vector<std::shared_ptr<Link<T>>> pass_thru_links;
 
-  // TODO: pass all the 'receive' function for other HMC/host that connect to
-  // this stack, and make sure to identify which side is host link (and whether
-  // in source mode) and which is pass thru link
   LogicLayer(const Config& configs, int cub, T* spec,
       std::vector<Controller<T>*> vault_ctrls, MemoryBase* mem,
       function<void(Packet&)> host_ctrl_recv):
@@ -140,16 +136,10 @@ class LogicLayer {
     // initialize some system parameters
     one_flit_cycles =
         (128.0/(spec->lane_speed * spec->link_width))/mem->clk_ns();
-    debug_hmc("one_flit_cycles: %lf\n", one_flit_cycles);
-    // XXX: the time to transfer one flit may not be exactly multiple memory
-    // cycles, will round up when calculate time to transmit a packet
 
-    // TODO: init host_links
     int host_links_num = configs.get_int_value("source_mode_host_links");
-    debug_hmc("host_links_num %d", host_links_num);
     // FIXME: we shouldn't assume all host links are in source mode
     int pass_thru_links_num = configs.get_int_value("pass_thru_links");
-    debug_hmc("pass_thru_links_num %d", pass_thru_links_num);
     // FIXME: we shouldn't assume we only have one stack so we shouldn't assume
     // the number of pass thru link is zero.
     assert(pass_thru_links_num == 0);
