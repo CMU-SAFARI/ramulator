@@ -320,10 +320,6 @@ void HBM::init_timing()
     t[int(Command::WR)].push_back({Command::WRA, 1, s.nCCDL});
     t[int(Command::WRA)].push_back({Command::WR, 1, s.nCCDL});
     t[int(Command::WRA)].push_back({Command::WRA, 1, s.nCCDL});
-    t[int(Command::WR)].push_back({Command::WR, 1, s.nCCDL});
-    t[int(Command::WR)].push_back({Command::WRA, 1, s.nCCDL});
-    t[int(Command::WRA)].push_back({Command::WR, 1, s.nCCDL});
-    t[int(Command::WRA)].push_back({Command::WRA, 1, s.nCCDL});
     t[int(Command::WR)].push_back({Command::RD, 1, s.nCWL + s.nBL + s.nWTRL});
     t[int(Command::WR)].push_back({Command::RDA, 1, s.nCWL + s.nBL + s.nWTRL});
     t[int(Command::WRA)].push_back({Command::RD, 1, s.nCWL + s.nBL + s.nWTRL});

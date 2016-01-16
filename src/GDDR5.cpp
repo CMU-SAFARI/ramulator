@@ -328,10 +328,6 @@ void GDDR5::init_timing()
     t[int(Command::WR)].push_back({Command::WRA, 1, s.nCCDL});
     t[int(Command::WRA)].push_back({Command::WR, 1, s.nCCDL});
     t[int(Command::WRA)].push_back({Command::WRA, 1, s.nCCDL});
-    t[int(Command::WR)].push_back({Command::WR, 1, s.nCCDL});
-    t[int(Command::WR)].push_back({Command::WRA, 1, s.nCCDL});
-    t[int(Command::WRA)].push_back({Command::WR, 1, s.nCCDL});
-    t[int(Command::WRA)].push_back({Command::WRA, 1, s.nCCDL});
 
     /*** Bank ***/ 
     t = timing[int(Level::Bank)];
