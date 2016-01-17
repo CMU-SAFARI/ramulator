@@ -32,36 +32,32 @@ class Controller
 {
 public:
     // For counting bandwidth
-    ScalarStat read_transaction_bytes;
-    ScalarStat write_transaction_bytes;
 
-    ScalarStat row_hits;
-    ScalarStat row_misses;
-    ScalarStat row_conflicts;
-    VectorStat read_row_hits;
-    VectorStat read_row_misses;
-    VectorStat read_row_conflicts;
-    VectorStat write_row_hits;
-    VectorStat write_row_misses;
-    VectorStat write_row_conflicts;
+    ScalarStat* read_transaction_bytes;
+    ScalarStat* write_transaction_bytes;
+    ScalarStat* row_hits;
+    ScalarStat* row_misses;
+    ScalarStat* row_conflicts;
+    VectorStat* read_row_hits;
+    VectorStat* read_row_misses;
+    VectorStat* read_row_conflicts;
+    VectorStat* write_row_hits;
+    VectorStat* write_row_misses;
+    VectorStat* write_row_conflicts;
 
-    ScalarStat read_latency_avg;
-    ScalarStat read_latency_sum;
+    ScalarStat* read_latency_sum;
 
-    ScalarStat req_queue_length_avg;
-    ScalarStat req_queue_length_sum;
-    ScalarStat read_req_queue_length_avg;
-    ScalarStat read_req_queue_length_sum;
-    ScalarStat write_req_queue_length_avg;
-    ScalarStat write_req_queue_length_sum;
+    ScalarStat* req_queue_length_sum;
+    ScalarStat* read_req_queue_length_sum;
+    ScalarStat* write_req_queue_length_sum;
 
 #ifndef INTEGRATED_WITH_GEM5
-    VectorStat record_read_hits;
-    VectorStat record_read_misses;
-    VectorStat record_read_conflicts;
-    VectorStat record_write_hits;
-    VectorStat record_write_misses;
-    VectorStat record_write_conflicts;
+    VectorStat* record_read_hits;
+    VectorStat* record_read_misses;
+    VectorStat* record_read_conflicts;
+    VectorStat* record_write_hits;
+    VectorStat* record_write_misses;
+    VectorStat* record_write_conflicts;
 #endif
 
 public:
@@ -115,155 +111,6 @@ public:
             for (unsigned int i = 0; i < channel->children.size(); i++)
                 cmd_trace_files[i].open(prefix + to_string(i) + suffix);
         }
-
-        // regStats
-
-        row_hits
-            .name("row_hits_channel_"+to_string(channel->id) + "_core")
-            .desc("Number of row hits per channel per core")
-            .precision(0)
-            ;
-        row_misses
-            .name("row_misses_channel_"+to_string(channel->id) + "_core")
-            .desc("Number of row misses per channel per core")
-            .precision(0)
-            ;
-        row_conflicts
-            .name("row_conflicts_channel_"+to_string(channel->id) + "_core")
-            .desc("Number of row conflicts per channel per core")
-            .precision(0)
-            ;
-
-        read_row_hits
-            .init(configs.get_core_num())
-            .name("read_row_hits_channel_"+to_string(channel->id) + "_core")
-            .desc("Number of row hits for read requests per channel per core")
-            .precision(0)
-            ;
-        read_row_misses
-            .init(configs.get_core_num())
-            .name("read_row_misses_channel_"+to_string(channel->id) + "_core")
-            .desc("Number of row misses for read requests per channel per core")
-            .precision(0)
-            ;
-        read_row_conflicts
-            .init(configs.get_core_num())
-            .name("read_row_conflicts_channel_"+to_string(channel->id) + "_core")
-            .desc("Number of row conflicts for read requests per channel per core")
-            .precision(0)
-            ;
-
-        write_row_hits
-            .init(configs.get_core_num())
-            .name("write_row_hits_channel_"+to_string(channel->id) + "_core")
-            .desc("Number of row hits for write requests per channel per core")
-            .precision(0)
-            ;
-        write_row_misses
-            .init(configs.get_core_num())
-            .name("write_row_misses_channel_"+to_string(channel->id) + "_core")
-            .desc("Number of row misses for write requests per channel per core")
-            .precision(0)
-            ;
-        write_row_conflicts
-            .init(configs.get_core_num())
-            .name("write_row_conflicts_channel_"+to_string(channel->id) + "_core")
-            .desc("Number of row conflicts for write requests per channel per core")
-            .precision(0)
-            ;
-
-        read_transaction_bytes
-            .name("read_transaction_bytes_"+to_string(channel->id))
-            .desc("The total byte of read transaction per channel")
-            .precision(0)
-            ;
-        write_transaction_bytes
-            .name("write_transaction_bytes_"+to_string(channel->id))
-            .desc("The total byte of write transaction per channel")
-            .precision(0)
-            ;
-
-        read_latency_sum
-            .name("read_latency_sum_"+to_string(channel->id))
-            .desc("The memory latency cycles (in memory time domain) sum for all read requests in this channel")
-            .precision(0)
-            ;
-        read_latency_avg
-            .name("read_latency_avg_"+to_string(channel->id))
-            .desc("The average memory latency cycles (in memory time domain) per request for all read requests in this channel")
-            .precision(6)
-            ;
-
-        req_queue_length_sum
-            .name("req_queue_length_sum_"+to_string(channel->id))
-            .desc("Sum of read and write queue length per memory cycle per channel.")
-            .precision(0)
-            ;
-        req_queue_length_avg
-            .name("req_queue_length_avg_"+to_string(channel->id))
-            .desc("Average of read and write queue length per memory cycle per channel.")
-            .precision(6)
-            ;
-
-        read_req_queue_length_sum
-            .name("read_req_queue_length_sum_"+to_string(channel->id))
-            .desc("Read queue length sum per memory cycle per channel.")
-            .precision(0)
-            ;
-        read_req_queue_length_avg
-            .name("read_req_queue_length_avg_"+to_string(channel->id))
-            .desc("Read queue length average per memory cycle per channel.")
-            .precision(6)
-            ;
-
-        write_req_queue_length_sum
-            .name("write_req_queue_length_sum_"+to_string(channel->id))
-            .desc("Write queue length sum per memory cycle per channel.")
-            .precision(0)
-            ;
-        write_req_queue_length_avg
-            .name("write_req_queue_length_avg_"+to_string(channel->id))
-            .desc("Write queue length average per memory cycle per channel.")
-            .precision(6)
-            ;
-
-#ifndef INTEGRATED_WITH_GEM5
-        record_read_hits
-            .init(configs.get_core_num())
-            .name("record_read_hits")
-            .desc("record read hit count for this core when it reaches request limit or to the end")
-            ;
-
-        record_read_misses
-            .init(configs.get_core_num())
-            .name("record_read_misses")
-            .desc("record_read_miss count for this core when it reaches request limit or to the end")
-            ;
-
-        record_read_conflicts
-            .init(configs.get_core_num())
-            .name("record_read_conflicts")
-            .desc("record read conflict count for this core when it reaches request limit or to the end")
-            ;
-
-        record_write_hits
-            .init(configs.get_core_num())
-            .name("record_write_hits")
-            .desc("record write hit count for this core when it reaches request limit or to the end")
-            ;
-
-        record_write_misses
-            .init(configs.get_core_num())
-            .name("record_write_misses")
-            .desc("record write miss count for this core when it reaches request limit or to the end")
-            ;
-
-        record_write_conflicts
-            .init(configs.get_core_num())
-            .name("record_write_conflicts")
-            .desc("record write conflict for this core when it reaches request limit or to the end")
-            ;
-#endif
     }
 
     ~Controller(){
@@ -277,12 +124,7 @@ public:
         cmd_trace_files.clear();
     }
 
-    void finish(long read_req, long dram_cycles) {
-      read_latency_avg = read_latency_sum.value() / read_req;
-      req_queue_length_avg = req_queue_length_sum.value() / dram_cycles;
-      read_req_queue_length_avg = read_req_queue_length_sum.value() / dram_cycles;
-      write_req_queue_length_avg = write_req_queue_length_sum.value() / dram_cycles;
-      // call finish function of each channel
+    void finish(long dram_cycles) {
       channel->finish(dram_cycles);
     }
 
@@ -318,16 +160,16 @@ public:
     void tick()
     {
         clk++;
-        req_queue_length_sum += readq.size() + writeq.size() + pending.size();
-        read_req_queue_length_sum += readq.size() + pending.size();
-        write_req_queue_length_sum += writeq.size();
+        (*req_queue_length_sum) += readq.size() + writeq.size() + pending.size();
+        (*read_req_queue_length_sum) += readq.size() + pending.size();
+        (*write_req_queue_length_sum) += writeq.size();
 
         /*** 1. Serve completed reads ***/
         if (pending.size()) {
             Request& req = pending[0];
             if (req.depart <= clk) {
                 if (req.depart - req.arrive > 1) { // this request really accessed a row
-                  read_latency_sum += req.depart - req.arrive;
+                  (*read_latency_sum) += req.depart - req.arrive;
                   channel->update_serving_requests(
                       req.addr_vec.data(), -1, clk);
                 }
@@ -376,28 +218,28 @@ public:
             int tx = (channel->spec->prefetch_size * channel->spec->channel_width / 8);
             if (req->type == Request::Type::READ) {
                 if (is_row_hit(req)) {
-                    ++read_row_hits[coreid];
-                    ++row_hits;
+                    ++(*read_row_hits)[coreid];
+                    ++(*row_hits);
                 } else if (is_row_open(req)) {
-                    ++read_row_conflicts[coreid];
-                    ++row_conflicts;
+                    ++(*read_row_conflicts)[coreid];
+                    ++(*row_conflicts);
                 } else {
-                    ++read_row_misses[coreid];
-                    ++row_misses;
+                    ++(*read_row_misses)[coreid];
+                    ++(*row_misses);
                 }
-              read_transaction_bytes += tx;
+              (*read_transaction_bytes) += tx;
             } else if (req->type == Request::Type::WRITE) {
               if (is_row_hit(req)) {
-                  ++write_row_hits[coreid];
-                  ++row_hits;
+                  ++(*write_row_hits)[coreid];
+                  ++(*row_hits);
               } else if (is_row_open(req)) {
-                  ++write_row_conflicts[coreid];
-                  ++row_conflicts;
+                  ++(*write_row_conflicts)[coreid];
+                  ++(*row_conflicts);
               } else {
-                  ++write_row_misses[coreid];
-                  ++row_misses;
+                  ++(*write_row_misses)[coreid];
+                  ++(*row_misses);
               }
-              write_transaction_bytes += tx;
+              (*write_transaction_bytes) += tx;
             }
         }
 
@@ -474,12 +316,12 @@ public:
 
     void record_core(int coreid) {
 #ifndef INTEGRATED_WITH_GEM5
-      record_read_hits[coreid] = read_row_hits[coreid];
-      record_read_misses[coreid] = read_row_misses[coreid];
-      record_read_conflicts[coreid] = read_row_conflicts[coreid];
-      record_write_hits[coreid] = write_row_hits[coreid];
-      record_write_misses[coreid] = write_row_misses[coreid];
-      record_write_conflicts[coreid] = write_row_conflicts[coreid];
+      (*record_read_hits)[coreid] = (*read_row_hits)[coreid];
+      (*record_read_misses)[coreid] = (*read_row_misses)[coreid];
+      (*record_read_conflicts)[coreid] = (*read_row_conflicts)[coreid];
+      (*record_write_hits)[coreid] = (*write_row_hits)[coreid];
+      (*record_write_misses)[coreid] = (*write_row_misses)[coreid];
+      (*record_write_conflicts)[coreid] = (*write_row_conflicts)[coreid];
 #endif
     }
 

@@ -54,16 +54,16 @@ void Controller<ALDRAM>::update_temp(ALDRAM::Temp current_temperature){
 template <>
 void Controller<TLDRAM>::tick(){
     clk++;
-    req_queue_length_sum += readq.size() + writeq.size();
-    read_req_queue_length_sum += readq.size();
-    write_req_queue_length_sum += writeq.size();
+    (*req_queue_length_sum) += readq.size() + writeq.size() + pending.size();
+    (*read_req_queue_length_sum) += readq.size() + pending.size();
+    (*write_req_queue_length_sum) += writeq.size();
 
     /*** 1. Serve completed reads ***/
     if (pending.size()) {
         Request& req = pending[0];
         if (req.depart <= clk) {
           if (req.depart - req.arrive > 1) {
-                  read_latency_sum += req.depart - req.arrive;
+                  (*read_latency_sum) += req.depart - req.arrive;
                   channel->update_serving_requests(
                       req.addr_vec.data(), -1, clk);
           }
@@ -112,28 +112,28 @@ void Controller<TLDRAM>::tick(){
         int tx = (channel->spec->prefetch_size * channel->spec->channel_width / 8);
         if (req->type == Request::Type::READ) {
             if (is_row_hit(req)) {
-                ++read_row_hits[coreid];
-                ++row_hits;
+                ++(*read_row_hits)[coreid];
+                ++(*row_hits);
             } else if (is_row_open(req)) {
-                ++read_row_conflicts[coreid];
-                ++row_conflicts;
+                ++(*read_row_conflicts)[coreid];
+                ++(*row_conflicts);
             } else {
-                ++read_row_misses[coreid];
-                ++row_misses;
+                ++(*read_row_misses)[coreid];
+                ++(*row_misses);
             }
-          read_transaction_bytes += tx;
+          (*read_transaction_bytes) += tx;
         } else if (req->type == Request::Type::WRITE) {
           if (is_row_hit(req)) {
-              ++write_row_hits[coreid];
-              ++row_hits;
+              ++(*write_row_hits)[coreid];
+              ++(*row_hits);
           } else if (is_row_open(req)) {
-              ++write_row_conflicts[coreid];
-              ++row_conflicts;
+              ++(*write_row_conflicts)[coreid];
+              ++(*row_conflicts);
           } else {
-              ++write_row_misses[coreid];
-              ++row_misses;
+              ++(*write_row_misses)[coreid];
+              ++(*row_misses);
           }
-          write_transaction_bytes += tx;
+          (*write_transaction_bytes) += tx;
         }
     }
 

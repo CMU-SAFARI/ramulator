@@ -56,16 +56,42 @@ protected:
   ScalarStat maximum_bandwidth;
   ScalarStat read_bandwidth;
   ScalarStat write_bandwidth;
-  ScalarStat in_queue_req_num_sum;
-  ScalarStat in_queue_read_req_num_sum;
-  ScalarStat in_queue_write_req_num_sum;
-  ScalarStat in_queue_req_num_avg;
-  ScalarStat in_queue_read_req_num_avg;
-  ScalarStat in_queue_write_req_num_avg;
 
 #ifndef INTEGRATED_WITH_GEM5
   VectorStat record_read_requests;
   VectorStat record_write_requests;
+#endif
+
+  // shared by all Controller objects
+  ScalarStat read_transaction_bytes;
+  ScalarStat write_transaction_bytes;
+  ScalarStat row_hits;
+  ScalarStat row_misses;
+  ScalarStat row_conflicts;
+  VectorStat read_row_hits;
+  VectorStat read_row_misses;
+  VectorStat read_row_conflicts;
+  VectorStat write_row_hits;
+  VectorStat write_row_misses;
+  VectorStat write_row_conflicts;
+
+  ScalarStat read_latency_avg;
+  ScalarStat read_latency_sum;
+
+  ScalarStat req_queue_length_avg;
+  ScalarStat req_queue_length_sum;
+  ScalarStat read_req_queue_length_avg;
+  ScalarStat read_req_queue_length_sum;
+  ScalarStat write_req_queue_length_avg;
+  ScalarStat write_req_queue_length_sum;
+
+#ifndef INTEGRATED_WITH_GEM5
+  VectorStat record_read_hits;
+  VectorStat record_read_misses;
+  VectorStat record_read_conflicts;
+  VectorStat record_write_hits;
+  VectorStat record_write_misses;
+  VectorStat record_write_conflicts;
 #endif
 
   long max_address;
@@ -102,6 +128,7 @@ public:
           spec(ctrls[0]->channel->spec),
           addr_bits(int(T::Level::MAX))
     {
+
         // make sure 2^N channels/ranks
         // TODO support channel number that is not powers of 2
         int *sz = spec->org_entry.count;
@@ -136,6 +163,8 @@ public:
 
           free_physical_pages.resize(free_physical_pages_remaining, -1);
         }
+
+        // regStats
 
         dram_capacity
             .name("dram_capacity")
@@ -204,36 +233,6 @@ public:
             .precision(0)
             ;
 
-        in_queue_req_num_sum
-            .name("in_queue_req_num_sum")
-            .desc("Sum of read/write queue length")
-            .precision(0)
-            ;
-        in_queue_read_req_num_sum
-            .name("in_queue_read_req_num_sum")
-            .desc("Sum of read queue length")
-            .precision(0)
-            ;
-        in_queue_write_req_num_sum
-            .name("in_queue_write_req_num_sum")
-            .desc("Sum of write queue length")
-            .precision(0)
-            ;
-        in_queue_req_num_avg
-            .name("in_queue_req_num_avg")
-            .desc("Average of read/write queue length per memory cycle")
-            .precision(6)
-            ;
-        in_queue_read_req_num_avg
-            .name("in_queue_read_req_num_avg")
-            .desc("Average of read queue length per memory cycle")
-            .precision(6)
-            ;
-        in_queue_write_req_num_avg
-            .name("in_queue_write_req_num_avg")
-            .desc("Average of write queue length per memory cycle")
-            .precision(6)
-            ;
 #ifndef INTEGRATED_WITH_GEM5
         record_read_requests
             .init(configs.get_core_num())
@@ -248,6 +247,180 @@ public:
             ;
 #endif
 
+        // shared by all Controller objects
+
+        read_transaction_bytes
+            .name("read_transaction_bytes")
+            .desc("The total byte of read transaction")
+            .precision(0)
+            ;
+        write_transaction_bytes
+            .name("write_transaction_bytes")
+            .desc("The total byte of write transaction")
+            .precision(0)
+            ;
+
+        row_hits
+            .name("row_hits")
+            .desc("Number of row hits")
+            .precision(0)
+            ;
+        row_misses
+            .name("row_misses")
+            .desc("Number of row misses")
+            .precision(0)
+            ;
+        row_conflicts
+            .name("row_conflicts")
+            .desc("Number of row conflicts")
+            .precision(0)
+            ;
+
+        read_row_hits
+            .init(configs.get_core_num())
+            .name("read_row_hits")
+            .desc("Number of row hits for read requests")
+            .precision(0)
+            ;
+        read_row_misses
+            .init(configs.get_core_num())
+            .name("read_row_misses")
+            .desc("Number of row misses for read requests")
+            .precision(0)
+            ;
+        read_row_conflicts
+            .init(configs.get_core_num())
+            .name("read_row_conflicts")
+            .desc("Number of row conflicts for read requests")
+            .precision(0)
+            ;
+
+        write_row_hits
+            .init(configs.get_core_num())
+            .name("write_row_hits")
+            .desc("Number of row hits for write requests")
+            .precision(0)
+            ;
+        write_row_misses
+            .init(configs.get_core_num())
+            .name("write_row_misses")
+            .desc("Number of row misses for write requests")
+            .precision(0)
+            ;
+        write_row_conflicts
+            .init(configs.get_core_num())
+            .name("write_row_conflicts")
+            .desc("Number of row conflicts for write requests")
+            .precision(0)
+            ;
+
+        read_latency_sum
+            .name("read_latency_sum")
+            .desc("The memory latency cycles (in memory time domain) sum for all read requests in this channel")
+            .precision(0)
+            ;
+        read_latency_avg
+            .name("read_latency_avg")
+            .desc("The average memory latency cycles (in memory time domain) per request for all read requests in this channel")
+            .precision(6)
+            ;
+
+        req_queue_length_sum
+            .name("req_queue_length_sum")
+            .desc("Sum of read and write queue length per memory cycle.")
+            .precision(0)
+            ;
+        req_queue_length_avg
+            .name("req_queue_length_avg")
+            .desc("Average of read and write queue length per memory cycle.")
+            .precision(6)
+            ;
+
+        read_req_queue_length_sum
+            .name("read_req_queue_length_sum")
+            .desc("Read queue length sum per memory cycle.")
+            .precision(0)
+            ;
+        read_req_queue_length_avg
+            .name("read_req_queue_length_avg")
+            .desc("Read queue length average per memory cycle.")
+            .precision(6)
+            ;
+
+        write_req_queue_length_sum
+            .name("write_req_queue_length_sum")
+            .desc("Write queue length sum per memory cycle.")
+            .precision(0)
+            ;
+        write_req_queue_length_avg
+            .name("write_req_queue_length_avg")
+            .desc("Write queue length average per memory cycle.")
+            .precision(6)
+            ;
+#ifndef INTEGRATED_WITH_GEM5
+        record_read_hits
+            .init(configs.get_core_num())
+            .name("record_read_hits")
+            .desc("record read hit count for this core when it reaches request limit or to the end")
+            ;
+
+        record_read_misses
+            .init(configs.get_core_num())
+            .name("record_read_misses")
+            .desc("record_read_miss count for this core when it reaches request limit or to the end")
+            ;
+
+        record_read_conflicts
+            .init(configs.get_core_num())
+            .name("record_read_conflicts")
+            .desc("record read conflict count for this core when it reaches request limit or to the end")
+            ;
+
+        record_write_hits
+            .init(configs.get_core_num())
+            .name("record_write_hits")
+            .desc("record write hit count for this core when it reaches request limit or to the end")
+            ;
+
+        record_write_misses
+            .init(configs.get_core_num())
+            .name("record_write_misses")
+            .desc("record write miss count for this core when it reaches request limit or to the end")
+            ;
+
+        record_write_conflicts
+            .init(configs.get_core_num())
+            .name("record_write_conflicts")
+            .desc("record write conflict for this core when it reaches request limit or to the end")
+            ;
+#endif
+
+        for (auto ctrl : ctrls) {
+          ctrl->read_transaction_bytes = &read_transaction_bytes;
+          ctrl->write_transaction_bytes = &write_transaction_bytes;
+
+          ctrl->row_hits = &row_hits;
+          ctrl->row_misses = &row_misses;
+          ctrl->row_conflicts = &row_conflicts;
+          ctrl->read_row_hits = &read_row_hits;
+          ctrl->read_row_misses = &read_row_misses;
+          ctrl->read_row_conflicts = &read_row_conflicts;
+          ctrl->write_row_hits = &write_row_hits;
+          ctrl->write_row_misses = &write_row_misses;
+          ctrl->write_row_conflicts = &write_row_conflicts;
+
+          ctrl->read_latency_sum = &read_latency_sum;
+          ctrl->req_queue_length_sum = &req_queue_length_sum;
+          ctrl->read_req_queue_length_sum = &read_req_queue_length_sum;
+          ctrl->write_req_queue_length_sum = &write_req_queue_length_sum;
+
+          ctrl->record_read_hits = &record_read_hits;
+          ctrl->record_read_misses = &record_read_misses;
+          ctrl->record_read_conflicts = &record_read_conflicts;
+          ctrl->record_write_hits = &record_write_hits;
+          ctrl->record_write_misses = &record_write_misses;
+          ctrl->record_write_conflicts = &record_write_conflicts;
+        }
     }
 
     ~Memory()
@@ -275,17 +448,6 @@ public:
     void tick()
     {
         ++num_dram_cycles;
-        int cur_que_req_num = 0;
-        int cur_que_readreq_num = 0;
-        int cur_que_writereq_num = 0;
-        for (auto ctrl : ctrls) {
-          cur_que_req_num += ctrl->readq.size() + ctrl->writeq.size() + ctrl->pending.size();
-          cur_que_readreq_num += ctrl->readq.size() + ctrl->pending.size();
-          cur_que_writereq_num += ctrl->writeq.size();
-        }
-        in_queue_req_num_sum += cur_que_req_num;
-        in_queue_read_req_num_sum += cur_que_readreq_num;
-        in_queue_write_req_num_sum += cur_que_writereq_num;
 
         bool is_active = false;
         for (auto ctrl : ctrls) {
@@ -350,22 +512,18 @@ public:
       dram_capacity = max_address;
       int *sz = spec->org_entry.count;
       maximum_bandwidth = spec->speed_entry.rate * 1e6 * spec->channel_width * sz[int(T::Level::Channel)] / 8;
-      long dram_cycles = num_dram_cycles.value();
-      long total_read_tx = 0;
-      long total_write_tx = 0;
-      for (auto ctrl : ctrls) {
-        long read_req = long(incoming_read_reqs_per_channel[ctrl->channel->id].value());
-        total_read_tx += long(ctrl->read_transaction_bytes.value());
-        total_write_tx += long(ctrl->write_transaction_bytes.value());
-        ctrl->finish(read_req, dram_cycles);
-      }
-      read_bandwidth = total_read_tx * 1e9 / (dram_cycles * clk_ns());
-      write_bandwidth = total_write_tx * 1e9 / (dram_cycles * clk_ns());
 
-      // finalize average queueing requests
-      in_queue_req_num_avg = in_queue_req_num_sum.value() / dram_cycles;
-      in_queue_read_req_num_avg = in_queue_read_req_num_sum.value() / dram_cycles;
-      in_queue_write_req_num_avg = in_queue_write_req_num_sum.value() / dram_cycles;
+      long dram_cycles = num_dram_cycles.value();
+      long total_read_req = num_read_requests.total();
+      for (auto ctrl : ctrls) {
+        ctrl->finish(dram_cycles);
+      }
+      read_bandwidth = read_transaction_bytes.value() * 1e9 / (dram_cycles * clk_ns());
+      write_bandwidth = write_transaction_bytes.value() * 1e9 / (dram_cycles * clk_ns());
+      read_latency_avg = read_latency_sum.value() / total_read_req;
+      req_queue_length_avg = req_queue_length_sum.value() / dram_cycles;
+      read_req_queue_length_avg = read_req_queue_length_sum.value() / dram_cycles;
+      write_req_queue_length_avg = write_req_queue_length_sum.value() / dram_cycles;
     }
 
     long page_allocator(long addr, int coreid) {
