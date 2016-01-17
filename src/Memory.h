@@ -77,6 +77,8 @@ protected:
 
   ScalarStat read_latency_avg;
   ScalarStat read_latency_sum;
+  ScalarStat queueing_latency_avg;
+  ScalarStat queueing_latency_sum;
 
   ScalarStat req_queue_length_avg;
   ScalarStat req_queue_length_sum;
@@ -324,6 +326,16 @@ public:
             .desc("The average memory latency cycles (in memory time domain) per request for all read requests in this channel")
             .precision(6)
             ;
+        queueing_latency_sum
+            .name("queueing_latency_sum")
+            .desc("The sum of time waiting in queue before first command issued")
+            .precision(0)
+            ;
+        queueing_latency_avg
+            .name("queueing_latency_avg")
+            .desc("The average of time waiting in queue before first command issued")
+            .precision(6)
+            ;
 
         req_queue_length_sum
             .name("req_queue_length_sum")
@@ -410,6 +422,8 @@ public:
           ctrl->write_row_conflicts = &write_row_conflicts;
 
           ctrl->read_latency_sum = &read_latency_sum;
+          ctrl->queueing_latency_sum = &queueing_latency_sum;
+
           ctrl->req_queue_length_sum = &req_queue_length_sum;
           ctrl->read_req_queue_length_sum = &read_req_queue_length_sum;
           ctrl->write_req_queue_length_sum = &write_req_queue_length_sum;
@@ -521,6 +535,7 @@ public:
       read_bandwidth = read_transaction_bytes.value() * 1e9 / (dram_cycles * clk_ns());
       write_bandwidth = write_transaction_bytes.value() * 1e9 / (dram_cycles * clk_ns());
       read_latency_avg = read_latency_sum.value() / total_read_req;
+      queueing_latency_avg = queueing_latency_sum.value() / total_read_req;
       req_queue_length_avg = req_queue_length_sum.value() / dram_cycles;
       read_req_queue_length_avg = read_req_queue_length_sum.value() / dram_cycles;
       write_req_queue_length_avg = write_req_queue_length_sum.value() / dram_cycles;

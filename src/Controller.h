@@ -46,6 +46,7 @@ public:
     VectorStat* write_row_conflicts;
 
     ScalarStat* read_latency_sum;
+    ScalarStat* queueing_latency_sum;
 
     ScalarStat* req_queue_length_sum;
     ScalarStat* read_req_queue_length_sum;
@@ -211,6 +212,7 @@ public:
 
         if (req->is_first_command) {
             req->is_first_command = false;
+            (*queueing_latency_sum) += clk - req->arrive;
             int coreid = req->coreid;
             if (req->type == Request::Type::READ || req->type == Request::Type::WRITE) {
               channel->update_serving_requests(req->addr_vec.data(), 1, clk);
