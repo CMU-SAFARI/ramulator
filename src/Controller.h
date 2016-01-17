@@ -30,7 +30,7 @@ namespace ramulator
 template <typename T>
 class Controller
 {
-protected:
+public:
     // For counting bandwidth
     ScalarStat read_transaction_bytes;
     ScalarStat write_transaction_bytes;

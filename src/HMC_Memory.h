@@ -6,6 +6,7 @@
 #include "LogicLayer.cpp"
 #include "Memory.h"
 #include "Packet.h"
+#include "Statistics.h"
 
 using namespace std;
 
@@ -18,7 +19,26 @@ class Memory<HMC, Controller> : public MemoryBase
 protected:
   long max_address;
   long capacity_per_stack;
+  ScalarStat dram_capacity;
+  ScalarStat num_dram_cycles;
+  VectorStat num_read_requests;
+  VectorStat num_write_requests;
+  VectorStat incoming_requests_per_channel;
+  VectorStat incoming_read_reqs_per_channel;
+  ScalarStat maximum_internal_bandwidth;
+  ScalarStat maximum_link_bandwidth;
+  ScalarStat read_bandwidth;
+  ScalarStat write_bandwidth;
+
+  ScalarStat read_latency_avg;
+  ScalarStat read_latency_sum;
+  ScalarStat request_packet_latency_avg;
+  ScalarStat request_packet_latency_sum;
+  ScalarStat response_packet_latency_avg;
+  ScalarStat response_packet_latency_sum;
+
 public:
+    long clk = 0;
     enum class Type {
         RoCoBaVa, // XXX The specification doesn't define row/column addressing
         MAX,
@@ -101,6 +121,103 @@ public:
               this, std::bind(&Memory<HMC>::receive_packets, this,
                               std::placeholders::_1)));
         }
+
+        // regStats
+        dram_capacity
+            .name("dram_capacity")
+            .desc("Number of bytes in simulated DRAM")
+            .precision(0)
+            ;
+        dram_capacity = max_address;
+
+        num_dram_cycles
+            .name("dram_cycles")
+            .desc("Number of DRAM cycles simulated")
+            .precision(0)
+            ;
+
+        num_read_requests
+            .init(configs.get_core_num())
+            .name("read_requests")
+            .desc("Number of incoming read requests to DRAM")
+            .precision(0)
+            ;
+
+        num_write_requests
+            .init(configs.get_core_num())
+            .name("write_requests")
+            .desc("Number of incoming write requests to DRAM")
+            .precision(0)
+            ;
+
+        incoming_requests_per_channel
+            .init(sz[int(HMC::Level::Vault)])
+            .name("incoming_requests_per_channel")
+            .desc("Number of incoming requests to each DRAM channel")
+            .precision(0)
+            ;
+
+        incoming_read_reqs_per_channel
+            .init(sz[int(HMC::Level::Vault)])
+            .name("incoming_read_reqs_per_channel")
+            .desc("Number of incoming read requests to each DRAM channel")
+            .precision(0)
+            ;
+
+        maximum_internal_bandwidth
+            .name("maximum_internal_bandwidth")
+            .desc("The theoretical maximum bandwidth (Bps)")
+            .precision(0)
+            ;
+
+        maximum_link_bandwidth
+            .name("maximum_link_bandwidth")
+            .desc("The theoretical maximum bandwidth (Bps)")
+            .precision(0)
+            ;
+
+        read_bandwidth
+            .name("read_bandwidth")
+            .desc("Real read bandwidth(Bps)")
+            .precision(0)
+            ;
+
+        write_bandwidth
+            .name("write_bandwidth")
+            .desc("Real write bandwidth(Bps)")
+            .precision(0)
+            ;
+        read_latency_sum
+            .name("read_latency_sum")
+            .desc("The memory latency cycles (in memory time domain) sum for all read requests")
+            .precision(0)
+            ;
+        read_latency_avg
+            .name("read_latency_avg")
+            .desc("The average memory latency cycles (in memory time domain) per request for all read requests")
+            .precision(6)
+            ;
+        request_packet_latency_sum
+            .name("request_packet_latency_sum")
+            .desc("The memory latency cycles (in memory time domain) sum for all read request packets transmission")
+            .precision(0)
+            ;
+        request_packet_latency_avg
+            .name("request_packet_latency_avg")
+            .desc("The average memory latency cycles (in memory time domain) per request for all read request packets transmission")
+            .precision(6)
+            ;
+        response_packet_latency_sum
+            .name("response_packet_latency_sum")
+            .desc("The memory latency cycles (in memory time domain) sum for all read response packets transmission")
+            .precision(0)
+            ;
+        response_packet_latency_avg
+            .name("response_packet_latency_avg")
+            .desc("The average memory latency cycles (in memory time domain) per response for all read response packets transmission")
+            .precision(6)
+            ;
+
     }
 
     ~Memory()
@@ -116,11 +233,13 @@ public:
     }
 
     void record_core(int coreid) {
-      // TODO record statistics
+      // TODO record multicore statistics
     }
 
     void tick()
     {
+        clk++;
+        num_dram_cycles++;
         for (auto ctrl : ctrls) {
           ctrl->tick();
         }
@@ -184,7 +303,14 @@ public:
       assert(packet.type == Packet::Type::RESPONSE);
       tags_pools[packet.header.SLID.value].push_back(packet.header.TAG.value);
       Request& req = packet.req;
+      req.depart_hmc = clk;
       if (req.type == Request::Type::READ) {
+        read_latency_sum += req.depart_hmc - req.arrive_hmc;
+        debug_hmc("read_latency: %ld", req.depart_hmc - req.arrive_hmc);
+        request_packet_latency_sum += req.arrive - req.arrive_hmc;
+        debug_hmc("request_packet_latency: %ld", req.arrive - req.arrive_hmc);
+        response_packet_latency_sum += req.depart_hmc - req.depart;
+        debug_hmc("response_packet_latency: %ld", req.depart_hmc - req.depart);
         req.callback(req);
       }
     }
@@ -194,23 +320,28 @@ public:
         debug_hmc("receive request packets@host controller");
         req.addr_vec.resize(addr_bits.size());
         long addr = req.addr;
+        long coreid = req.coreid;
 
         // Each transaction size is 2^tx_bits, so first clear the lowest tx_bits bits
         clear_lower_bits(addr, tx_bits);
 
         switch(int(type)) {
           case int(Type::RoCoBaVa): {
-            int max_block_bits = spec->maxblock_entry.flit_num_bits;
+            int max_block_col_bits =
+                spec->maxblock_entry.flit_num_bits - tx_bits;
             req.addr_vec[int(HMC::Level::Column)] =
-                slice_lower_bits(addr, max_block_bits - tx_bits);
+                slice_lower_bits(addr, max_block_col_bits);
             req.addr_vec[int(HMC::Level::Vault)] =
                 slice_lower_bits(addr, addr_bits[int(HMC::Level::Vault)]);
             req.addr_vec[int(HMC::Level::Bank)] =
                 slice_lower_bits(addr, addr_bits[int(HMC::Level::Bank)]);
+            req.addr_vec[int(HMC::Level::BankGroup)] =
+                slice_lower_bits(addr, addr_bits[int(HMC::Level::BankGroup)]);
             int column_MSB_bits =
-              slice_lower_bits(addr, addr_bits[int(HMC::Level::Column)] - max_block_bits);
+              slice_lower_bits(
+                  addr, addr_bits[int(HMC::Level::Column)] - max_block_col_bits);
             req.addr_vec[int(HMC::Level::Column)] =
-              req.addr_vec[int(HMC::Level::Column)] | (column_MSB_bits << max_block_bits);
+              req.addr_vec[int(HMC::Level::Column)] | (column_MSB_bits << max_block_col_bits);
             req.addr_vec[int(HMC::Level::Row)] =
                 slice_lower_bits(addr, addr_bits[int(HMC::Level::Row)]);
           }
@@ -219,6 +350,7 @@ public:
               assert(false);
         }
 
+        req.arrive_hmc = clk;
         Packet packet = form_request_packet(req);
         if (packet.header.TAG.value == -1) {
           debug_hmc("tag for link %d not available", packet.tail.SLID.value);
@@ -230,6 +362,14 @@ public:
             logic_layers[0]->host_links[packet.tail.SLID.value].get();
         if (packet.total_flits <= link->slave.available_space()) {
           link->slave.receive(packet);
+          if (req.type == Request::Type::READ) {
+            ++num_read_requests[coreid];
+            ++incoming_read_reqs_per_channel[req.addr_vec[int(HMC::Level::Vault)]];
+          }
+          if (req.type == Request::Type::WRITE) {
+            ++num_write_requests[coreid];
+          }
+          ++incoming_requests_per_channel[req.addr_vec[int(HMC::Level::Vault)]];
           return true;
         } else {
           return false;
@@ -245,6 +385,29 @@ public:
     }
 
     void finish(void) {
+      dram_capacity = max_address;
+      int *sz = spec->org_entry.count;
+      maximum_internal_bandwidth =
+        spec->speed_entry.rate * 1e6 * spec->channel_width * sz[int(HMC::Level::Vault)] / 8;
+      maximum_link_bandwidth =
+        spec->link_width * 2 * spec->source_links * spec->lane_speed * 1e9 / 8;
+      long dram_cycles = num_dram_cycles.value();
+      long total_read_tx = 0;
+      long total_write_tx = 0;
+      long total_read_req = 0;
+      for (auto ctrl : ctrls) {
+        long read_req =
+            long(incoming_read_reqs_per_channel[ctrl->channel->id].value());
+        total_read_req += read_req;
+        total_read_tx += ctrl->read_transaction_bytes.value();
+        total_write_tx += ctrl->write_transaction_bytes.value();
+        ctrl->finish(read_req, dram_cycles);
+      }
+      read_bandwidth = total_read_tx * 1e9 / (dram_cycles * clk_ns());
+      write_bandwidth = total_write_tx * 1e9 / (dram_cycles * clk_ns());;
+      read_latency_avg = read_latency_sum.value() / total_read_req;
+      request_packet_latency_avg = request_packet_latency_sum.value() / total_read_req;
+      response_packet_latency_avg = response_packet_latency_sum.value() / total_read_req;
     }
 
     long page_allocator(long addr, int coreid) {

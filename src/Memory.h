@@ -54,6 +54,8 @@ protected:
 
   ScalarStat physical_page_replacement;
   ScalarStat maximum_bandwidth;
+  ScalarStat read_bandwidth;
+  ScalarStat write_bandwidth;
   ScalarStat in_queue_req_num_sum;
   ScalarStat in_queue_read_req_num_sum;
   ScalarStat in_queue_write_req_num_sum;
@@ -185,11 +187,23 @@ public:
             .desc("The number of times that physical page replacement happens.")
             .precision(0)
             ;
+
         maximum_bandwidth
             .name("maximum_bandwidth")
             .desc("The theoretical maximum bandwidth (Bps)")
             .precision(0)
             ;
+        read_bandwidth
+            .name("read_bandwidth")
+            .desc("Real read bandwidth(Bps)")
+            .precision(0)
+            ;
+        write_bandwidth
+            .name("write_bandwidth")
+            .desc("Real write bandwidth(Bps)")
+            .precision(0)
+            ;
+
         in_queue_req_num_sum
             .name("in_queue_req_num_sum")
             .desc("Sum of read/write queue length")
@@ -337,10 +351,16 @@ public:
       int *sz = spec->org_entry.count;
       maximum_bandwidth = spec->speed_entry.rate * 1e6 * spec->channel_width * sz[int(T::Level::Channel)] / 8;
       long dram_cycles = num_dram_cycles.value();
+      long total_read_tx = 0;
+      long total_write_tx = 0;
       for (auto ctrl : ctrls) {
         long read_req = long(incoming_read_reqs_per_channel[ctrl->channel->id].value());
+        total_read_tx += long(ctrl->read_transaction_bytes.value());
+        total_write_tx += long(ctrl->write_transaction_bytes.value());
         ctrl->finish(read_req, dram_cycles);
       }
+      read_bandwidth = total_read_tx * 1e9 / (dram_cycles * clk_ns());
+      write_bandwidth = total_write_tx * 1e9 / (dram_cycles * clk_ns());
 
       // finalize average queueing requests
       in_queue_req_num_avg = in_queue_req_num_sum.value() / dram_cycles;

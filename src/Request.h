@@ -33,6 +33,8 @@ public:
 
     long arrive = -1;
     long depart;
+    long arrive_hmc;
+    long depart_hmc;
 
     int burst_count = 0;
     function<void(Request&)> callback; // call back with more info
