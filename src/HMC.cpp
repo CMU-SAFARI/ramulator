@@ -47,7 +47,7 @@ HMC::HMC(Org org, Speed speed, MaxBlock maxblock, LinkWidth linkwidth,
     link_width(link_width_table[int(linkwidth)]),
     lane_speed(lane_speed_table[int(lanespeed)]),
     source_links(source_links), payload_flits(payload_flits),
-    burst_count(payload_flits / ((prefetch_size * channel_width / 8)/ bytes_per_flit))
+    burst_count(ceil(payload_flits / ((prefetch_size * channel_width / 8)/ bytes_per_flit)))
 {
     init_speed();
     init_prereq();

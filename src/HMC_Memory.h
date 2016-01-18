@@ -32,6 +32,8 @@ protected:
 
   ScalarStat read_latency_avg;
   ScalarStat read_latency_sum;
+  ScalarStat queueing_latency_avg;
+  ScalarStat queueing_latency_sum;
   ScalarStat request_packet_latency_avg;
   ScalarStat request_packet_latency_sum;
   ScalarStat response_packet_latency_avg;
@@ -224,6 +226,16 @@ public:
             .desc("The average memory latency cycles (in memory time domain) per request for all read requests")
             .precision(6)
             ;
+        queueing_latency_sum
+            .name("queueing_latency_sum")
+            .desc("The sum of time waiting in queue before first command issued")
+            .precision(0)
+            ;
+        queueing_latency_avg
+            .name("queueing_latency_avg")
+            .desc("The average of time waiting in queue before first command issued")
+            .precision(6)
+            ;
         request_packet_latency_sum
             .name("request_packet_latency_sum")
             .desc("The memory latency cycles (in memory time domain) sum for all read request packets transmission")
@@ -394,6 +406,8 @@ public:
           ctrl->write_row_hits = &write_row_hits;
           ctrl->write_row_misses = &write_row_misses;
           ctrl->write_row_conflicts = &write_row_conflicts;
+
+          ctrl->queueing_latency_sum = &queueing_latency_sum;
 
           ctrl->req_queue_length_sum = &req_queue_length_sum;
           ctrl->read_req_queue_length_sum = &read_req_queue_length_sum;
@@ -588,6 +602,7 @@ public:
       read_bandwidth = read_transaction_bytes.value() * 1e9 / (dram_cycles * clk_ns());
       write_bandwidth = write_transaction_bytes.value() * 1e9 / (dram_cycles * clk_ns());;
       read_latency_avg = read_latency_sum.value() / total_read_req;
+      queueing_latency_avg = queueing_latency_sum.value() / total_read_req;
       request_packet_latency_avg = request_packet_latency_sum.value() / total_read_req;
       response_packet_latency_avg = response_packet_latency_sum.value() / total_read_req;
       req_queue_length_avg = req_queue_length_sum.value() / dram_cycles;

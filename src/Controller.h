@@ -212,13 +212,13 @@ public:
 
         if (req->is_first_command) {
             req->is_first_command = false;
-            (*queueing_latency_sum) += clk - req->arrive;
             int coreid = req->coreid;
             if (req->type == Request::Type::READ || req->type == Request::Type::WRITE) {
               channel->update_serving_requests(req->addr_vec.data(), 1, clk);
             }
             int tx = (channel->spec->prefetch_size * channel->spec->channel_width / 8);
             if (req->type == Request::Type::READ) {
+                (*queueing_latency_sum) += clk - req->arrive;
                 if (is_row_hit(req)) {
                     ++(*read_row_hits)[coreid];
                     ++(*row_hits);

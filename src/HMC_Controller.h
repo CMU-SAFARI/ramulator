@@ -38,6 +38,8 @@ public:
     VectorStat* write_row_misses;
     VectorStat* write_row_conflicts;
 
+    ScalarStat* queueing_latency_sum;
+
     ScalarStat* req_queue_length_sum;
     ScalarStat* read_req_queue_length_sum;
     ScalarStat* write_req_queue_length_sum;
@@ -243,6 +245,7 @@ public:
           int tx =
               (channel->spec->prefetch_size * channel->spec->channel_width / 8);
           if (req->type == Request::Type::READ) {
+            (*queueing_latency_sum) += clk - req->arrive;
             if (is_row_hit(req)) {
                 ++(*read_row_hits)[coreid];
                 ++(*row_hits);
