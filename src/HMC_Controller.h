@@ -123,6 +123,7 @@ public:
       assert(packet.type == Packet::Type::REQUEST);
       Request& req = packet.req;
       req.burst_count = channel->spec->burst_count;
+      req.transaction_bytes = channel->spec->payload_flits * 16;
       debug_hmc("req.burst_count %d", req.burst_count);
       debug_hmc("req.reqid %d, req.coreid %d", req.reqid, req.coreid);
       // buffer packet, for future response packet
@@ -242,8 +243,6 @@ public:
           if (req->type == Request::Type::READ || req->type == Request::Type::WRITE) {
             channel->update_serving_requests(req->addr_vec.data(), 1, clk);
           }
-          int tx =
-              (channel->spec->prefetch_size * channel->spec->channel_width / 8);
           if (req->type == Request::Type::READ) {
             (*queueing_latency_sum) += clk - req->arrive;
             if (is_row_hit(req)) {
@@ -259,7 +258,7 @@ public:
                 ++(*row_misses);
                 debug_hmc("row miss");
             }
-            (*read_transaction_bytes) += tx;
+            (*read_transaction_bytes) += req->transaction_bytes;
           } else if (req->type == Request::Type::WRITE) {
             if (is_row_hit(req)) {
                 ++(*write_row_hits)[coreid];
@@ -271,7 +270,7 @@ public:
                 ++(*write_row_misses)[coreid];
                 ++(*row_misses);
             }
-            (*write_transaction_bytes) += tx;
+            (*write_transaction_bytes) += req->transaction_bytes;
           }
         }
 

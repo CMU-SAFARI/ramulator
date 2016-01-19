@@ -37,6 +37,7 @@ public:
     long depart_hmc;
 
     int burst_count = 0;
+    int transaction_bytes = 0;
     function<void(Request&)> callback; // call back with more info
 
     Request(long addr, Type type, int coreid = 0)
