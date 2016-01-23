@@ -53,12 +53,14 @@ protected:
     ScalarStat write_req_queue_length_avg;
     ScalarStat write_req_queue_length_sum;
 
+#ifndef INTEGRATED_WITH_GEM5
     VectorStat record_read_hits;
     VectorStat record_read_misses;
     VectorStat record_read_conflicts;
     VectorStat record_write_hits;
     VectorStat record_write_misses;
     VectorStat record_write_conflicts;
+#endif
 
 public:
     /* Member Variables */
@@ -115,56 +117,56 @@ public:
         // regStats
 
         row_hits
-            .name("row_hits_channel_"+to_string(channel->id))
-            .desc("Number of row hits per channel")
+            .name("row_hits_channel_"+to_string(channel->id) + "_core")
+            .desc("Number of row hits per channel per core")
             .precision(0)
             ;
         row_misses
-            .name("row_misses_channel_"+to_string(channel->id))
-            .desc("Number of row misses per channel")
+            .name("row_misses_channel_"+to_string(channel->id) + "_core")
+            .desc("Number of row misses per channel per core")
             .precision(0)
             ;
         row_conflicts
-            .name("row_conflicts_channel_"+to_string(channel->id))
-            .desc("Number of row conflicts per channel")
+            .name("row_conflicts_channel_"+to_string(channel->id) + "_core")
+            .desc("Number of row conflicts per channel per core")
             .precision(0)
             ;
 
         read_row_hits
             .init(configs.get_core_num())
-            .name("read_row_hits_channel_"+to_string(channel->id))
-            .desc("Number of row hits for read requests per channel")
+            .name("read_row_hits_channel_"+to_string(channel->id) + "_core")
+            .desc("Number of row hits for read requests per channel per core")
             .precision(0)
             ;
         read_row_misses
             .init(configs.get_core_num())
-            .name("read_row_misses_channel_"+to_string(channel->id))
-            .desc("Number of row misses for read requests per channel")
+            .name("read_row_misses_channel_"+to_string(channel->id) + "_core")
+            .desc("Number of row misses for read requests per channel per core")
             .precision(0)
             ;
         read_row_conflicts
             .init(configs.get_core_num())
-            .name("read_row_conflicts_channel_"+to_string(channel->id))
-            .desc("Number of row conflicts for read requests per channel")
+            .name("read_row_conflicts_channel_"+to_string(channel->id) + "_core")
+            .desc("Number of row conflicts for read requests per channel per core")
             .precision(0)
             ;
 
         write_row_hits
             .init(configs.get_core_num())
-            .name("write_row_hits_channel_"+to_string(channel->id))
-            .desc("Number of row hits for write requests per channel")
+            .name("write_row_hits_channel_"+to_string(channel->id) + "_core")
+            .desc("Number of row hits for write requests per channel per core")
             .precision(0)
             ;
         write_row_misses
             .init(configs.get_core_num())
-            .name("write_row_misses_channel_"+to_string(channel->id))
-            .desc("Number of row misses for write requests per channel")
+            .name("write_row_misses_channel_"+to_string(channel->id) + "_core")
+            .desc("Number of row misses for write requests per channel per core")
             .precision(0)
             ;
         write_row_conflicts
             .init(configs.get_core_num())
-            .name("write_row_conflicts_channel_"+to_string(channel->id))
-            .desc("Number of row conflicts for write requests per channel")
+            .name("write_row_conflicts_channel_"+to_string(channel->id) + "_core")
+            .desc("Number of row conflicts for write requests per channel per core")
             .precision(0)
             ;
 
@@ -223,6 +225,7 @@ public:
             .precision(6)
             ;
 
+#ifndef INTEGRATED_WITH_GEM5
         record_read_hits
             .init(configs.get_core_num())
             .name("record_read_hits")
@@ -258,6 +261,7 @@ public:
             .name("record_write_conflicts")
             .desc("record write conflict for this core when it reaches request limit or to the end")
             ;
+#endif
     }
 
     ~Controller(){
@@ -467,12 +471,14 @@ public:
     }
 
     void record_core(int coreid) {
+#ifndef INTEGRATED_WITH_GEM5
       record_read_hits[coreid] = read_row_hits[coreid];
       record_read_misses[coreid] = read_row_misses[coreid];
       record_read_conflicts[coreid] = read_row_conflicts[coreid];
       record_write_hits[coreid] = write_row_hits[coreid];
       record_write_misses[coreid] = write_row_misses[coreid];
       record_write_conflicts[coreid] = write_row_conflicts[coreid];
+#endif
     }
 
 private:
