@@ -106,6 +106,7 @@ Ramulator requires a C++11 compiler (e.g., `clang++`, `g++-5`).
         # Compile gem5
         # Run gem5 with `--mem-type=ramulator` and `--ramulator-config=configs/DDR3-config.cfg`
 
+  By default, gem5 uses the atomic CPU and uses atomic memory accesses, i.e. a detailed memory model like ramulator is not really used. To actually run gem5 in timing mode, a CPU type need to be specified by command line parameter `--cpu-type`. e.g. `--cpu-type=timing`
         
 ## Simulation Output
 
