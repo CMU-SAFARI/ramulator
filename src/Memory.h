@@ -59,8 +59,10 @@ protected:
   ScalarStat in_queue_read_req_num_avg;
   ScalarStat in_queue_write_req_num_avg;
 
+#ifndef INTEGRATED_WITH_GEM5
   VectorStat record_read_requests;
   VectorStat record_write_requests;
+#endif
 
   long max_address;
 public:
@@ -151,13 +153,13 @@ public:
         num_read_requests
             .init(configs.get_core_num())
             .name("read_requests")
-            .desc("Number of incoming read requests to DRAM")
+            .desc("Number of incoming read requests to DRAM per core")
             .precision(0)
             ;
         num_write_requests
             .init(configs.get_core_num())
             .name("write_requests")
-            .desc("Number of incoming write requests to DRAM")
+            .desc("Number of incoming write requests to DRAM per core")
             .precision(0)
             ;
         incoming_requests_per_channel
@@ -216,6 +218,7 @@ public:
             .desc("Average of write queue length per memory cycle")
             .precision(6)
             ;
+#ifndef INTEGRATED_WITH_GEM5
         record_read_requests
             .init(configs.get_core_num())
             .name("record_read_requests")
@@ -227,6 +230,7 @@ public:
             .name("record_write_requests")
             .desc("record write requests for this core when it reaches request limit or to the end")
             ;
+#endif
 
     }
 
@@ -243,8 +247,10 @@ public:
     }
 
     void record_core(int coreid) {
+#ifndef INTEGRATED_WITH_GEM5
       record_read_requests[coreid] = num_read_requests[coreid];
       record_write_requests[coreid] = num_write_requests[coreid];
+#endif
       for (auto ctrl : ctrls) {
         ctrl->record_core(coreid);
       }
