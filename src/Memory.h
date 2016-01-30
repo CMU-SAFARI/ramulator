@@ -49,6 +49,7 @@ protected:
   VectorStat num_read_requests;
   VectorStat num_write_requests;
   ScalarStat ramulator_active_cycles;
+  ScalarStat memory_footprint;
   VectorStat incoming_requests_per_channel;
   VectorStat incoming_read_reqs_per_channel;
 
@@ -211,6 +212,11 @@ public:
         ramulator_active_cycles
             .name("ramulator_active_cycles")
             .desc("The total number of cycles that the DRAM part is active (serving R/W)")
+            .precision(0)
+            ;
+        memory_footprint
+            .name("memory_footprint")
+            .desc("memory footprint in byte")
             .precision(0)
             ;
         physical_page_replacement
@@ -556,6 +562,7 @@ public:
 
                     // if physical page doesn't remain, replace a previous assigned
                     // physical page.
+                    memory_footprint += 1<<12;
                     if (!free_physical_pages_remaining) {
                       physical_page_replacement++;
                       long phys_page_to_read = lrand() % free_physical_pages.size();
