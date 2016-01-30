@@ -22,6 +22,9 @@ map<string, enum GDDR5::Speed> GDDR5::speed_map = {
     {"GDDR5_5000", GDDR5::Speed::GDDR5_5000}, {"GDDR5_5500", GDDR5::Speed::GDDR5_5500},
     {"GDDR5_6000", GDDR5::Speed::GDDR5_6000}, {"GDDR5_6500", GDDR5::Speed::GDDR5_6500},
     {"GDDR5_7000", GDDR5::Speed::GDDR5_7000},
+    {"GDDR5_7000_disable_bg", GDDR5::Speed::GDDR5_7000_disable_bg},
+    {"GDDR5_7000_larger_REFI", GDDR5::Speed::GDDR5_7000_larger_REFI},
+    {"GDDR5_7000_disable_bg_larger_REFI", GDDR5::Speed::GDDR5_7000_disable_bg_larger_REFI},
 };
 
 GDDR5::GDDR5(Org org, Speed speed) : 
@@ -54,6 +57,7 @@ void GDDR5::init_speed()
 {
     const int REFIL_TABLE[int(Speed::MAX)] = {3900, 4388, 4875, 5363, 5850, 6338, 6825};
     const int REFIS_TABLE[int(Speed::MAX)] = {1900, 2138, 2375, 2613, 2850, 3088, 3325};
+//     const int larger_REFI_TABLE[int(Speed::MAX)] = {7800, 8775, 9750, 10725, 11700, 12675, 13650};
     const int RFC_TABLE[5][int(Speed::MAX)] = {
         // using DDR3 values
         {90, 102, 113, 124, 135, 147, 158},
@@ -81,8 +85,11 @@ void GDDR5::init_speed()
         case 16: density = 4; break;
         default: assert(0);
     }
-    if (org_entry.size <= 1024) speed_entry.nREFI = REFIL_TABLE[speed];
-    else speed_entry.nREFI = REFIS_TABLE[speed];
+    if (speed_entry.nREFI == 0) {
+      if (org_entry.size <= 1024) speed_entry.nREFI = REFIL_TABLE[speed];
+      else speed_entry.nREFI = REFIS_TABLE[speed];
+    }
+    printf("speed_entry.nREFI: %d\n", speed_entry.nREFI);
     speed_entry.nRFC = RFC_TABLE[density][speed];
 }
 

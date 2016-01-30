@@ -21,6 +21,7 @@ map<string, enum DDR4::Speed> DDR4::speed_map = {
     {"DDR4_1866M", DDR4::Speed::DDR4_1866M}, {"DDR4_1866N", DDR4::Speed::DDR4_1866N},
     {"DDR4_2133P", DDR4::Speed::DDR4_2133P}, {"DDR4_2133R", DDR4::Speed::DDR4_2133R},
     {"DDR4_2400R", DDR4::Speed::DDR4_2400R}, {"DDR4_2400U", DDR4::Speed::DDR4_2400U},
+    {"DDR4_2400R_disable_bg", DDR4::Speed::DDR4_2400R_disable_bg}
 };
 
 
