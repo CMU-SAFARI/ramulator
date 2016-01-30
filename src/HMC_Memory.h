@@ -70,8 +70,15 @@ public:
     long clk = 0;
     enum class Type {
         RoCoBaVa, // XXX The specification doesn't define row/column addressing
+        RoBaCoVa,
+        RoCoBaBgVa,
         MAX,
     } type = Type::RoCoBaVa;
+
+    std::map<std::string, Type> name_to_type = {
+      {"RoCoBaVa", Type::RoCoBaVa},
+      {"RoBaCoVa", Type::RoBaCoVa},
+      {"RoCoBaBgVa", Type::RoCoBaBgVa}};
 
     enum class Translation {
       None,
@@ -133,6 +140,13 @@ public:
           free_physical_pages_remaining = max_address >> 12;
 
           free_physical_pages.resize(free_physical_pages_remaining, -1);
+        }
+
+        // Initiating addressing
+        if (configs.contains("addressing_type")) {
+          assert(name_to_type.find(configs["addressing_type"]) != name_to_type.end());
+          printf("configs[\"addressing_type\"] %s\n", configs["addressing_type"].c_str());
+          type = name_to_type[configs["addressing_type"]];
         }
 
         // HMC
@@ -539,6 +553,46 @@ public:
                 slice_lower_bits(addr, addr_bits[int(HMC::Level::Bank)]);
             req.addr_vec[int(HMC::Level::BankGroup)] =
                 slice_lower_bits(addr, addr_bits[int(HMC::Level::BankGroup)]);
+            int column_MSB_bits =
+              slice_lower_bits(
+                  addr, addr_bits[int(HMC::Level::Column)] - max_block_col_bits);
+            req.addr_vec[int(HMC::Level::Column)] =
+              req.addr_vec[int(HMC::Level::Column)] | (column_MSB_bits << max_block_col_bits);
+            req.addr_vec[int(HMC::Level::Row)] =
+                slice_lower_bits(addr, addr_bits[int(HMC::Level::Row)]);
+          }
+          break;
+          case int(Type::RoBaCoVa): {
+            int max_block_col_bits =
+                spec->maxblock_entry.flit_num_bits - tx_bits;
+            req.addr_vec[int(HMC::Level::Column)] =
+                slice_lower_bits(addr, max_block_col_bits);
+            req.addr_vec[int(HMC::Level::Vault)] =
+                slice_lower_bits(addr, addr_bits[int(HMC::Level::Vault)]);
+            int column_MSB_bits =
+              slice_lower_bits(
+                  addr, addr_bits[int(HMC::Level::Column)] - max_block_col_bits);
+            req.addr_vec[int(HMC::Level::Column)] =
+              req.addr_vec[int(HMC::Level::Column)] | (column_MSB_bits << max_block_col_bits);
+            req.addr_vec[int(HMC::Level::Bank)] =
+                slice_lower_bits(addr, addr_bits[int(HMC::Level::Bank)]);
+            req.addr_vec[int(HMC::Level::BankGroup)] =
+                slice_lower_bits(addr, addr_bits[int(HMC::Level::BankGroup)]);
+            req.addr_vec[int(HMC::Level::Row)] =
+                slice_lower_bits(addr, addr_bits[int(HMC::Level::Row)]);
+          }
+          break;
+          case int(Type::RoCoBaBgVa): {
+            int max_block_col_bits =
+                spec->maxblock_entry.flit_num_bits - tx_bits;
+            req.addr_vec[int(HMC::Level::Column)] =
+                slice_lower_bits(addr, max_block_col_bits);
+            req.addr_vec[int(HMC::Level::Vault)] =
+                slice_lower_bits(addr, addr_bits[int(HMC::Level::Vault)]);
+            req.addr_vec[int(HMC::Level::BankGroup)] =
+                slice_lower_bits(addr, addr_bits[int(HMC::Level::BankGroup)]);
+            req.addr_vec[int(HMC::Level::Bank)] =
+                slice_lower_bits(addr, addr_bits[int(HMC::Level::Bank)]);
             int column_MSB_bits =
               slice_lower_bits(
                   addr, addr_bits[int(HMC::Level::Column)] - max_block_col_bits);
