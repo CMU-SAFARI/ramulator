@@ -200,6 +200,9 @@ public:
         if (pending.size()) {
           Request& req = pending[0];
           if (req.depart <= clk) {
+            if (req.depart - req.arrive > 1) {
+              channel->update_serving_requests(req.addr_vec.data(), -1, clk);
+            }
             Packet packet = form_response_packet(req);
             response_packets_buffer.push_back(packet);
             pending.pop_front();
@@ -295,6 +298,7 @@ public:
             if (req->burst_count == 0) {
               Packet packet = form_response_packet(*req);
               response_packets_buffer.push_back(packet);
+              channel->update_serving_requests(req->addr_vec.data(), -1, clk);
             }
         }
 
