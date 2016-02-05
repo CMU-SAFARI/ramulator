@@ -34,12 +34,16 @@ protected:
   ScalarStat write_bandwidth;
 
   ScalarStat read_latency_avg;
+  ScalarStat read_latency_ns_avg;
   ScalarStat read_latency_sum;
   ScalarStat queueing_latency_avg;
+  ScalarStat queueing_latency_ns_avg;
   ScalarStat queueing_latency_sum;
   ScalarStat request_packet_latency_avg;
+  ScalarStat request_packet_latency_ns_avg;
   ScalarStat request_packet_latency_sum;
   ScalarStat response_packet_latency_avg;
+  ScalarStat response_packet_latency_ns_avg;
   ScalarStat response_packet_latency_sum;
 
   // shared by all Controller objects
@@ -268,6 +272,16 @@ public:
             .desc("The average of time waiting in queue before first command issued")
             .precision(6)
             ;
+        read_latency_ns_avg
+            .name("read_latency_ns_avg")
+            .desc("The average memory latency (ns) per request for all read requests in this channel")
+            .precision(6)
+            ;
+        queueing_latency_ns_avg
+            .name("queueing_latency_ns_avg")
+            .desc("The average of time (ns) waiting in queue before first command issued")
+            .precision(6)
+            ;
         request_packet_latency_sum
             .name("request_packet_latency_sum")
             .desc("The memory latency cycles (in memory time domain) sum for all read request packets transmission")
@@ -278,6 +292,11 @@ public:
             .desc("The average memory latency cycles (in memory time domain) per request for all read request packets transmission")
             .precision(6)
             ;
+        request_packet_latency_ns_avg
+            .name("request_packet_latency_ns_avg")
+            .desc("The average memory latency (ns) per request for all read request packets transmission")
+            .precision(6)
+            ;
         response_packet_latency_sum
             .name("response_packet_latency_sum")
             .desc("The memory latency cycles (in memory time domain) sum for all read response packets transmission")
@@ -286,6 +305,11 @@ public:
         response_packet_latency_avg
             .name("response_packet_latency_avg")
             .desc("The average memory latency cycles (in memory time domain) per response for all read response packets transmission")
+            .precision(6)
+            ;
+        response_packet_latency_ns_avg
+            .name("response_packet_latency_ns_avg")
+            .desc("The average memory latency (ns) per response for all read response packets transmission")
             .precision(6)
             ;
 
@@ -683,6 +707,10 @@ public:
       queueing_latency_avg = queueing_latency_sum.value() / total_read_req;
       request_packet_latency_avg = request_packet_latency_sum.value() / total_read_req;
       response_packet_latency_avg = response_packet_latency_sum.value() / total_read_req;
+      read_latency_ns_avg = read_latency_avg.value() * clk_ns();
+      queueing_latency_ns_avg = queueing_latency_avg.value() * clk_ns();
+      request_packet_latency_ns_avg = request_packet_latency_avg.value() * clk_ns();
+      response_packet_latency_ns_avg = response_packet_latency_avg.value() * clk_ns();
       req_queue_length_avg = req_queue_length_sum.value() / dram_cycles;
       read_req_queue_length_avg = read_req_queue_length_sum.value() / dram_cycles;
       write_req_queue_length_avg = write_req_queue_length_sum.value() / dram_cycles;
