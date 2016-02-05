@@ -63,8 +63,6 @@ stat_map["ramulator.incoming_requests_per_channel"] = "incoming_requests"
 # stat_map["ramulator.incoming_requests"] = "incoming_requests"
 stat_map["ramulator.read_requests"] = "read_requests"
 stat_map["ramulator.write_requests"] = "write_requests"
-stat_map["ramulator.cpu_instructions_core_0"] = "cpu_insts"
-stat_map["ramulator.cpu_cycles"] = "cpu_cycles"
 stat_map["ramulator.maximum_bandwidth"] = "maximum_bandwidth"
 stat_map["ramulator.maximum_internal_bandwidth"] = "maximum_internal_bandwidth"
 stat_map["ramulator.maximum_link_bandwidth"] = "maximum_link_bandwidth"
@@ -92,9 +90,13 @@ stat_map["ramulator.ramulator_active_cycles"] = "DRAM_active_cycles"
 # multidim_stats.append("ramulator.read_req_queue_length_sum_")
 # multidim_stats.append("ramulator.write_req_queue_length_sum_")
 #
+stat_map["ramulator.record_cycs_core_"] = "cpu_cycles"
+stat_map["ramulator.record_insts_core_"] = "cpu_insts"
 stat_map["ramulator.serving_requests_"] = "total_serving_requests"
 stat_map["ramulator.active_cycles_"] = "total_active_cycles"
 
+multidim_stats.append("ramulator.record_cycs_core_")
+multidim_stats.append("ramulator.record_insts_core_")
 multidim_stats.append("ramulator.serving_requests_")
 multidim_stats.append("ramulator.active_cycles_")
 #
@@ -171,9 +173,15 @@ class Stats(object):
             self.mem_stats[stat_name][len(indices) - 1] = [(indices, value)]
         else:
           assert(False and "Wow only ramulator has multidim stats!")
-    # preprocess second-level statistics
+  # preprocess second-level statistics
+    if len(self.mem_stats) == 0:
+      return
+  # max_cpu_cycles
+    self.mem_stats["max_cpu_cycles"] = max([c[1] for c in self.mem_stats["cpu_cycles"][0]])
   # ipc
-    self.mem_stats["ipc"] = self.mem_stats["cpu_insts"] / self.mem_stats["cpu_cycles"]
+    self.mem_stats["ipc"] = []
+    for cpu_insts,cpu_cycles in zip(self.mem_stats["cpu_insts"][0], self.mem_stats["cpu_cycles"][0]):
+      self.mem_stats["ipc"].append(cpu_insts[1]/cpu_cycles[1])
 
     # row buffer locality
     self.mem_stats["row_hit_rate"] = self.mem_stats["row_hits"] / self.mem_stats["incoming_requests"]
@@ -189,7 +197,7 @@ class Stats(object):
     total_active_cycles_per_bank = self.mem_stats["total_active_cycles"][ba_idx]
     assert(len(total_serving_requests_per_bank) == len(total_active_cycles_per_bank))
     ba_num = len(total_serving_requests_per_bank)
-    self.mem_stats["BLP"] = sum([t[1] for t in total_serving_requests_per_bank]) / (self.mem_stats["cpu_cycles"] * ba_num)
+    self.mem_stats["BLP"] = sum([t[1] for t in total_serving_requests_per_bank]) / (self.mem_stats["max_cpu_cycles"] * ba_num)
     if "DRAM_active_cycles" in self.mem_stats:
       self.mem_stats["effective_BLP"] = sum([t[1] for t in total_serving_requests_per_bank]) / self.mem_stats["DRAM_active_cycles"]
     else:
@@ -207,4 +215,4 @@ class Stats(object):
       self.mem_stats["bandwidth_utilization"] = self.mem_stats["bandwidth"] / self.mem_stats["maximum_bandwidth"]
 
     # MPKI
-    self.mem_stats["MPKI"] = self.mem_stats["incoming_requests"] * 1000 / self.mem_stats["cpu_insts"]
+    self.mem_stats["MPKI"] = self.mem_stats["incoming_requests"] * 1000 / self.mem_stats["cpu_insts"][0][0][1]
