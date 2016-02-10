@@ -211,20 +211,18 @@ void Core::tick()
         if (inserted == window.ipc) return;
         if (window.is_full()) return;
 
-        Request req(req_addr, req_type, callback, mem_req_count, id);
+        Request req(req_addr, req_type, callback, id);
         if (!send(req)) return;
 
         window.insert(false, req_addr);
         cpu_inst++;
-        mem_req_count++;
     }
     else {
         // write request
         assert(req_type == Request::Type::WRITE);
-        Request req(req_addr, req_type, callback, mem_req_count, id);
+        Request req(req_addr, req_type, callback, id);
         if (!send(req)) return;
         cpu_inst++;
-        mem_req_count++;
     }
     if (long(cpu_inst.value()) == expected_limit_insts && !reached_limit) {
       record_cycs = clk;

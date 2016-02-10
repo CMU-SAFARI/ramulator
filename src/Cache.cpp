@@ -281,7 +281,7 @@ void Cache::evict(std::list<Line>* lines,
   } else {
     // LLC eviction
     if (dirty) {
-      Request write_req(addr, Request::Type::WRITE);
+      Request write_req(addr, Request::Type::WRITE, 0); // write memory requests are caused by eviction at LLC, which is highly reordered and most of them suffer from conflicts. Here we don't differentiate statistics related with write requests from different cores.
       cachesys->wait_list.push_back(make_pair(
           cachesys->clk + invalidate_time + latency[int(level)],
           write_req));

@@ -91,7 +91,6 @@ public:
     long expected_limit_insts;
     // This is set true iff expected number of instructions has been executed or all instructions are executed.
     bool reached_limit = false;;
-    long mem_req_count = 0;
 
 private:
     Trace trace;

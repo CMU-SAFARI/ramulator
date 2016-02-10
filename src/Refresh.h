@@ -106,7 +106,7 @@ private:
     addr_vec[1] = rank;
     addr_vec[2] = bank;
     addr_vec[3] = sa;
-    Request req(addr_vec, Request::Type::REFRESH, NULL, 0);
+    Request req(addr_vec, Request::Type::REFRESH, NULL, -1);
     bool res = ctrl->enqueue(req);
     assert(res);
   }

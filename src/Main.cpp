@@ -60,7 +60,8 @@ void run_dramtrace(const Config& configs, Memory<T, Controller>& memory, const c
     map<int, int> latencies;
     auto read_complete = [&latencies](Request& r){latencies[r.depart - r.arrive]++;};
 
-    Request req(addr, type, read_complete);
+    // TODO allow request streams coming from different cores
+    Request req(addr, type, read_complete, 0);
 
     while (!end || memory.pending_requests()){
         if (!end && !stall){
