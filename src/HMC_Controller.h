@@ -84,7 +84,7 @@ public:
 
     // HMC
     deque<Packet> response_packets_buffer;
-    map<pair<int, int>, Packet> incoming_packets_buffer;
+    map<long, Packet> incoming_packets_buffer;
 
     /* Constructor */
     Controller(const Config& configs, DRAM<HMC>* channel) :
@@ -127,7 +127,7 @@ public:
       debug_hmc("req.burst_count %d", req.burst_count);
       debug_hmc("req.reqid %d, req.coreid %d", req.reqid, req.coreid);
       // buffer packet, for future response packet
-      incoming_packets_buffer[make_pair(req.reqid, req.coreid)] = packet;
+      incoming_packets_buffer[req.reqid] = packet;
       return enqueue(req);
     }
 
@@ -166,8 +166,9 @@ public:
 
     Packet form_response_packet(Request& req) {
       // All packets sent from host controller are Request packets
-      const Packet& req_packet =
-          incoming_packets_buffer[make_pair(req.reqid, req.coreid)];
+      assert(incoming_packets_buffer.find(req.reqid) !=
+          incoming_packets_buffer.end());
+      Packet req_packet = incoming_packets_buffer[req.reqid];
       int cub = req_packet.header.CUB.value;
       int tag = req_packet.header.TAG.value;
       int slid = req_packet.tail.SLID.value;
@@ -185,6 +186,8 @@ public:
       assert(packet.header.TAG.valid()); // -1 also considered valid here...
       assert(packet.header.SLID.valid());
       assert(packet.header.CMD.valid());
+      // Don't forget to release the space for incoming packet
+      incoming_packets_buffer.erase(req.reqid);
       return packet;
     }
 

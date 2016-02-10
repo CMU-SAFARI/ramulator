@@ -73,6 +73,8 @@ protected:
   VectorStat record_write_misses;
   VectorStat record_write_conflicts;
 
+  long mem_req_count = 0;
+
 public:
     long clk = 0;
     enum class Type {
@@ -583,6 +585,7 @@ public:
     {
         debug_hmc("receive request packets@host controller");
         req.addr_vec.resize(addr_bits.size());
+        req.reqid = mem_req_count;
         long addr = req.addr;
         long coreid = req.coreid;
 
@@ -674,6 +677,7 @@ public:
             ++num_write_requests[coreid];
           }
           ++incoming_requests_per_channel[req.addr_vec[int(HMC::Level::Vault)]];
+          ++mem_req_count;
           return true;
         } else {
           return false;
