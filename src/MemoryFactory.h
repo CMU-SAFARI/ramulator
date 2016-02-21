@@ -54,7 +54,7 @@ public:
         assert(channels > 0 && ranks > 0);
     }
 
-    static MemoryBase *create(const Config& configs, int cacheline)
+    static MemoryBase *create(Config& configs, int cacheline)
     {
         int channels = stoi(configs["channels"], NULL, 0);
         int ranks = stoi(configs["ranks"], NULL, 0);
@@ -66,16 +66,21 @@ public:
 
         T *spec = new T(org_name, speed_name);
 
-        extend_channel_width(spec, cacheline);
+        configs.set_cacheline_size(cacheline);
+
+        if (configs.contains("extend_channel_width") &&
+            configs["extend_channel_width"] == "true") {
+          extend_channel_width(spec, cacheline);
+        }
 
         return (MemoryBase *)populate_memory(configs, spec, channels, ranks);
     }
 };
 
 template <>
-MemoryBase *MemoryFactory<WideIO2>::create(const Config& configs, int cacheline);
+MemoryBase *MemoryFactory<WideIO2>::create(Config& configs, int cacheline);
 template <>
-MemoryBase *MemoryFactory<SALP>::create(const Config& configs, int cacheline);
+MemoryBase *MemoryFactory<SALP>::create(Config& configs, int cacheline);
 
 } /*namespace ramulator*/
 

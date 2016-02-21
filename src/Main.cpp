@@ -250,7 +250,10 @@ int main(int argc, const char *argv[])
     } else if (standard == "WideIO2") {
       // total cap: 2GB, 1/2 of others
       WideIO2* wio2 = new WideIO2(configs["org"], configs["speed"], configs.get_channels());
-      wio2->channel_width *= 2;
+      if (configs.contains("extend_channel_width") &&
+          configs["extend_channel_width"] == "true") {
+        wio2->channel_width *= 2;
+      }
       start_run(configs, wio2, files);
     }
     // Various refresh mechanisms

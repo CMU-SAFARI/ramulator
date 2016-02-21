@@ -21,6 +21,7 @@ private:
     int subarrays;
     int cpu_frequency;
     int core_num = 0;
+    int cacheline_size = 64;
     long expected_limit_insts = 0;
 
 public:
@@ -52,6 +53,7 @@ public:
     }
 
     void set_core_num(int _core_num) {core_num = _core_num;}
+    void set_cacheline_size(int _cacheline_size) {cacheline_size = _cacheline_size;}
 
     int get_int_value(const std::string& name) const {
       assert(options.find(name) != options.end() && "can't find this argument");
@@ -63,6 +65,7 @@ public:
     int get_ranks() const {return ranks;}
     int get_cpu_tick() const {return int(1000000 / cpu_frequency);}
     int get_core_num() const {return core_num;}
+    int get_cacheline_size() const {return cacheline_size;}
     long get_expected_limit_insts() const {return expected_limit_insts;}
     bool has_l3_cache() const {
       if (options.find("cache") != options.end()) {

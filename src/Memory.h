@@ -127,6 +127,7 @@ public:
     vector<int> addr_bits;
 
     int tx_bits;
+    int cacheline_size;
 
     Memory(const Config& configs, vector<Controller<T>*> ctrls)
         : ctrls(ctrls),
@@ -168,6 +169,8 @@ public:
 
           free_physical_pages.resize(free_physical_pages_remaining, -1);
         }
+
+        cacheline_size = configs.get_cacheline_size();
 
         // regStats
 
