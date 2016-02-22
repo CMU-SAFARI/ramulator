@@ -21,6 +21,7 @@
 #include "ALDRAM.h"
 #include "SALP.h"
 #include "TLDRAM.h"
+#include "WideIO2.h"
 
 using namespace std;
 
@@ -216,7 +217,8 @@ public:
             if (req->type == Request::Type::READ || req->type == Request::Type::WRITE) {
               channel->update_serving_requests(req->addr_vec.data(), 1, clk);
             }
-            int tx = (channel->spec->prefetch_size * channel->spec->channel_width / 8);
+            // FIXME: easy to make mistakes when calculating tx. TODO move tx calculation during initialization
+            int tx = (channel->spec->prefetch_size * channel->spec->channel_width / 8) * req->burst_count; // req->burst_count is the initial value because req->is_first_command is true
             if (req->type == Request::Type::READ) {
                 (*queueing_latency_sum) += clk - req->arrive;
                 if (is_row_hit(req)) {
@@ -378,6 +380,9 @@ void Controller<ALDRAM>::update_temp(ALDRAM::Temp current_temperature);
 
 template <>
 void Controller<TLDRAM>::tick();
+
+template <>
+void Controller<WideIO2>::tick();
 
 } /*namespace ramulator*/
 

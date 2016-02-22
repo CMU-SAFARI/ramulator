@@ -497,6 +497,7 @@ public:
     bool send(Request req)
     {
         req.addr_vec.resize(addr_bits.size());
+        req.burst_count = cacheline_size / (1 << tx_bits);
         long addr = req.addr;
         int coreid = req.coreid;
 
