@@ -1,4 +1,3 @@
-import sys
 import os.path
 
 ### This python script is used for extract structural data from gem5 stats.txt
@@ -81,6 +80,10 @@ stat_map["ramulator.read_latency_avg"] = "read_latency_avg"
 stat_map["ramulator.queueing_latency_avg"] = "queueing_latency_avg"
 stat_map["ramulator.request_packet_latency_avg"] = "request_packet_latency_avg"
 stat_map["ramulator.response_packet_latency_avg"] = "response_packet_latency_avg"
+stat_map["ramulator.read_latency_ns_avg"] = "read_latency_ns_avg"
+stat_map["ramulator.queueing_latency_ns_avg"] = "queueing_latency_ns_avg"
+stat_map["ramulator.request_packet_latency_ns_avg"] = "request_packet_latency_ns_avg"
+stat_map["ramulator.response_packet_latency_ns_avg"] = "response_packet_latency_ns_avg"
 stat_map["ramulator.maximum_bandwidth"] = "maximum_bandwidth"
 stat_map["ramulator.maximum_internal_bandwidth"] = "maximum_internal_bandwidth"
 stat_map["ramulator.ramulator_active_cycles"] = "DRAM_active_cycles"
@@ -126,22 +129,16 @@ class Stats(object):
         return partial_name
     return ""
 
-  def get_mem_stats(self, name):
-    if name in self.mem_stats:
-      return self.mem_stats[name]
+  def get_mem_stats(self, mem_stats, name):
+    if name in mem_stats:
+      return mem_stats[name]
     else:
       return 0
 
-  def __init__(self, fname):
-    print fname
-    self.stats = dict()
-    self.mem_stats = dict()
-    self.sys_stats = dict()
-    if os.path.isfile(fname):
-      f = open(fname, "r")
-    else:
-      return
+  def init_from_file(self, f):
     # parse statistics in output file
+    mem_stats = dict()
+    sys_stats = dict()
     for s in f:
       s = s.split(" ")
       s = filter(None, s)[:2]
@@ -154,9 +151,9 @@ class Stats(object):
       if stat_map.has_key(s[0]):
         stat_name = stat_map[s[0]]
         if s[0].split(".")[0] == "ramulator":
-          self.mem_stats[stat_name] = value
+          mem_stats[stat_name] = value
         else:
-          self.sys_stats[stat_name] = value
+          sys_stats[stat_name] = value
       else:
         partial_name = self.is_multidim_stats(s[0])
         if not partial_name:
@@ -165,54 +162,126 @@ class Stats(object):
         stat_name = stat_map[partial_name]
         value = float(s[1])
         if s[0].split(".")[0] == "ramulator":
-          if self.mem_stats.has_key(stat_name) and self.mem_stats[stat_name].has_key(len(indices) - 1):
-            self.mem_stats[stat_name][len(indices) - 1].append((indices, value))
-          elif not self.mem_stats.has_key(stat_name):
-            self.mem_stats[stat_name] = {len(indices) - 1 : [(indices, value)]}
+          if mem_stats.has_key(stat_name) and mem_stats[stat_name].has_key(len(indices) - 1):
+            mem_stats[stat_name][len(indices) - 1].append((indices, value))
+          elif not mem_stats.has_key(stat_name):
+            mem_stats[stat_name] = {len(indices) - 1 : [(indices, value)]}
           else:
-            self.mem_stats[stat_name][len(indices) - 1] = [(indices, value)]
+            mem_stats[stat_name][len(indices) - 1] = [(indices, value)]
         else:
           assert(False and "Wow only ramulator has multidim stats!")
   # preprocess second-level statistics
-    if len(self.mem_stats) == 0:
+    if len(mem_stats) == 0:
       return
-  # max_cpu_cycles
-    self.mem_stats["max_cpu_cycles"] = max([c[1] for c in self.mem_stats["cpu_cycles"][0]])
-  # ipc
-    self.mem_stats["ipc"] = []
-    for cpu_insts,cpu_cycles in zip(self.mem_stats["cpu_insts"][0], self.mem_stats["cpu_cycles"][0]):
-      self.mem_stats["ipc"].append(cpu_insts[1]/cpu_cycles[1])
 
-    # row buffer locality
-    self.mem_stats["row_hit_rate"] = self.mem_stats["row_hits"] / self.mem_stats["incoming_requests"]
+    try:
+    # max_cpu_cycles
+      mem_stats["max_cpu_cycles"] = max([c[1] for c in mem_stats["cpu_cycles"][0]])
+    except KeyError as detail:
+      print "Ignore KeyError: ", detail
+      pass
 
-    self.mem_stats["row_miss_rate"] = self.mem_stats["row_misses"] / self.mem_stats["incoming_requests"]
+    try:
+    # ipc
+      mem_stats["ipc"] = []
+      for cpu_insts,cpu_cycles in zip(mem_stats["cpu_insts"][0], mem_stats["cpu_cycles"][0]):
+        mem_stats["ipc"].append(cpu_insts[1]/cpu_cycles[1])
+    except KeyError as detail:
+      print "Ignore KeyError: ", detail
+      pass
 
-    self.mem_stats["row_conflict_rate"] = self.mem_stats["row_conflicts"] / self.mem_stats["incoming_requests"]
+    # weithed_speedup
+    if len(mem_stats["ipc"]) > 1:
+      try:
+        ref_ipcs = [s["ipc"][0] for s in self.ref_mem_stats]
+        num_of_core = len(mem_stats["ipc"])
+        weighted_speedup = 0
+        assert(len(ref_ipcs) == len(mem_stats["ipc"]))
+        for ipc, ref_ipc in zip(mem_stats["ipc"], ref_ipcs):
+          weighted_speedup += ipc / ref_ipc
+        mem_stats["weighted_speedup"] = weighted_speedup
+      except KeyError as detail:
+        print "Ignore KeyError: ", detail
+        pass
 
-    # BLP
-    # definition: average outstanding requests in DRAM per cycle
-    ba_idx = len(self.mem_stats["total_serving_requests"]) - 1
-    total_serving_requests_per_bank = self.mem_stats["total_serving_requests"][ba_idx]
-    total_active_cycles_per_bank = self.mem_stats["total_active_cycles"][ba_idx]
-    assert(len(total_serving_requests_per_bank) == len(total_active_cycles_per_bank))
-    ba_num = len(total_serving_requests_per_bank)
-    self.mem_stats["BLP"] = sum([t[1] for t in total_serving_requests_per_bank]) / (self.mem_stats["max_cpu_cycles"] * ba_num)
-    if "DRAM_active_cycles" in self.mem_stats:
-      self.mem_stats["effective_BLP"] = sum([t[1] for t in total_serving_requests_per_bank]) / self.mem_stats["DRAM_active_cycles"]
+    try:
+      # row buffer locality
+      mem_stats["row_hit_rate"] = mem_stats["row_hits"] / mem_stats["incoming_requests"]
+
+      mem_stats["row_miss_rate"] = mem_stats["row_misses"] / mem_stats["incoming_requests"]
+
+      mem_stats["row_conflict_rate"] = mem_stats["row_conflicts"] / mem_stats["incoming_requests"]
+    except KeyError as detail:
+      print "Ignore KeyError: ", detail
+      pass
+
+    try:
+      # BLP
+      # definition: average outstanding requests in DRAM per cycle
+      ba_idx = len(mem_stats["total_serving_requests"]) - 1
+      total_serving_requests_per_bank = mem_stats["total_serving_requests"][ba_idx]
+      total_active_cycles_per_bank = mem_stats["total_active_cycles"][ba_idx]
+      assert(len(total_serving_requests_per_bank) == len(total_active_cycles_per_bank))
+      ba_num = len(total_serving_requests_per_bank)
+      mem_stats["BLP"] = sum([t[1] for t in total_serving_requests_per_bank]) / (mem_stats["max_cpu_cycles"] * ba_num)
+      if "DRAM_active_cycles" in mem_stats:
+        mem_stats["effective_BLP"] = sum([t[1] for t in total_serving_requests_per_bank]) / mem_stats["DRAM_active_cycles"]
+      else:
+        print "Warning: stat DRAM_active_cycles doesn't exist"
+    except KeyError as detail:
+      print "Ignore KeyError: ", detail
+      pass
+
+    try:
+      # latency
+      if not ("request_packet_latency_avg" and "response_packet_latency_avg") in mem_stats:
+        mem_stats["request_packet_latency_avg"] = 0
+        mem_stats["response_packet_latency_avg"] = 0
+      mem_stats["DRAM_latency_avg"] = mem_stats["read_latency_avg"] - mem_stats["queueing_latency_avg"] - self.get_mem_stats(mem_stats, "request_packet_latency_avg") - self.get_mem_stats(mem_stats, "response_packet_latency_avg")
+      # latency_ns
+      if not ("request_packet_latency_ns_avg" and "response_packet_latency_ns_avg") in mem_stats:
+        mem_stats["request_packet_latency_ns_avg"] = 0
+        mem_stats["response_packet_latency_ns_avg"] = 0
+      mem_stats["DRAM_latency_ns_avg"] = mem_stats["read_latency_ns_avg"] - mem_stats["queueing_latency_ns_avg"] - self.get_mem_stats(mem_stats, "request_packet_latency_ns_avg") - self.get_mem_stats(mem_stats, "response_packet_latency_ns_avg")
+    except KeyError as detail:
+      print "Ignore KeyError: ", detail
+      pass
+
+    try:
+      # bandwidth
+      mem_stats["bandwidth"] = mem_stats["write_bandwidth"] + mem_stats["read_bandwidth"]
+
+      if "maximum_internal_bandwidth" in mem_stats:
+        mem_stats["bandwidth_utilization"] = mem_stats["bandwidth"] / mem_stats["maximum_internal_bandwidth"]
+      else:
+        mem_stats["bandwidth_utilization"] = mem_stats["bandwidth"] / mem_stats["maximum_bandwidth"]
+    except KeyError as detail:
+      print "Ignore KeyError: ", detail
+      pass
+
+    try:
+      # MPKI
+      mem_stats["MPKI"] = mem_stats["incoming_requests"] * 1000 / mem_stats["cpu_insts"][0][0][1]
+    except KeyError as detail:
+      print "Ignore KeyError: ", detail
+      pass
+    return (mem_stats, sys_stats)
+
+  def __init__(self, target_fname, ref_fname_list = None):
+    self.ref_mem_stats = []
+    self.ref_sys_stats = []
+    if os.path.isfile(target_fname):
+      target_fdesc = open(target_fname, "r")
     else:
-      print "Warning: stat DRAM_active_cycles doesn't exist"
+      print "target file name %s doesn't exist, return earlier" % target_fname
+      return
+    if not ref_fname_list is None:
+      for ref_fname in ref_fname_list:
+        if os.path.isfile(ref_fname):
+          ref_fdesc = open(ref_fname, "r")
+          ref_mem_stats, ref_sys_stats = self.init_from_file(ref_fdesc)
+          self.ref_mem_stats.append(ref_mem_stats)
+          self.ref_sys_stats.append(ref_sys_stats)
 
-    # latency
-    self.mem_stats["DRAM_latency_avg"] = self.mem_stats["read_latency_avg"] - self.mem_stats["queueing_latency_avg"] - self.get_mem_stats("request_packet_latency_avg") - self.get_mem_stats("response_packet_latency_avg")
+    self.mem_stats, self.sys_stats = self.init_from_file(target_fdesc)
 
-    # bandwidth
-    self.mem_stats["bandwidth"] = self.mem_stats["write_bandwidth"] + self.mem_stats["read_bandwidth"]
-
-    if "maximum_internal_bandwidth" in self.mem_stats:
-      self.mem_stats["bandwidth_utilization"] = self.mem_stats["bandwidth"] / self.mem_stats["maximum_internal_bandwidth"]
-    else:
-      self.mem_stats["bandwidth_utilization"] = self.mem_stats["bandwidth"] / self.mem_stats["maximum_bandwidth"]
-
-    # MPKI
-    self.mem_stats["MPKI"] = self.mem_stats["incoming_requests"] * 1000 / self.mem_stats["cpu_insts"][0][0][1]
