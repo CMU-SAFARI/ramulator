@@ -5,7 +5,7 @@ using namespace std;
 using namespace ramulator;
 
 Processor::Processor(const Config& configs,
-    vector<const char*> trace_list,
+    vector<string> trace_list,
     function<bool(Request)> send_memory,
     MemoryBase& memory)
     : ipcs(trace_list.size(), -1),
@@ -22,7 +22,7 @@ Processor::Processor(const Config& configs,
   assert(tracenum > 0);
   printf("tracenum: %d\n", tracenum);
   for (int i = 0 ; i < tracenum ; ++i) {
-    printf("trace_list[%d]: %s\n", i, trace_list[i]);
+    printf("trace_list[%d]: %s\n", i, trace_list[i].c_str());
   }
   if (no_shared_cache) {
     for (int i = 0 ; i < tracenum ; ++i) {
@@ -113,7 +113,7 @@ bool Processor::has_reached_limit() {
 }
 
 Core::Core(const Config& configs, int coreid,
-    const char* trace_fname, function<bool(Request)> send_next,
+    const string& trace_fname, function<bool(Request)> send_next,
     Cache* llc, std::shared_ptr<CacheSystem> cachesys, MemoryBase& memory)
     : id(coreid), no_core_caches(!configs.has_core_caches()),
     no_shared_cache(!configs.has_l3_cache()),
@@ -329,7 +329,7 @@ void Window::set_ready(long addr, int mask)
 
 
 
-Trace::Trace(const char* trace_fname) : file(trace_fname), trace_name(trace_fname)
+Trace::Trace(const string& trace_fname) : file(trace_fname), trace_name(trace_fname)
 {
     if (!file.good()) {
         std::cerr << "Bad trace file: " << trace_fname << std::endl;

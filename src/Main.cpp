@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <functional>
 #include <map>
+#include <boost/program_options.hpp>
 
 /* Standards */
 #include "Gem5Wrapper.h"
@@ -33,6 +34,7 @@
 
 using namespace std;
 using namespace ramulator;
+namespace po = boost::program_options;
 
 static int gcd(int u, int v) {
   if (v > u) {
@@ -47,7 +49,7 @@ static int gcd(int u, int v) {
 }
 
 template<typename T>
-void run_dramtrace(const Config& configs, Memory<T, Controller>& memory, const char* tracename) {
+void run_dramtrace(const Config& configs, Memory<T, Controller>& memory, const string& tracename) {
 
     /* initialize DRAM trace */
     Trace trace(tracename);
@@ -88,7 +90,7 @@ void run_dramtrace(const Config& configs, Memory<T, Controller>& memory, const c
 }
 
 template <typename T>
-void run_cputrace(const Config& configs, Memory<T, Controller>& memory, const std::vector<const char *>& files)
+void run_cputrace(const Config& configs, Memory<T, Controller>& memory, const std::vector<string>& files)
 {
     // time unit is ps
     int cpu_tick = configs.get_cpu_tick();
@@ -136,7 +138,7 @@ void run_cputrace(const Config& configs, Memory<T, Controller>& memory, const st
 }
 
 template<typename T>
-void start_run(const Config& configs, T* spec, const vector<const char*>& files) {
+void start_run(const Config& configs, T* spec, const vector<string>& files) {
   // initiate controller and memory
   int C = configs.get_channels(), R = configs.get_ranks();
   // Check and Set channel, rank number
@@ -161,7 +163,7 @@ void start_run(const Config& configs, T* spec, const vector<const char*>& files)
 }
 
 template<>
-void start_run<HMC>(const Config& configs, HMC* spec, const vector<const char*>& files) {
+void start_run<HMC>(const Config& configs, HMC* spec, const vector<string>& files) {
   int V = spec->org_entry.count[int(HMC::Level::Vault)];
   int S = configs.get_stacks();
   int total_vault_number = V * S;
@@ -192,34 +194,86 @@ int main(int argc, const char *argv[])
         return 0;
     }
 
-    Config configs(argv[1]);
+    po::options_description desc;
+    desc.add_options()
+      ("help", "print simple manual")
+      ("stats", po::value<string>(), "path to output file.")
+      ("config", po::value<string>(), "path to config file.")
+      ("mode", po::value<string>(), "simulator running mode.")
+      ("channel", po::value<string>(), "# of DRAM channel.")
+      ("rank", po::value<string>(), "# of DRAM rank.")
+      ("cache", po::value<string>(), "cache setting.")
+      ("inflight-limit", po::value<string>(), "maximum in flight memory requests number.") // for DRAM alone mode
+      ("trace", po::value<std::vector<string>>()->multitoken(), "a single or a list of file name(s) that are the traces to run.")
+      ("print-cmd-trace", po::value<string>(), "whether print DRAM command to standard output.")
+      ("cpu-frequency", po::value<string>(), "define CPU frequency.")
+      ;
+    po::variables_map vm;
+    po::store(po::parse_command_line(argc, argv, desc), vm);
+    po::notify(vm);
+
+    if (vm.count("help")) {
+      cout << desc << "\n";
+      return 1;
+    }
+
+    if (!vm.count("config")) {
+      cout << "config file is required. (missing --config [configfile])" << endl;
+      return 1;
+    }
+    Config configs(vm["config"].as<string>());
+    if (vm.count("channel")) {
+      configs.set("channel", vm["channel"].as<string>());
+    }
+    if (vm.count("rank")) {
+      configs.set("rank", vm["rank"].as<string>());
+    }
+    if (vm.count("cache")) {
+      configs.set("cache", vm["cache"].as<string>());
+    }
+    if (vm.count("print-cmd-trace")) {
+      configs.set("print_cmd_trace", vm["print-cmd-trace"].as<string>());
+    }
+    if (vm.count("inflight-limit")) {
+      configs.set("inflight_limit", vm["inflight-limit"].as<string>());
+    }
+    if (vm.count("cpu-frequency")) {
+      configs.set("cpu_frequency", vm["cpu-frequency"].as<string>());
+    }
 
     const std::string& standard = configs["standard"];
     assert(standard != "" || "DRAM standard should be specified.");
 
-    const char *trace_type = strstr(argv[2], "=");
-    trace_type++;
-    if (strcmp(trace_type, "cpu") == 0) {
-      configs.add("trace_type", "CPU");
-    } else if (strcmp(trace_type, "dram") == 0) {
-      configs.add("trace_type", "DRAM");
+    if (vm.count("mode")) {
+      const string& mode_str = vm["mode"].as<string>();
+      if (mode_str == "cpu") {
+        configs.add("trace_type", "CPU");
+      } else if (mode_str == "dram") {
+        configs.add("trace_type", "DRAM");
+      } else {
+        cout << "invalid trace type: " << mode_str << endl;
+        return 1;
+      }
     } else {
-      printf("invalid trace type: %s\n", trace_type);
-      assert(false);
+      cout << "mode is required. (missing --mode [cpu|dram])" << endl;
     }
 
-    int trace_start = 3;
     string stats_out;
-    if (strcmp(argv[3], "--stats") == 0) {
-      Stats::statlist.output(argv[4]);
-      stats_out = argv[4];
-      trace_start = 5;
+    if (vm.count("stats")) {
+      stats_out = vm["stats"].as<string>();
     } else {
-      Stats::statlist.output(standard+".stats");
       stats_out = standard + string(".stats");
     }
-    std::vector<const char*> files(&argv[trace_start], &argv[argc]);
-    configs.set_core_num(argc - trace_start);
+    Stats::statlist.output(stats_out);
+
+    std::vector<string> files;
+    if (vm.count("trace")) {
+      files = vm["trace"].as<vector<string>>();
+    } else {
+      cout << "trace file name(s) is(are) required. (missing --trace [core1-trace core2-trace...])";
+    }
+
+    configs.set_core_num(files.size());
 
     if (standard == "DDR3") {
       DDR3* ddr3 = new DDR3(configs["org"], configs["speed"]);
@@ -274,7 +328,7 @@ int main(int argc, const char *argv[])
       start_run(configs, hmc, files);
     }
 
-    printf("Simulation done. Statistics written to %s\n", stats_out.c_str());
+    cout << "Simulation done. Statistics written to " << stats_out << endl ;
 
     return 0;
 }

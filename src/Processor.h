@@ -18,7 +18,7 @@ namespace ramulator
 
 class Trace {
 public:
-    Trace(const char* trace_fname);
+    Trace(const string& trace_fname);
     // trace file format 1:
     // [# of bubbles(non-mem instructions)] [read address(dec or hex)] <optional: write address(evicted cacheline)>
     bool get_unfiltered_request(long& bubble_cnt, long& req_addr, Request::Type& req_type);
@@ -62,7 +62,7 @@ public:
     function<bool(Request)> send;
 
     Core(const Config& configs, int coreid,
-        const char* trace_fname,
+        const string& trace_fname,
         function<bool(Request)> send_next, Cache* llc,
         std::shared_ptr<CacheSystem> cachesys, MemoryBase& memory);
     void tick();
@@ -109,7 +109,7 @@ private:
 
 class Processor {
 public:
-    Processor(const Config& configs, vector<const char*> trace_list,
+    Processor(const Config& configs, vector<string> trace_list,
         function<bool(Request)> send, MemoryBase& memory);
     void tick();
     void receive(Request& req);

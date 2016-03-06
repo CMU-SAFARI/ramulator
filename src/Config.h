@@ -52,6 +52,10 @@ public:
       }
     }
 
+    void set(const std::string& name, const std::string& value) {
+      options[name] = value;
+    }
+
     void set_core_num(int _core_num) {core_num = _core_num;}
     void set_cacheline_size(int _cacheline_size) {cacheline_size = _cacheline_size;}
 
