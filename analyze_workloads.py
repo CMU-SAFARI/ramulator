@@ -71,7 +71,7 @@ else: # multi-program workload
 if single_threaded_workload_lists is None: # single-threaded workload
   workload_stats_list.sort(key = lambda x : x.ref_stats.mem_stats["MPKI"], reverse=True)
 else:
-  workload_stats_list.sort(key = lambda x : sum([s["MPKI"] for s in x.ref_stats.ref_mem_stats]))
+  workload_stats_list.sort(key = lambda x : sum([s["MPKI"] for s in x.ref_stats.ref_mem_stats]), reverse=True)
 
 # first write header for 1D workload, which is fixed for all statistics
 R_dataframe_out_f.write_to_all(["MPKI", "ipc", "weighted_speedup", "locality", "bandwidth_utilization", "average_latency_ns", "normalized_ipc", "normalized_weighted_speedup"], ",".join(["statistics", "value", "DRAM", "workload", "workload_feature", "workload_and_feature", "ref_MPKI"]) + "\n")
