@@ -48,6 +48,30 @@ static int gcd(int u, int v) {
   return u;
 }
 
+class OutstandingReqWindow {
+ private:
+  int inflight_req = 0;
+  int inflight_limit = -1; // if inflight_limit == -1, the window is unlimited
+
+ public:
+  OutstandingReqWindow(int inflight_limit):inflight_limit(inflight_limit) {}
+  bool is_unlimited() const {return (inflight_limit == -1);}
+  bool is_full() const { return !is_unlimited() && (inflight_limit == inflight_req); }
+  bool is_empty() const { return (inflight_req == 0);}
+  void insert() {
+    if (!is_unlimited()) {
+      assert(!is_full());
+      inflight_req++;
+    }
+  }
+  void retire() {
+    if (!is_unlimited()) {
+      assert(!is_empty());
+      inflight_req--;
+    }
+  }
+};
+
 template<typename T>
 void run_dramtrace(const Config& configs, Memory<T, Controller>& memory, const string& tracename) {
 
@@ -60,7 +84,16 @@ void run_dramtrace(const Config& configs, Memory<T, Controller>& memory, const s
     long addr = 0;
     Request::Type type = Request::Type::READ;
     map<int, int> latencies;
-    auto read_complete = [&latencies](Request& r){latencies[r.depart - r.arrive]++;};
+    int inflight_limit = -1;
+    if (configs.contains("inflight_limit")) {
+      inflight_limit = configs.get_int_value("inflight_limit");
+    }
+    OutstandingReqWindow window(inflight_limit);
+    auto read_complete =
+        [&latencies, &window](Request& r) {
+          latencies[r.depart - r.arrive]++;
+          window.retire();
+        };
 
     // TODO allow request streams coming from different cores
     Request req(addr, type, read_complete, 0);
@@ -73,9 +106,16 @@ void run_dramtrace(const Config& configs, Memory<T, Controller>& memory, const s
         if (!end){
             req.addr = addr;
             req.type = type;
-            stall = !memory.send(req);
+            if (window.is_full()) {
+              stall = true;
+            } else {
+              stall = !memory.send(req);
+            }
             if (!stall){
-                if (type == Request::Type::READ) reads++;
+                if (type == Request::Type::READ) {
+                  reads++;
+                  window.insert(); // increment request counter. Write is posted.
+                }
                 else if (type == Request::Type::WRITE) writes++;
             }
         }
@@ -188,12 +228,6 @@ void start_run<HMC>(const Config& configs, HMC* spec, const vector<string>& file
 
 int main(int argc, const char *argv[])
 {
-    if (argc < 2) {
-        printf("Usage: %s <configs-file> --mode=cpu,dram [--stats <filename>] <trace-filename1> <trace-filename2>\n"
-            "Example: %s ramulator-configs.cfg --mode=cpu cpu.trace cpu.trace\n", argv[0], argv[0]);
-        return 0;
-    }
-
     po::options_description desc;
     desc.add_options()
       ("help", "print simple manual")
@@ -207,12 +241,14 @@ int main(int argc, const char *argv[])
       ("trace", po::value<std::vector<string>>()->multitoken(), "a single or a list of file name(s) that are the traces to run.")
       ("print-cmd-trace", po::value<string>(), "whether print DRAM command to standard output.")
       ("cpu-frequency", po::value<string>(), "define CPU frequency.")
+      ("translation", po::value<string>(), "translation mode, selected from: None, Random")
+      ("org", po::value<string>(), "specify DRAM organization")
       ;
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, desc), vm);
     po::notify(vm);
 
-    if (vm.count("help")) {
+    if (argc < 2 || vm.count("help")) {
       cout << desc << "\n";
       return 1;
     }
@@ -239,6 +275,12 @@ int main(int argc, const char *argv[])
     }
     if (vm.count("cpu-frequency")) {
       configs.set("cpu_frequency", vm["cpu-frequency"].as<string>());
+    }
+    if (vm.count("translation")) {
+      configs.set("translation", vm["translation"].as<string>());
+    }
+    if (vm.count("org")) {
+      configs.set("org", vm["org"].as<string>());
     }
 
     const std::string& standard = configs["standard"];
