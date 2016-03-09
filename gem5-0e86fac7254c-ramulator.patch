@@ -1,14 +1,14 @@
-diff -r 0e86fac7254c .hgignore
---- a/.hgignore Sat May 31 18:00:23 2014 -0700
-+++ b/.hgignore Fri Jan 22 19:05:46 2016 -0500
+diff -r 0e86fac7254c -r d1234c44d57e .hgignore
+--- a/.hgignore	Sat May 31 18:00:23 2014 -0700
++++ b/.hgignore	Thu Mar 10 03:46:14 2016 +0800
 @@ -10,3 +10,4 @@
  m5out
  src/doxygen
  ext/dramsim2/DRAMSim2
 +ext/ramulator/Ramulator
-diff -r 0e86fac7254c SConstruct
---- a/SConstruct  Sat May 31 18:00:23 2014 -0700
-+++ b/SConstruct  Fri Jan 22 19:05:46 2016 -0500
+diff -r 0e86fac7254c -r d1234c44d57e SConstruct
+--- a/SConstruct	Sat May 31 18:00:23 2014 -0700
++++ b/SConstruct	Thu Mar 10 03:46:14 2016 +0800
 @@ -215,6 +215,10 @@
  main.root = Dir(".")         # The current directory (where this file lives).
  main.srcdir = Dir("src")     # The source directory
@@ -49,9 +49,9 @@ diff -r 0e86fac7254c SConstruct
  ###################################################
  #
  # This function is used to set up a directory with switching headers
-diff -r 0e86fac7254c configs/common/MemConfig.py
---- a/configs/common/MemConfig.py Sat May 31 18:00:23 2014 -0700
-+++ b/configs/common/MemConfig.py Fri Jan 22 19:05:46 2016 -0500
+diff -r 0e86fac7254c -r d1234c44d57e configs/common/MemConfig.py
+--- a/configs/common/MemConfig.py	Sat May 31 18:00:23 2014 -0700
++++ b/configs/common/MemConfig.py	Thu Mar 10 03:46:14 2016 +0800
 @@ -54,7 +54,8 @@
      ("lpddr2_s4_1066_x32", "LPDDR2_S4_1066_x32"),
      ("lpddr3_1600_x32", "LPDDR3_1600_x32"),
@@ -79,9 +79,9 @@ diff -r 0e86fac7254c configs/common/MemConfig.py
                  # Inform each controller how many channels to account
                  # for
                  ctrl.channels = nbr_mem_ctrls
-diff -r 0e86fac7254c configs/common/Options.py
---- a/configs/common/Options.py Sat May 31 18:00:23 2014 -0700
-+++ b/configs/common/Options.py Fri Jan 22 19:05:46 2016 -0500
+diff -r 0e86fac7254c -r d1234c44d57e configs/common/Options.py
+--- a/configs/common/Options.py	Sat May 31 18:00:23 2014 -0700
++++ b/configs/common/Options.py	Thu Mar 10 03:46:14 2016 +0800
 @@ -93,6 +93,8 @@
      parser.add_option("--mem-size", action="store", type="string",
                        default="512MB",
@@ -91,9 +91,9 @@ diff -r 0e86fac7254c configs/common/Options.py
  
      parser.add_option("-l", "--lpae", action="store_true")
      parser.add_option("-V", "--virtualisation", action="store_true")
-diff -r 0e86fac7254c ext/dnet/os.h
---- a/ext/dnet/os.h Sat May 31 18:00:23 2014 -0700
-+++ b/ext/dnet/os.h Fri Jan 22 19:05:46 2016 -0500
+diff -r 0e86fac7254c -r d1234c44d57e ext/dnet/os.h
+--- a/ext/dnet/os.h	Sat May 31 18:00:23 2014 -0700
++++ b/ext/dnet/os.h	Thu Mar 10 03:46:14 2016 +0800
 @@ -98,7 +98,10 @@
  
  /* Support for flexible arrays. */
@@ -104,11 +104,11 @@ diff -r 0e86fac7254c ext/dnet/os.h
 +# define __flexarr [1]
 +#elif defined(__GNUC__) && ((__GNUC__ > 2) || (__GNUC__ == 2 && __GNUC_MINOR__ >= 97))
  /* GCC 2.97 supports C99 flexible array members.  */
- # define __flexarr []
+ # define __flexarr	[]
  #else
-diff -r 0e86fac7254c ext/ramulator/README
---- /dev/null Thu Jan 01 00:00:00 1970 +0000
-+++ b/ext/ramulator/README  Fri Jan 22 19:05:46 2016 -0500
+diff -r 0e86fac7254c -r d1234c44d57e ext/ramulator/README
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/ext/ramulator/README	Thu Mar 10 03:46:14 2016 +0800
 @@ -0,0 +1,11 @@
 +To use Ramulator in gem5 simulations
 +
@@ -121,9 +121,9 @@ diff -r 0e86fac7254c ext/ramulator/README
 +3. Run gem5 with Ramulator
 +    3.1 Use --mem-type=ramulator and --ramulator-config=XXX
 +
-diff -r 0e86fac7254c ext/ramulator/SConscript
---- /dev/null Thu Jan 01 00:00:00 1970 +0000
-+++ b/ext/ramulator/SConscript  Fri Jan 22 19:05:46 2016 -0500
+diff -r 0e86fac7254c -r d1234c44d57e ext/ramulator/SConscript
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/ext/ramulator/SConscript	Thu Mar 10 03:46:14 2016 +0800
 @@ -0,0 +1,48 @@
 +# -*- mode:python -*-
 +
@@ -173,9 +173,9 @@ diff -r 0e86fac7254c ext/ramulator/SConscript
 +main.Prepend(CPPPATH=Dir('.'))
 +main.Append(LIBS=['ramulator'])
 +main.Prepend(LIBPATH=[Dir('.')])
-diff -r 0e86fac7254c src/mem/Ramulator.py
---- /dev/null Thu Jan 01 00:00:00 1970 +0000
-+++ b/src/mem/Ramulator.py  Fri Jan 22 19:05:46 2016 -0500
+diff -r 0e86fac7254c -r d1234c44d57e src/mem/Ramulator.py
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/src/mem/Ramulator.py	Thu Mar 10 03:46:14 2016 +0800
 @@ -0,0 +1,14 @@
 +# -*- mode:python -*-
 +from m5.params import *
@@ -191,9 +191,9 @@ diff -r 0e86fac7254c src/mem/Ramulator.py
 +
 +    config_file = Param.String("", "configuration file")
 +    num_cpus = Param.Unsigned(1, "Number of cpu")
-diff -r 0e86fac7254c src/mem/SConscript
---- a/src/mem/SConscript  Sat May 31 18:00:23 2014 -0700
-+++ b/src/mem/SConscript  Fri Jan 22 19:05:46 2016 -0500
+diff -r 0e86fac7254c -r d1234c44d57e src/mem/SConscript
+--- a/src/mem/SConscript	Sat May 31 18:00:23 2014 -0700
++++ b/src/mem/SConscript	Thu Mar 10 03:46:14 2016 +0800
 @@ -71,6 +71,11 @@
      Source('dramsim2_wrapper.cc')
      Source('dramsim2.cc')
@@ -206,10 +206,10 @@ diff -r 0e86fac7254c src/mem/SConscript
  DebugFlag('BaseBus')
  DebugFlag('BusAddrRanges')
  DebugFlag('CoherentBus')
-diff -r 0e86fac7254c src/mem/ramulator.cc
---- /dev/null Thu Jan 01 00:00:00 1970 +0000
-+++ b/src/mem/ramulator.cc  Fri Jan 22 19:05:46 2016 -0500
-@@ -0,0 +1,222 @@
+diff -r 0e86fac7254c -r d1234c44d57e src/mem/ramulator.cc
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/src/mem/ramulator.cc	Thu Mar 10 03:46:14 2016 +0800
+@@ -0,0 +1,225 @@
 +#include "base/callback.hh"
 +#include "mem/ramulator.hh"
 +#include "Ramulator/src/Gem5Wrapper.h"
@@ -344,9 +344,9 @@ diff -r 0e86fac7254c src/mem/ramulator.cc
 +    }
 +
 +    bool accepted = true;
-+    DPRINTF(Ramulator, "context id: %d, thread id: %d\n", pkt->req->contextId(),
-+        pkt->req->threadId());
 +    if (pkt->isRead()) {
++        DPRINTF(Ramulator, "context id: %d, thread id: %d\n", pkt->req->contextId(),
++            pkt->req->threadId());
 +        ramulator::Request req(pkt->getAddr(), ramulator::Request::Type::READ, read_cb_func, pkt->req->contextId());
 +        accepted = wrapper->send(req);
 +        if (accepted){
@@ -359,7 +359,10 @@ diff -r 0e86fac7254c src/mem/ramulator.cc
 +            req_stall = true;
 +        }
 +    } else if (pkt->isWrite()) {
-+        ramulator::Request req(pkt->getAddr(), ramulator::Request::Type::WRITE, write_cb_func, pkt->req->contextId());
++        // Detailed CPU model always comes along with cache model enabled and
++        // write requests are caused by cache eviction, so it shouldn't be
++        // tallied for any core/thread
++        ramulator::Request req(pkt->getAddr(), ramulator::Request::Type::WRITE, write_cb_func, 0);
 +        accepted = wrapper->send(req);
 +        if (accepted){
 +            accessAndRespond(pkt);
@@ -404,7 +407,7 @@ diff -r 0e86fac7254c src/mem/ramulator.cc
 +
 +void Ramulator::readComplete(ramulator::Request& req){
 +    DPRINTF(Ramulator, "Read to %ld completed.\n", req.addr);
-+    auto pkt_q = reads.find(req.addr)->second;
++    auto& pkt_q = reads.find(req.addr)->second;
 +    PacketPtr pkt = pkt_q.front();
 +    pkt_q.pop_front();
 +    if (!pkt_q.size())
@@ -432,9 +435,9 @@ diff -r 0e86fac7254c src/mem/ramulator.cc
 +Ramulator *RamulatorParams::create(){
 +    return new Ramulator(this);
 +}
-diff -r 0e86fac7254c src/mem/ramulator.hh
---- /dev/null Thu Jan 01 00:00:00 1970 +0000
-+++ b/src/mem/ramulator.hh  Fri Jan 22 19:05:46 2016 -0500
+diff -r 0e86fac7254c -r d1234c44d57e src/mem/ramulator.hh
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/src/mem/ramulator.hh	Thu Mar 10 03:46:14 2016 +0800
 @@ -0,0 +1,94 @@
 +#ifndef __RAMULATOR_HH__
 +#define __RAMULATOR_HH__
@@ -530,9 +533,9 @@ diff -r 0e86fac7254c src/mem/ramulator.hh
 +};
 +
 +#endif // __RAMULATOR_HH__
-diff -r 0e86fac7254c src/python/m5/params.py
---- a/src/python/m5/params.py Sat May 31 18:00:23 2014 -0700
-+++ b/src/python/m5/params.py Fri Jan 22 19:05:46 2016 -0500
+diff -r 0e86fac7254c -r d1234c44d57e src/python/m5/params.py
+--- a/src/python/m5/params.py	Sat May 31 18:00:23 2014 -0700
++++ b/src/python/m5/params.py	Thu Mar 10 03:46:14 2016 +0800
 @@ -177,7 +177,7 @@
          return self.ptype(value)
  
