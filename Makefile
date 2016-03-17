@@ -9,8 +9,15 @@ OBJS := $(patsubst $(SRCDIR)/%.cpp, $(OBJDIR)/%.o, $(SRCS))
 #   g++ 4.x due to an internal compiler error when processing lambda functions.
 CXX := clang++
 # CXX := g++-5
-CXXFLAGS := -O3 -std=c++11 -g -Wall -I$(BOOST_PATH)/include
-LDFLAGS := -L$(BOOST_PATH)/lib -lboost_program_options
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S), Linux)
+  CXXFLAGS := -O3 -std=c++11 -g -Wall
+  LDFLAGS := -lboost_program_options
+endif
+ifeq ($(UNAME_S), Darwin)
+  CXXFLAGS := -O3 -std=c++11 -g -Wall -I$(BOOST_PATH)/include
+  LDFLAGS := -L$(BOOST_PATH)/lib -lboost_program_options
+endif
 
 .PHONY: all clean depend
 
