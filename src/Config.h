@@ -63,14 +63,14 @@ public:
       assert(options.find(name) != options.end() && "can't find this argument");
       return atoi(options.find(name)->second.c_str());
     }
-    int get_stacks() const {return stacks;}
-    int get_channels() const {return channels;}
-    int get_subarrays() const {return subarrays;}
-    int get_ranks() const {return ranks;}
-    int get_cpu_tick() const {return int(1000000 / cpu_frequency);}
+    int get_stacks() const {return get_int_value("stacks");}
+    int get_channels() const {return get_int_value("channels");}
+    int get_subarrays() const {return get_int_value("subarrays");}
+    int get_ranks() const {return get_int_value("ranks");}
+    int get_cpu_tick() const {return int(1000000.0 / get_int_value("cpu_frequency"));}
     int get_core_num() const {return core_num;}
     int get_cacheline_size() const {return cacheline_size;}
-    long get_expected_limit_insts() const {return expected_limit_insts;}
+    long get_expected_limit_insts() const {return get_int_value("expected_limit_insts");}
     bool has_l3_cache() const {
       if (options.find("cache") != options.end()) {
         const std::string& cache_option = (options.find("cache"))->second;
