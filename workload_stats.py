@@ -16,6 +16,7 @@ class workload_stats(object):
     self.single_threaded_workload_list = configs.single_threaded_workload_list # list of workloads for each core
     self.w_stats = dict()
     self.ref_stats = None # DDR3 statistics, for normalization and reorder
+    self.trace_type = configs.trace_type
 
     for DRAM in self.DRAM_list:
       if self.single_threaded_workload_list is None:
@@ -30,13 +31,21 @@ class workload_stats(object):
     """ append scalar statistics to file
     :type filedesc: file descriptor
     """
-    if self.single_threaded_workload_list is None: # single-threaded
-      assert(len(self.ref_stats.mem_stats["ipc"]) == 1)
-      workload_and_feature = "_".join([self.workload, "MPKI", "%.4f" % self.ref_stats.mem_stats["MPKI"], "ipc", "%.4f" % sum(self.ref_stats.mem_stats["ipc"])])
-    else: # multiprogram
-      workload_and_feature = "_".join([self.workload, "MPKI", "%.4f" % sum([s["MPKI"] for s in self.ref_stats.ref_mem_stats]), "weighted-speedup", "%.4f" % self.ref_stats.mem_stats["weighted_speedup"]])
+
+    if self.trace_type == 'CPU':
+      if self.single_threaded_workload_list is None: # single-threaded
+        assert(len(self.ref_stats.mem_stats["ipc"]) == 1)
+        workload_and_feature = "_".join([self.workload, "MPKI", "%.4f" % self.ref_stats.mem_stats["MPKI"], "ipc", "%.4f" % sum(self.ref_stats.mem_stats["ipc"])])
+      else: # multiprogram
+        workload_and_feature = "_".join([self.workload, "MPKI", "%.4f" % sum([s["MPKI"] for s in self.ref_stats.ref_mem_stats]), "weighted-speedup", "%.4f" % self.ref_stats.mem_stats["weighted_speedup"]])
+    elif self.trace_type == 'DRAM':
+      if self.single_threaded_workload_list is None: # single-threaded
+        workload_and_feature = "_".join([self.workload, "BLP", "%.4f" % self.ref_stats.mem_stats["BLP"], "bandwidth_utilization", "%.4f" % self.ref_stats.mem_stats["bandwidth_utilization"]])
+    else: assert(False)
 
     filedesc.write(workload_and_feature + "," + ",".join(self.DRAM_list) + "\n")
+
+    attrnames = [x for x in attrnames if (x in self.w_stats[self.DRAM_list[0]].mem_stats and (not isinstance(self.w_stats[self.DRAM_list[0]].mem_stats[x], list) or len(self.w_stats[self.DRAM_list[0]].mem_stats[x]) > 0))]
     for attrname in attrnames:
       values = []
       for DRAM in self.DRAM_list:
@@ -50,16 +59,24 @@ class workload_stats(object):
   def append_1D_to(self, attrnames, filedesc):
     """ append scalar statistics to file (in a format similar to relational database)
     """
-    if self.single_threaded_workload_list is None: # single-threaded
-      assert(len(self.ref_stats.mem_stats["ipc"]) == 1)
-      ref_MPKI=self.ref_stats.mem_stats["MPKI"]
-      feature = "_".join(["MPKI", "%.4f" % ref_MPKI, "ipc", "%.4f" % sum(self.ref_stats.mem_stats["ipc"])])
-      workload_and_feature = "_".join([self.workload, feature])
-    else: # multiprogram
-      ref_MPKI=sum([s["MPKI"] for s in self.ref_stats.ref_mem_stats])
-      feature = "_".join(["MPKI", "%.4f" % ref_MPKI, "weighted-speedup", "%.4f" % self.ref_stats.mem_stats["weighted_speedup"]])
-      workload_and_feature = "_".join([self.workload, feature])
+    if self.trace_type == 'CPU':
+      if self.single_threaded_workload_list is None: # single-threaded
+        assert(len(self.ref_stats.mem_stats["ipc"]) == 1)
+        ref_MPKI=self.ref_stats.mem_stats["MPKI"]
+        feature = "_".join(["MPKI", "%.4f" % ref_MPKI, "ipc", "%.4f" % sum(self.ref_stats.mem_stats["ipc"])])
+        workload_and_feature = "_".join([self.workload, feature])
+      else: # multiprogram
+        ref_MPKI=sum([s["MPKI"] for s in self.ref_stats.ref_mem_stats])
+        feature = "_".join(["MPKI", "%.4f" % ref_MPKI, "weighted-speedup", "%.4f" % self.ref_stats.mem_stats["weighted_speedup"]])
+        workload_and_feature = "_".join([self.workload, feature])
+    elif self.trace_type == 'DRAM':
+      if self.single_threaded_workload_list is None:
+        ref_MPKI = self.ref_stats.mem_stats["BLP"]
+        feature = "_".join(["BLP", "%.4f" % ref_MPKI, "bandwidth_utilization", "%.4f" % self.ref_stats.mem_stats["bandwidth_utilization"]])
+        workload_and_feature = "_".join([self.workload, feature])
+    else: assert(False)
 
+    attrnames = [x for x in attrnames if (x in self.w_stats[self.DRAM_list[0]].mem_stats and (not isinstance(self.w_stats[self.DRAM_list[0]].mem_stats[x], list) or len(self.w_stats[self.DRAM_list[0]].mem_stats[x]) > 0))]
     for attrname in attrnames:
       for DRAM in self.DRAM_list:
         if isinstance(self.w_stats[DRAM].mem_stats[attrname], list):

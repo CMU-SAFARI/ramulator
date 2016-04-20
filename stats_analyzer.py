@@ -87,6 +87,7 @@ stat_map["ramulator.response_packet_latency_ns_avg"] = "response_packet_latency_
 stat_map["ramulator.maximum_bandwidth"] = "maximum_bandwidth"
 stat_map["ramulator.maximum_internal_bandwidth"] = "maximum_internal_bandwidth"
 stat_map["ramulator.ramulator_active_cycles"] = "DRAM_active_cycles"
+stat_map["ramulator.dram_cycles"] = "DRAM_cycles"
 
 # multidim_stats.append("ramulator.incoming_requests_per_channel::")
 # multidim_stats.append("ramulator.req_queue_length_sum_")
@@ -182,6 +183,16 @@ class Stats(object):
       pass
 
     try:
+    # max_cycles
+      if "cpu_cycles" in mem_stats:
+        mem_stats["max_cycles"] = mem_stats["max_cpu_cycles"]
+      else:
+        mem_stats["max_cycles"] = mem_stats["DRAM_cycles"]
+    except KeyError as detail:
+      print "Ignore KeyError: ", detail
+      pass
+
+    try:
     # ipc
       mem_stats["ipc"] = []
       for cpu_insts,cpu_cycles in zip(mem_stats["cpu_insts"][0], mem_stats["cpu_cycles"][0]):
@@ -223,7 +234,7 @@ class Stats(object):
       total_active_cycles_per_bank = mem_stats["total_active_cycles"][ba_idx]
       assert(len(total_serving_requests_per_bank) == len(total_active_cycles_per_bank))
       ba_num = len(total_serving_requests_per_bank)
-      mem_stats["BLP"] = sum([t[1] for t in total_serving_requests_per_bank]) / (mem_stats["max_cpu_cycles"] * ba_num)
+      mem_stats["BLP"] = sum([t[1] for t in total_serving_requests_per_bank]) / (mem_stats["max_cycles"])
       if "DRAM_active_cycles" in mem_stats:
         mem_stats["effective_BLP"] = sum([t[1] for t in total_serving_requests_per_bank]) / mem_stats["DRAM_active_cycles"]
       else:

@@ -9,6 +9,7 @@ class Config(object):
     self.DRAM_list = None
     self.ref_DRAM = None
     self.single_threaded_workload_list = None
+    self.trace_type = None
 
 parser = argparse.ArgumentParser(description="Process ramulator statistics.")
 
@@ -18,6 +19,9 @@ parser.add_argument('--dram-list', required=True, nargs="+", help="input a list 
 parser.add_argument('--ref-dram', required=True, help="input the reference DRAM that is used to be normalized to and reorder")
 parser.add_argument('--single-threaded-workload-lists', nargs="+", help="input a list of the corresponding single-threaded workload list that is used for weighted speedup calculation (required only when the target workload is multiprogram)")
 parser.add_argument('--output-dir', required=True, help="output directory")
+parser.add_argument('--trace-type', required=False, default='CPU', help="CPU or DRAM, default is CPU")
+parser.add_argument('--no-sort', required=False, dest='sort', action='store_false')
+parser.set_defaults(feature=True)
 
 args = vars(parser.parse_args())
 
@@ -26,6 +30,7 @@ configs = Config()
 configs.workload_dir = args["workload_dir"]
 configs.DRAM_list = args["dram_list"]
 configs.ref_DRAM = args["ref_dram"]
+configs.trace_type = args["trace_type"]
 single_threaded_workload_lists = args["single_threaded_workload_lists"]
 workload_list = args["workload_list"]
 
@@ -52,9 +57,11 @@ workload_stats_list = []
 
 if single_threaded_workload_lists is None: # single-threaded workload
   for workload in workload_list:
+    print workload
     configs.workload = workload
     w = workload_stats(configs)
     w.normalize("ipc")
+    w.normalize("bandwidth")
     workload_stats_list.append(w)
 else: # multi-program workload
   if (not len(single_threaded_workload_lists) == len(workload_list)):
@@ -68,38 +75,73 @@ else: # multi-program workload
     w.normalize("weighted_speedup")
     workload_stats_list.append(w)
 
-if single_threaded_workload_lists is None: # single-threaded workload
-  workload_stats_list.sort(key = lambda x : x.ref_stats.mem_stats["MPKI"], reverse=True)
+if args["sort"]:
+  if args["trace_type"] == 'CPU':
+    if single_threaded_workload_lists is None: # single-threaded workload
+        workload_stats_list.sort(key = lambda x : x.ref_stats.mem_stats["MPKI"], reverse=True)
+    else:
+      workload_stats_list.sort(key = lambda x : sum([s["MPKI"] for s in x.ref_stats.ref_mem_stats]), reverse=True)
+  elif args["trace_type"] == 'DRAM':
+    if single_threaded_workload_lists is None: # single-threaded workload
+        workload_stats_list.sort(key = lambda x : x.ref_stats.mem_stats["BLP"], reverse=True)
+  else: assert(False)
 else:
-  workload_stats_list.sort(key = lambda x : sum([s["MPKI"] for s in x.ref_stats.ref_mem_stats]), reverse=True)
+  print "not sorted by memory intensity"
 
 # first write header for 1D workload, which is fixed for all statistics
-R_dataframe_out_f.write_to_all(["MPKI", "ipc", "weighted_speedup", "locality", "bandwidth_utilization", "average_latency_ns", "normalized_ipc", "normalized_weighted_speedup"], ",".join(["statistics", "value", "DRAM", "workload", "workload_feature", "workload_and_feature", "ref_MPKI"]) + "\n")
+if args["trace_type"] == 'CPU':
+  R_dataframe_out_f.write_to_all(["MPKI", "ipc", "weighted_speedup", "locality", "bandwidth_utilization", "bandwidth", "average_latency_ns", "normalized_ipc", "normalized_weighted_speedup", "average_outstanding_requests"], ",".join(["statistics", "value", "DRAM", "workload", "workload_feature", "workload_and_feature", "ref_MPKI"]) + "\n")
+elif args["trace_type"] == 'DRAM':
+  R_dataframe_out_f.write_to_all(["locality", "bandwidth_utilization", "average_latency_ns", "normalized_bandwidth", "bandwidth", "average_outstanding_requests"], ",".join(["statistics", "value", "DRAM", "workload", "workload_feature", "workload_and_feature", "ref_memory_intensity"]) + "\n")
+else: assert(False)
 
 for w in workload_stats_list:
-# 2D format
-  w.append_2D_to(["MPKI"], out_f["MPKI"])
-  if single_threaded_workload_lists is None:
-    w.append_2D_to(["ipc"], out_f["ipc"])
-    w.append_2D_to(["normalized_ipc"], out_f["normalized_ipc"])
+  if args["trace_type"] == 'CPU':
+  # 2D format
+    w.append_2D_to(["MPKI"], out_f["MPKI"])
+    if single_threaded_workload_lists is None:
+      w.append_2D_to(["ipc"], out_f["ipc"])
+      w.append_2D_to(["normalized_ipc"], out_f["normalized_ipc"])
+    else:
+      w.append_2D_to(["weighted_speedup"], out_f["weighted_speedup"])
+      w.append_2D_to(["normalized_weighted_speedup"], out_f["normalized_weighted_speedup"])
 
-  else:
-    w.append_2D_to(["weighted_speedup"], out_f["weighted_speedup"])
-    w.append_2D_to(["normalized_weighted_speedup"], out_f["normalized_weighted_speedup"])
-  w.append_2D_to(["row_hit_rate", "row_miss_rate", "row_conflict_rate"], out_f["locality"])
-  w.append_2D_to(["bandwidth_utilization"], out_f["bandwidth_utilization"])
-  w.append_2D_to(["request_packet_latency_ns_avg", "queueing_latency_ns_avg", "DRAM_latency_ns_avg", "response_packet_latency_ns_avg"], out_f["average_latency_ns"])
+    w.append_2D_to(["row_hit_rate", "row_miss_rate", "row_conflict_rate"], out_f["locality"])
+    w.append_2D_to(["bandwidth_utilization"], out_f["bandwidth_utilization"])
+    w.append_2D_to(["queueing_latency_ns_avg", "DRAM_latency_ns_avg"], out_f["average_latency_ns"])
 
-# 1D format (one row for one value, for R dataframe)
+  # 1D format (one row for one value, for R dataframe)
+    w.append_1D_to(["MPKI"], R_dataframe_out_f["MPKI"])
+    if single_threaded_workload_lists is None:
+      w.append_1D_to(["ipc"], R_dataframe_out_f["ipc"])
+      w.append_1D_to(["normalized_ipc"], R_dataframe_out_f["normalized_ipc"])
+    else:
+      w.append_1D_to(["weighted_speedup"], R_dataframe_out_f["weighted_speedup"])
+      w.append_1D_to(["normalized_weighted_speedup"], R_dataframe_out_f["normalized_weighted_speedup"])
 
-  w.append_1D_to(["MPKI"], R_dataframe_out_f["MPKI"])
-  if single_threaded_workload_lists is None:
-    w.append_1D_to(["ipc"], R_dataframe_out_f["ipc"])
-    w.append_1D_to(["normalized_ipc"], R_dataframe_out_f["normalized_ipc"])
+    w.append_1D_to(["row_hit_rate", "row_miss_rate", "row_conflict_rate"], R_dataframe_out_f["locality"])
+    w.append_1D_to(["bandwidth_utilization"], R_dataframe_out_f["bandwidth_utilization"])
+    w.append_1D_to(["queueing_latency_ns_avg", "DRAM_latency_ns_avg"], R_dataframe_out_f["average_latency_ns"])
 
-  else:
-    w.append_1D_to(["weighted_speedup"], R_dataframe_out_f["weighted_speedup"])
-    w.append_1D_to(["normalized_weighted_speedup"], R_dataframe_out_f["normalized_weighted_speedup"])
-  w.append_1D_to(["row_hit_rate", "row_miss_rate", "row_conflict_rate"], R_dataframe_out_f["locality"])
-  w.append_1D_to(["bandwidth_utilization"], R_dataframe_out_f["bandwidth_utilization"])
-  w.append_1D_to(["request_packet_latency_ns_avg", "queueing_latency_ns_avg", "DRAM_latency_ns_avg", "response_packet_latency_ns_avg"], R_dataframe_out_f["average_latency_ns"])
+  elif args["trace_type"] == 'DRAM':
+  # 2D format
+    w.append_2D_to(["BLP"], out_f["average_outstanding_requests"])
+    if single_threaded_workload_lists is None:
+      w.append_2D_to(["normalized_bandwidth"], out_f["normalized_bandwidth"])
+      w.append_2D_to(["bandwidth"], out_f["bandwidth"])
+
+    w.append_2D_to(["row_hit_rate", "row_miss_rate", "row_conflict_rate"], out_f["locality"])
+    w.append_2D_to(["bandwidth_utilization"], out_f["bandwidth_utilization"])
+    w.append_2D_to(["queueing_latency_ns_avg", "DRAM_latency_ns_avg"], out_f["average_latency_ns"])
+
+  # 1D format (one row for one value, for R dataframe)
+    w.append_1D_to(["BLP"], R_dataframe_out_f["average_outstanding_requests"])
+    if single_threaded_workload_lists is None:
+      w.append_1D_to(["normalized_bandwidth"], R_dataframe_out_f["normalized_bandwidth"])
+      w.append_1D_to(["bandwidth"], R_dataframe_out_f["bandwidth"])
+
+    w.append_1D_to(["row_hit_rate", "row_miss_rate", "row_conflict_rate"], R_dataframe_out_f["locality"])
+    w.append_1D_to(["bandwidth_utilization"], R_dataframe_out_f["bandwidth_utilization"])
+    w.append_1D_to(["queueing_latency_ns_avg", "DRAM_latency_ns_avg"], R_dataframe_out_f["average_latency_ns"])
+
+  else: assert(False)
