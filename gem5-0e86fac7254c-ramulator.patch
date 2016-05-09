@@ -220,7 +220,8 @@ diff -r 0e86fac7254c -r d1234c44d57e src/mem/ramulator.cc
 +Ramulator::Ramulator(const Params *p):
 +    AbstractMemory(p),
 +    port(name() + ".port", *this),
-+    requestsInFlight(0),
++    rd_requestsInFlight(0),
++    wr_requestsInFlight(0),
 +    drain_manager(NULL),
 +    config_file(p->config_file),
 +    configs(p->config_file),
@@ -229,7 +230,8 @@ diff -r 0e86fac7254c -r d1234c44d57e src/mem/ramulator.cc
 +    write_cb_func(std::bind(&Ramulator::writeComplete, this, std::placeholders::_1)),
 +    ticks_per_clk(0),
 +    resp_stall(false),
-+    req_stall(false),
++    rd_req_stall(false),
++    wr_req_stall(false),
 +    send_resp_event(this),
 +    tick_event(this) 
 +{
@@ -305,8 +307,12 @@ diff -r 0e86fac7254c -r d1234c44d57e src/mem/ramulator.cc
 +    
 +void Ramulator::tick() {
 +    wrapper->tick();
-+    if (req_stall){
-+        req_stall = false;
++    if (rd_req_stall && rd_requestsInFlight < wrapper->rdqueuesize()){
++        rd_req_stall = false;
++        port.sendRetry();
++    }
++    if (wr_req_stall && wr_requestsInFlight < wrapper->wrqueuesize()){
++        wr_req_stall = false;
 +        port.sendRetry();
 +    }
 +    schedule(tick_event, curTick() + ticks_per_clk);
@@ -330,7 +336,6 @@ diff -r 0e86fac7254c -r d1234c44d57e src/mem/ramulator.cc
 +
 +bool Ramulator::recvTimingReq(PacketPtr pkt) {
 +    // we should never see a new request while in retry
-+    assert(!req_stall);
 +
 +    for (PacketPtr pendPkt: pending_del)
 +        delete pendPkt;
@@ -345,6 +350,7 @@ diff -r 0e86fac7254c -r d1234c44d57e src/mem/ramulator.cc
 +
 +    bool accepted = true;
 +    if (pkt->isRead()) {
++        assert(!rd_req_stall);
 +        DPRINTF(Ramulator, "context id: %d, thread id: %d\n", pkt->req->contextId(),
 +            pkt->req->threadId());
 +        ramulator::Request req(pkt->getAddr(), ramulator::Request::Type::READ, read_cb_func, pkt->req->contextId());
@@ -354,11 +360,12 @@ diff -r 0e86fac7254c -r d1234c44d57e src/mem/ramulator.cc
 +            DPRINTF(Ramulator, "Read to %ld accepted.\n", req.addr);
 +
 +            // added counter to track requests in flight
-+            ++requestsInFlight;
++            ++rd_requestsInFlight;
 +        } else {
-+            req_stall = true;
++            rd_req_stall = true;
 +        }
 +    } else if (pkt->isWrite()) {
++        assert(!wr_req_stall);
 +        // Detailed CPU model always comes along with cache model enabled and
 +        // write requests are caused by cache eviction, so it shouldn't be
 +        // tallied for any core/thread
@@ -369,7 +376,7 @@ diff -r 0e86fac7254c -r d1234c44d57e src/mem/ramulator.cc
 +            DPRINTF(Ramulator, "Write to %ld accepted and served.\n", req.addr);
 +
 +            // added counter to track requests in flight
-+            ++requestsInFlight;
++            ++wr_requestsInFlight;
 +        } else {
 +            req_stall = true;
 +        }
@@ -414,7 +421,7 @@ diff -r 0e86fac7254c -r d1234c44d57e src/mem/ramulator.cc
 +        reads.erase(req.addr);
 +
 +    // added counter to track requests in flight
-+    --requestsInFlight;
++    --rd_requestsInFlight;
 +
 +    accessAndRespond(pkt);
 +}
@@ -423,7 +430,7 @@ diff -r 0e86fac7254c -r d1234c44d57e src/mem/ramulator.cc
 +    DPRINTF(Ramulator, "Write to %ld completed.\n", req.addr);
 +
 +    // added counter to track requests in flight
-+    --requestsInFlight;
++    --wr_requestsInFlight;
 +
 +    // check if we were asked to drain and if we are now done
 +    if (drain_manager && numOutstanding() == 0) {
@@ -489,7 +496,8 @@ diff -r 0e86fac7254c -r d1234c44d57e src/mem/ramulator.hh
 +        }
 +    } port;
 +
-+    unsigned int requestsInFlight;
++    unsigned int rd_requestsInFlight;
++    unsigned int wr_requestsInFlight;
 +    std::map<long, std::deque<PacketPtr> > reads;
 +    std::map<long, std::deque<PacketPtr> > writes;
 +    std::deque<PacketPtr> resp_queue;
@@ -503,9 +511,10 @@ diff -r 0e86fac7254c -r d1234c44d57e src/mem/ramulator.hh
 +    std::function<void(ramulator::Request&)> write_cb_func;
 +    Tick ticks_per_clk;
 +    bool resp_stall;
-+    bool req_stall;
++    bool rd_req_stall;
++    bool wr_req_stall;
 +
-+    unsigned int numOutstanding() const { return requestsInFlight + resp_queue.size(); }
++    unsigned int numOutstanding() const { return rd_requestsInFlight + wr_requestsInFlight + resp_queue.size(); }
 +    
 +    void sendResponse();
 +    void tick();

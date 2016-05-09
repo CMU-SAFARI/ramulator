@@ -24,6 +24,8 @@ public:
     void tick();
     bool send(Request req);
     void finish(void);
+    unsigned int rdqueuesize();
+    unsigned int wrqueuesize();
 };
 
 } /*namespace ramulator*/
