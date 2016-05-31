@@ -70,7 +70,13 @@ public:
     int get_cpu_tick() const {return int(1000000.0 / get_int_value("cpu_frequency"));}
     int get_core_num() const {return core_num;}
     int get_cacheline_size() const {return cacheline_size;}
-    long get_expected_limit_insts() const {return get_int_value("expected_limit_insts");}
+    long get_expected_limit_insts() const {
+      if (contains("expected_limit_insts")) {
+        return get_int_value("expected_limit_insts");
+      } else {
+        return 0;
+      }
+    }
     bool has_l3_cache() const {
       if (options.find("cache") != options.end()) {
         const std::string& cache_option = (options.find("cache"))->second;
