@@ -36,6 +36,8 @@ public:
       }
     }
 
+    void parse_to_const(const std::string& name, const std::string& value);
+
     bool contains(const std::string& name) const {
       if (options.find(name) != options.end()) {
         return true;
@@ -54,6 +56,8 @@ public:
 
     void set(const std::string& name, const std::string& value) {
       options[name] = value;
+      // TODO call this function only name maps to a constant
+      parse_to_const(name, value);
     }
 
     void set_core_num(int _core_num) {core_num = _core_num;}

@@ -243,6 +243,7 @@ int main(int argc, const char *argv[])
       ("cpu-frequency", po::value<string>(), "define CPU frequency.")
       ("translation", po::value<string>(), "translation mode, selected from: None, Random")
       ("org", po::value<string>(), "specify DRAM organization")
+      ("expected-limit-insts", po::value<string>(), "specify instructions to run for each thread")
       ;
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -281,6 +282,9 @@ int main(int argc, const char *argv[])
     }
     if (vm.count("org")) {
       configs.set("org", vm["org"].as<string>());
+    }
+    if (vm.count("expected-limit-insts")) {
+      configs.set("expected_limit_insts", vm["expected-limit-insts"].as<string>());
     }
 
     const std::string& standard = configs["standard"];
