@@ -14,16 +14,16 @@ wide array of commercial, as well as academic, DRAM standards:
 - DSARP \[5\]
 
 [\[1\] Kim et al. *Ramulator: A Fast and Extensible DRAM Simulator.* IEEE CAL
-2015.](http://dx.doi.org/10.1109/LCA.2015.2414456)  
+2015.](https://users.ece.cmu.edu/~omutlu/pub/ramulator_dram_simulator-ieee-cal15.pdf)  
 [\[2\] Kim et al. *A Case for Exploiting Subarray-Level Parallelism (SALP) in
-DRAM.* ISCA 2012.](http://dx.doi.org/10.1109/ISCA.2012.6237032)  
+DRAM.* ISCA 2012.](https://users.ece.cmu.edu/~omutlu/pub/salp-dram_isca12.pdf)  
 [\[3\] Lee et al. *Tiered-Latency DRAM: A Low Latency and Low Cost DRAM
-Architecture.* HPCA 2013.](http://dx.doi.org/10.1109/HPCA.2013.6522354)  
+Architecture.* HPCA 2013.](https://users.ece.cmu.edu/~omutlu/pub/tldram_hpca13.pdf)  
 [\[4\] Seshadri et al. *RowClone: Fast and Energy-Efficient In-DRAM Bulk Data
 Copy and Initialization.* MICRO
-2013.](http://dx.doi.org/10.1145/2540708.2540725)  
+2013.](https://users.ece.cmu.edu/~omutlu/pub/rowclone_micro13.pdf)  
 [\[5\] Chang et al. *Improving DRAM Performance by Parallelizing Refreshes with
-Accesses.* HPCA 2014.](http://dx.doi.org/10.1109/HPCA.2014.6835946)
+Accesses.* HPCA 2014.](https://users.ece.cmu.edu/~omutlu/pub/dram-access-refresh-parallelization_hpca14.pdf)
 
 
 ## Usage
