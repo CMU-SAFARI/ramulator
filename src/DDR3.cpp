@@ -15,6 +15,11 @@ map<string, enum DDR3::Org> DDR3::org_map = {
     {"DDR3_2Gb_x4", DDR3::Org::DDR3_2Gb_x4}, {"DDR3_2Gb_x8", DDR3::Org::DDR3_2Gb_x8}, {"DDR3_2Gb_x16", DDR3::Org::DDR3_2Gb_x16},
     {"DDR3_4Gb_x4", DDR3::Org::DDR3_4Gb_x4}, {"DDR3_4Gb_x8", DDR3::Org::DDR3_4Gb_x8}, {"DDR3_4Gb_x16", DDR3::Org::DDR3_4Gb_x16},
     {"DDR3_8Gb_x4", DDR3::Org::DDR3_8Gb_x4}, {"DDR3_8Gb_x8", DDR3::Org::DDR3_8Gb_x8}, {"DDR3_8Gb_x16", DDR3::Org::DDR3_8Gb_x16},
+    {"DDR3_2Gb_x16_bank16", DDR3::Org::DDR3_2Gb_x16_bank16},
+    {"DDR3_2Gb_x16_bank32", DDR3::Org::DDR3_2Gb_x16_bank32},
+    {"DDR3_2Gb_x16_bank64", DDR3::Org::DDR3_2Gb_x16_bank64},
+    {"DDR3_2Gb_x16_bank128", DDR3::Org::DDR3_2Gb_x16_bank128},
+    {"DDR3_2Gb_x16_bank256", DDR3::Org::DDR3_2Gb_x16_bank256},
 };
 
 map<string, enum DDR3::Speed> DDR3::speed_map = {

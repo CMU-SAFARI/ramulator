@@ -12,6 +12,11 @@ const int bytes_per_flit = 16;
 
 map<string, enum HMC::Org> HMC::org_map = {
     {"HMC_4GB", HMC::Org::HMC_4GB}, {"HMC_8GB", HMC::Org::HMC_8GB},
+    {"HMC_4GB_bank16", HMC::Org::HMC_4GB_bank16},
+    {"HMC_4GB_bank32", HMC::Org::HMC_4GB_bank32},
+    {"HMC_4GB_bank64", HMC::Org::HMC_4GB_bank64},
+    {"HMC_4GB_bank128", HMC::Org::HMC_4GB_bank128},
+    {"HMC_4GB_bank256", HMC::Org::HMC_4GB_bank256},
 };
 
 map<string, enum HMC::Speed> HMC::speed_map = {

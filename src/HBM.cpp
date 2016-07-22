@@ -14,6 +14,11 @@ map<string, enum HBM::Org> HBM::org_map = {
     {"HBM_1Gb", HBM::Org::HBM_1Gb},
     {"HBM_2Gb", HBM::Org::HBM_2Gb},
     {"HBM_4Gb", HBM::Org::HBM_4Gb},
+    {"HBM_4Gb_bank32", HBM::Org::HBM_4Gb_bank32},
+    {"HBM_4Gb_bank64", HBM::Org::HBM_4Gb_bank64},
+    {"HBM_4Gb_bank128", HBM::Org::HBM_4Gb_bank128},
+    {"HBM_4Gb_bank256", HBM::Org::HBM_4Gb_bank256},
+    {"HBM_4Gb_bank512", HBM::Org::HBM_4Gb_bank512},
 };
 
 map<string, enum HBM::Speed> HBM::speed_map = {

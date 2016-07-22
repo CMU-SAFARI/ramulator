@@ -15,6 +15,11 @@ map<string, enum GDDR5::Org> GDDR5::org_map = {
     {"GDDR5_2Gb_x16", GDDR5::Org::GDDR5_2Gb_x16}, {"GDDR5_2Gb_x32", GDDR5::Org::GDDR5_2Gb_x32},
     {"GDDR5_4Gb_x16", GDDR5::Org::GDDR5_4Gb_x16}, {"GDDR5_4Gb_x32", GDDR5::Org::GDDR5_4Gb_x32},
     {"GDDR5_8Gb_x16", GDDR5::Org::GDDR5_8Gb_x16}, {"GDDR5_8Gb_x32", GDDR5::Org::GDDR5_8Gb_x32},
+    {"GDDR5_2Gb_x16_bank32", GDDR5::Org::GDDR5_2Gb_x16_bank32},
+    {"GDDR5_2Gb_x16_bank64", GDDR5::Org::GDDR5_2Gb_x16_bank64},
+    {"GDDR5_2Gb_x16_bank128", GDDR5::Org::GDDR5_2Gb_x16_bank128},
+    {"GDDR5_2Gb_x16_bank256", GDDR5::Org::GDDR5_2Gb_x16_bank256},
+    {"GDDR5_2Gb_x16_bank512", GDDR5::Org::GDDR5_2Gb_x16_bank512},
 };
 
 map<string, enum GDDR5::Speed> GDDR5::speed_map = {
