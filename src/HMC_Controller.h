@@ -82,6 +82,10 @@ public:
     /* Commands to stdout */
     bool print_cmd_trace = false;
 
+    // ideal DRAM
+    bool no_DRAM_latency = false;
+    bool unlimit_bandwidth = false;
+
     // HMC
     deque<Packet> response_packets_buffer;
     map<long, Packet> incoming_packets_buffer;
@@ -105,6 +109,16 @@ public:
             string suffix = ".cmdtrace";
             for (unsigned int i = 0; i < channel->children.size(); i++)
                 cmd_trace_files[i].open(prefix + to_string(i) + suffix);
+        }
+        if (configs["no_DRAM_latency"] == "true") {
+          no_DRAM_latency = true;
+          scheduler->type = Scheduler<HMC>::Type::FRFCFS;
+        }
+        if (configs["unlimit_bandwidth"] == "true") {
+          unlimit_bandwidth = true;
+          printf("nBL: %d\n", channel->spec->speed_entry.nBL);
+          channel->spec->speed_entry.nBL = 0;
+          channel->spec->read_latency = channel->spec->speed_entry.nCL;
         }
     }
 
@@ -234,6 +248,7 @@ public:
 
         auto req = scheduler->get_head(queue->q);
         if (req == queue->q.end() || !is_ready(req)) {
+          if (!no_DRAM_latency) {
             // we couldn't find a command to schedule -- let's try to be speculative
             auto cmd = HMC::Command::PRE;
             vector<int> victim = rowpolicy->get_victim(cmd);
@@ -241,6 +256,9 @@ public:
                 issue_cmd(cmd, victim);
             }
             return;  // nothing more to be done this cycle
+          } else {
+            return;
+          }
         }
 
         if (req->is_first_command) {
@@ -373,7 +391,11 @@ private:
     typename HMC::Command get_first_cmd(list<Request>::iterator req)
     {
         typename HMC::Command cmd = channel->spec->translate[int(req->type)];
-        return channel->decode(cmd, req->addr_vec.data());
+        if (!no_DRAM_latency) {
+          return channel->decode(cmd, req->addr_vec.data());
+        } else {
+          return cmd;
+        }
     }
 
     void issue_cmd(typename HMC::Command cmd, const vector<int>& addr_vec)
@@ -385,8 +407,10 @@ private:
             printf("\n");
         }
         assert(is_ready(cmd, addr_vec));
-        channel->update(cmd, addr_vec.data(), clk);
-        rowtable->update(cmd, addr_vec, clk);
+        if (!no_DRAM_latency) {
+          channel->update(cmd, addr_vec.data(), clk);
+          rowtable->update(cmd, addr_vec, clk);
+        }
         if (record_cmd_trace){
             // select rank
             auto& file = cmd_trace_files[addr_vec[1]];

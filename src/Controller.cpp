@@ -205,6 +205,7 @@ void Controller<WideIO2>::tick() {
 
     auto req = scheduler->get_head(queue->q);
     if (req == queue->q.end() || !is_ready(req)) {
+      if (!no_DRAM_latency) {
         // we couldn't find a command to schedule -- let's try to be speculative
         auto cmd = WideIO2::Command::PRE;
         vector<int> victim = rowpolicy->get_victim(cmd);
@@ -212,6 +213,9 @@ void Controller<WideIO2>::tick() {
             issue_cmd(cmd, victim);
         }
         return;  // nothing more to be done this cycle
+      } else {
+        return;
+      }
     }
 
     if (req->is_first_command) {

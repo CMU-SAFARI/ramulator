@@ -244,6 +244,8 @@ int main(int argc, const char *argv[])
       ("translation", po::value<string>(), "translation mode, selected from: None, Random")
       ("org", po::value<string>(), "specify DRAM organization")
       ("expected-limit-insts", po::value<string>(), "specify instructions to run for each thread")
+      ("no-DRAM-latency", po::value<string>(), "ideal DRAM with zero DRAM access latency (default option turns this off)")
+      ("unlimit-bandwidth", po::value<string>(), "ideal DRAM with unlimited bandwidth")
       ;
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -285,6 +287,12 @@ int main(int argc, const char *argv[])
     }
     if (vm.count("expected-limit-insts")) {
       configs.set("expected_limit_insts", vm["expected-limit-insts"].as<string>());
+    }
+    if (vm.count("no-DRAM-latency")) {
+      configs.set("no_DRAM_latency", vm["no-DRAM-latency"].as<string>());
+    }
+    if (vm.count("unlimit-bandwidth")) {
+      configs.set("unlimit_bandwidth", vm["unlimit-bandwidth"].as<string>());
     }
 
     const std::string& standard = configs["standard"];
