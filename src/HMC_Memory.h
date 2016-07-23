@@ -586,6 +586,7 @@ public:
         debug_hmc("receive request packets@host controller");
         req.addr_vec.resize(addr_bits.size());
         req.reqid = mem_req_count;
+        clear_higher_bits(req.addr, max_address-1ll);
         long addr = req.addr;
         long coreid = req.coreid;
 
@@ -792,6 +793,9 @@ private:
     void clear_lower_bits(long& addr, int bits)
     {
         addr >>= bits;
+    }
+    void clear_higher_bits(long& addr, long mask) {
+        addr = (addr & mask);
     }
     long lrand(void) {
         if(sizeof(int) < sizeof(long)) {
