@@ -70,6 +70,11 @@ public:
 
     // Update the timing/state of the tree, signifying that a command has been issued
     void update(typename T::Command cmd, const int* addr, long clk);
+
+    // Helper Functions
+    void update_state(typename T::Command cmd, const int* addr);
+    void update_timing(typename T::Command cmd, const int* addr, long clk);
+
     // Update statistics:
 
     // Update the number of requests it serves currently
@@ -116,9 +121,6 @@ private:
     // E.g., activate->precharge: tRAS@bank, activate->activate: tRC@bank
     vector<typename T::TimingEntry>* timing;
 
-    // Helper Functions
-    void update_state(typename T::Command cmd, const int* addr);
-    void update_timing(typename T::Command cmd, const int* addr, long clk);
 }; /* class DRAM */
 
 

@@ -410,6 +410,9 @@ private:
         if (!no_DRAM_latency) {
           channel->update(cmd, addr_vec.data(), clk);
           rowtable->update(cmd, addr_vec, clk);
+        } else {
+          // still have bandwidth restriction (update timing for RD/WR requets)
+          channel->update_timing(cmd, addr_vec.data(), clk);
         }
         if (record_cmd_trace){
             // select rank
