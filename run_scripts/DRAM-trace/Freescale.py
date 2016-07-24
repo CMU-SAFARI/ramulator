@@ -46,10 +46,10 @@ DRAM_list = [
   "GDDR5-7000-noDRAMlat",
   "HBM-1000-noDRAMlat",
   "HMC-noDRAMlat",
-  "DDR3-2133L-ideal-lat-BW",
-  "GDDR5-7000-ideal-lat-BW",
-  "HBM-1000-ideal-lat-BW",
-  "HMC-ideal-lat-BW"
+  "DDR3-2133L-unlimitBW",
+  "GDDR5-7000-unlimitBW",
+  "HBM-1000-unlimitBW",
+  "HMC-unlimitBW"
 ]
 
 ramulator_bin = "/home/tianshi/tianshi-Workspace/ramulator/ramulator"
