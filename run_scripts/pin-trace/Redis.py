@@ -11,3 +11,6 @@ class Redis:
             ["ycsb-workloada-server", "ycsb-workloadc-server", "ycsb-workloadd-server", "ycsb-workloade-server"],
             ["ycsb-workloadb-server", "ycsb-workloadc-server", "ycsb-workloadd-server", "ycsb-workloade-server"]]
 
+    self.expected_limit_insts = [
+      900000000, 900000000, 900000000, 900000000, 900000000
+    ]

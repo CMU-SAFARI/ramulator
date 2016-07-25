@@ -38,5 +38,8 @@ class Hadoop:
                 "sort-map2",
                 "sort-map3"
             ]]
+    self.expected_limit_insts = [
+      7121840399, 412596850, 22705986279, 1886863202
+    ]
 
 

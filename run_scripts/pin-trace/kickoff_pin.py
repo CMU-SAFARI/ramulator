@@ -14,7 +14,6 @@ if not len(sys.argv) >= 8:
   sys.exit(0)
 
 # FIXME specify this argument by commandline argument
-expected_limit_insts = 1886863202
 
 if len(sys.argv) > 8:
   extra_arg = sys.argv[8]
@@ -47,7 +46,7 @@ config_path = config_dir + "/" + DRAM + "-config.cfg"
 if option == "multicore":
   traces = [trace_dir + "/" + t + ".trace" for t in config.workloads[workload_id]]
 
-  cmds = [ramulator_bin, "--config", config_path, "--mode", "cpu", "--stats", output_path, "--expected-limit-insts", str(expected_limit_insts), "--trace"] + traces + extra_arg.split()
+  cmds = [ramulator_bin, "--config", config_path, "--mode", "cpu", "--stats", output_path, "--expected-limit-insts", str(config.expected_limit_insts[workload_id]), "--trace"] + traces + extra_arg.split()
   print " ".join(cmds)
   call(cmds)
 elif option == "single-threaded":
