@@ -246,6 +246,7 @@ int main(int argc, const char *argv[])
       ("expected-limit-insts", po::value<string>(), "specify instructions to run for each thread")
       ("no-DRAM-latency", po::value<string>(), "ideal DRAM with zero DRAM access latency (default option turns this off)")
       ("unlimit-bandwidth", po::value<string>(), "ideal DRAM with unlimited bandwidth")
+      ("rc-trace", po::value<string>(), "trace format is row clone trace")
       ;
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -293,6 +294,9 @@ int main(int argc, const char *argv[])
     }
     if (vm.count("unlimit-bandwidth")) {
       configs.set("unlimit_bandwidth", vm["unlimit-bandwidth"].as<string>());
+    }
+    if (vm.count("rc-trace")) {
+      configs.set("rc_trace", vm["rc-trace"].as<string>());
     }
 
     const std::string& standard = configs["standard"];

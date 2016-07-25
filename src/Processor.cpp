@@ -119,6 +119,10 @@ Core::Core(const Config& configs, int coreid,
     no_shared_cache(!configs.has_l3_cache()),
     llc(llc), trace(trace_fname), memory(memory)
 {
+  if (configs["rc_trace"] == "true") {
+    rc_trace = true;
+  }
+
   // Build cache hierarchy
   if (no_core_caches) {
     send = send_next;
@@ -137,14 +141,20 @@ Core::Core(const Config& configs, int coreid,
     }
     caches[1]->concatlower(caches[0].get());
   }
-  if (no_core_caches) {
-    more_reqs = trace.get_filtered_request(
+  if (rc_trace) {
+    assert(no_core_caches);
+    more_reqs = trace.get_rowclone_request(
         bubble_cnt, req_addr, req_type);
-    req_addr = memory.page_allocator(req_addr, id);
   } else {
-    more_reqs = trace.get_unfiltered_request(
-        bubble_cnt, req_addr, req_type);
-    req_addr = memory.page_allocator(req_addr, id);
+    if (no_core_caches) {
+      more_reqs = trace.get_filtered_request(
+          bubble_cnt, req_addr, req_type);
+      req_addr = memory.page_allocator(req_addr, id);
+    } else {
+      more_reqs = trace.get_unfiltered_request(
+          bubble_cnt, req_addr, req_type);
+      req_addr = memory.page_allocator(req_addr, id);
+    }
   }
 
   // set expected limit instruction for calculating weighted speedup
@@ -231,17 +241,25 @@ void Core::tick()
       reached_limit = true;
     }
 
-    if (no_core_caches) {
-      more_reqs = trace.get_filtered_request(
+    if (rc_trace) {
+      more_reqs = trace.get_rowclone_request(
           bubble_cnt, req_addr, req_type);
       if (req_addr != -1) {
         req_addr = memory.page_allocator(req_addr, id);
       }
     } else {
-      more_reqs = trace.get_unfiltered_request(
-          bubble_cnt, req_addr, req_type);
-      if (req_addr != -1) {
-        req_addr = memory.page_allocator(req_addr, id);
+      if (no_core_caches) {
+        more_reqs = trace.get_filtered_request(
+            bubble_cnt, req_addr, req_type);
+        if (req_addr != -1) {
+          req_addr = memory.page_allocator(req_addr, id);
+        }
+      } else {
+        more_reqs = trace.get_unfiltered_request(
+            bubble_cnt, req_addr, req_type);
+        if (req_addr != -1) {
+          req_addr = memory.page_allocator(req_addr, id);
+        }
       }
     }
     if (!more_reqs) {
@@ -366,6 +384,7 @@ bool Trace::get_filtered_request(long& bubble_cnt, long& req_addr, Request::Type
     static bool has_write = false;
     static long write_addr;
     static int line_num = 0;
+
     if (has_write){
         bubble_cnt = 0;
         req_addr = write_addr;
@@ -416,5 +435,147 @@ bool Trace::get_dramtrace_request(long& req_addr, Request::Type& req_type)
     else if (line.substr(pos)[0] == 'W')
         req_type = Request::Type::WRITE;
     else assert(false);
+    return true;
+}
+
+bool Trace::get_rowclone_request(long& bubble_cnt, long& req_addr, Request::Type& req_type)
+{
+    static bool has_write = false;
+    static long write_addr;
+    static int line_num = 0;
+
+    static bool batch_cp = false;
+    static bool batch_set = false;
+    static bool is_src;
+    static long src_addr;
+    static long src_addr_end;
+    static long dst_addr;
+    static long dst_addr_end;
+
+    if (has_write){
+        bubble_cnt = 0;
+        req_addr = write_addr;
+        req_type = Request::Type::WRITE;
+
+        has_write = false;
+        return true;
+    } else if (batch_cp) {
+      bubble_cnt = 0;
+      if (is_src) {
+        req_addr = src_addr;
+        req_type = Request::Type::READ;
+        if (src_addr < src_addr_end) {
+          // FIXME: won't assume cacheline size is 64.
+          src_addr += 64;
+        }
+      } else {
+        req_addr = dst_addr;
+        req_type = Request::Type::WRITE;
+        if (dst_addr < dst_addr_end) {
+          // FIXME: won't assume cacheline size is 64.
+          dst_addr += 64;
+        }
+      }
+      if (src_addr >= src_addr_end && dst_addr >= dst_addr_end) {
+        batch_cp = false;
+      } else {
+        is_src = !is_src;
+      }
+      return true;
+    } else if (batch_set) {
+      bubble_cnt = 0;
+      req_addr = dst_addr;
+      req_type = Request::Type::WRITE;
+
+      dst_addr += 64;
+      if (dst_addr >= dst_addr_end) {
+        batch_set = false;
+      }
+      return true;
+    }
+
+    string line;
+    getline(file, line);
+    line_num ++;
+    if (file.eof() || line.size() == 0) {
+        file.clear();
+        file.seekg(0, file.beg);
+        has_write = false;
+        line_num = 0;
+        return false;
+    }
+
+    size_t pos, end;
+
+    char type = line[0];
+    switch (type) {
+      case 'R': {
+        pos = line.find_first_not_of(' ', 1);
+        req_addr = stoul(line.substr(pos), &end, 16);
+        req_type = Request::Type::READ;
+
+        pos = line.find_first_not_of(' ', pos+end);
+        write_addr = stoul(line.substr(pos), &end, 16);
+        if (write_addr != 0) {
+          has_write = true;
+        }
+
+        pos = line.find_first_not_of(' ', pos+end);
+        bubble_cnt = stoul(line.substr(pos), NULL, 10);
+        break;
+      }
+      case 'C': {
+        batch_cp = true;
+
+        pos = line.find_first_not_of(' ', 1);
+        src_addr = stoul(line.substr(pos), &end, 16);
+
+        pos = line.find_first_not_of(' ', pos + end);
+        dst_addr = stoul(line.substr(pos), &end, 16);
+
+        pos = line.find_first_not_of(' ', pos + end);
+        int cp_data_size = stoul(line.substr(pos), &end, 10);
+
+        pos = line.find_first_not_of(' ', pos + end);
+        bubble_cnt = stoul(line.substr(pos), NULL, 10);
+
+        src_addr_end = src_addr + cp_data_size;
+        dst_addr_end = dst_addr + cp_data_size;
+
+        req_addr = src_addr;
+        is_src = false;
+        src_addr += 64;
+
+        req_type = Request::Type::READ;
+
+        break;
+      }
+      case 'S': {
+        batch_set = true;
+
+        pos = line.find_first_not_of(' ', 1);
+        dst_addr = stoul(line.substr(pos), &end, 16);
+
+        pos = line.find_first_not_of(' ', pos + end);
+        assert(stoul(line.substr(pos), &end, 16) == 0);
+
+        pos = line.find_first_not_of(' ', pos + end);
+        int set_data_size = stoul(line.substr(pos), &end, 10);
+
+        pos = line.find_first_not_of(' ', pos + end);
+        bubble_cnt = stoul(line.substr(pos), NULL, 10);
+
+        dst_addr_end = dst_addr + set_data_size;
+
+        req_addr = dst_addr;
+        req_type = Request::Type::WRITE;
+        dst_addr += 64;
+        if (dst_addr >= dst_addr_end) {
+          batch_set = false;
+        }
+        break;
+      }
+    }
+
     return true;
 }
