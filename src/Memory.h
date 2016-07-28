@@ -570,6 +570,11 @@ public:
 
         switch(int(translation)) {
             case int(Translation::None): {
+              auto target = make_pair(coreid, virtual_page_number);
+              if(page_translation.find(target) == page_translation.end()) {
+                memory_footprint += 1<<12;
+                page_translation[target] = virtual_page_number;
+              }
               return addr;
             }
             case int(Translation::Random): {
