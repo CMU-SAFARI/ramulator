@@ -119,6 +119,8 @@ public:
           printf("nBL: %d\n", channel->spec->speed_entry.nBL);
           channel->spec->speed_entry.nBL = 0;
           channel->spec->read_latency = channel->spec->speed_entry.nCL;
+          channel->spec->speed_entry.nCCDS = 1;
+          channel->spec->speed_entry.nCCDL = 1;
         }
     }
 

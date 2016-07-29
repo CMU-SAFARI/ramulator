@@ -23,6 +23,10 @@
 #include "TLDRAM.h"
 #include "WideIO2.h"
 
+#include "DDR4.h"
+#include "GDDR5.h"
+#include "HBM.h"
+
 using namespace std;
 
 namespace ramulator
@@ -97,6 +101,20 @@ public:
     bool no_DRAM_latency = false;
     bool unlimit_bandwidth = false;
 
+    void fake_ideal_DRAM(const Config& configs) {
+        if (configs["no_DRAM_latency"] == "true") {
+          no_DRAM_latency = true;
+          scheduler->type = Scheduler<T>::Type::FRFCFS;
+        }
+        if (configs["unlimit_bandwidth"] == "true") {
+          unlimit_bandwidth = true;
+          printf("nBL: %d\n", channel->spec->speed_entry.nBL);
+          channel->spec->speed_entry.nBL = 0;
+          channel->spec->read_latency = channel->spec->speed_entry.nCL;
+          channel->spec->speed_entry.nCCD = 1;
+        }
+    }
+
     /* Constructor */
     Controller(const Config& configs, DRAM<T>* channel) :
         channel(channel),
@@ -117,16 +135,7 @@ public:
             for (unsigned int i = 0; i < channel->children.size(); i++)
                 cmd_trace_files[i].open(prefix + to_string(i) + suffix);
         }
-        if (configs["no_DRAM_latency"] == "true") {
-          no_DRAM_latency = true;
-          scheduler->type = Scheduler<T>::Type::FRFCFS;
-        }
-        if (configs["unlimit_bandwidth"] == "true") {
-          unlimit_bandwidth = true;
-          printf("nBL: %d\n", channel->spec->speed_entry.nBL);
-          channel->spec->speed_entry.nBL = 0;
-          channel->spec->read_latency = channel->spec->speed_entry.nCL;
-        }
+        fake_ideal_DRAM(configs);
     }
 
     ~Controller(){
@@ -410,6 +419,15 @@ void Controller<TLDRAM>::tick();
 
 template <>
 void Controller<WideIO2>::tick();
+
+template <>
+void Controller<DDR4>::fake_ideal_DRAM(const Config& configs);
+
+template <>
+void Controller<GDDR5>::fake_ideal_DRAM(const Config& configs);
+
+template <>
+void Controller<HBM>::fake_ideal_DRAM(const Config& configs);
 
 } /*namespace ramulator*/
 
