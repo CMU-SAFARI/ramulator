@@ -13,6 +13,16 @@ single_threaded =[
                 ]
 
 DRAM_list = [
+  "DDR3-2133L",
+  "DDR4-2400R",
+  "LPDDR3-2133",
+  "LPDDR4-3200",
+  "GDDR5-7000",
+  "HBM-1000",
+  "WideIO-266",
+  "WideIO2-1067"
+  "HMC",
+  "HMC-RoBaCoVa"
   "DDR3-800D",
   "DDR3-1066E",
   "DDR3-1333G",

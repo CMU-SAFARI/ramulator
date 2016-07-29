@@ -3,9 +3,9 @@ import sys
 
 class Mediabench2:
   def __init__(self):
-    self.single_threaded =["mediabench2-h264-decode",
-                    "mediabench2-jp2-decode",
-                    "mediabench2-h264-encode",
-                    "mediabench2-jp2-encode",
+    self.single_threaded =["h264-decode",
+                    "jp2-decode",
+                    "h264-encode",
+                    "jp2-encode",
                     ]
     self.workloads = []

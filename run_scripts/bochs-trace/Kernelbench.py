@@ -44,7 +44,11 @@ single_threaded =[
                   "netperf_tcpstream_v4",
                   "netperf_udpstream_v4",
                   "netperf_tcprr_v4",
-                  "netperf_udprr_v4"
+                  "netperf_udprr_v4",
+                  "netperf_tcpstream_v4_100sec",
+                  "netperf_udpstream_v4_100sec",
+                  "netperf_tcprr_v4_100sec",
+                  "netperf_udprr_v4_100sec"
                 ]
 
 ramulator_bin = "/home/tianshi/tianshi-Workspace/ramulator/ramulator"
