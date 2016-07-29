@@ -59,7 +59,12 @@ DRAM_list = [
   "DDR3-2133L-unlimitBW",
   "GDDR5-7000-unlimitBW",
   "HBM-1000-unlimitBW",
-  "HMC-unlimitBW"
+  "HMC-unlimitBW",
+  "HMC-va64",
+  "HMC-va128",
+  "HMC-va256",
+  "HMC-va512",
+  "HMC-va1024"
 ]
 
 ramulator_bin = "/home/tianshi/tianshi-Workspace/ramulator/ramulator"
