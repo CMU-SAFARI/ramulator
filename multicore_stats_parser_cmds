@@ -33,3 +33,21 @@ python analyze_workloads.py --workload-dir ../characterize_result/ramulator/spec
 --single-threaded-workload-lists milc,GemsFDTD,mcf,libquantum bwaves,omnetpp,mcf,libquantum libquantum,bwaves,soplex,GemsFDTD soplex,mcf,omnetpp,milc milc,mcf,GemsFDTD,h264ref soplex,omnetpp,milc,namd libquantum,omnetpp,bwaves,povray libquantum,mcf,milc,zeusmp omnetpp,GemsFDTD,cactusADM,hmmer GemsFDTD,mcf,gamess,zeusmp milc,mcf,bzip2,h264ref bwaves,soplex,gamess,namd omnetpp,sjeng,namd,gcc GemsFDTD,hmmer,zeusmp,astar GemsFDTD,povray,sphinx3,calculix soplex,zeusmp,sphinx3,gcc povray,astar,gobmk,perlbench povray,bzip2,sphinx3,cactusADM astar,sjeng,gcc,cactusADM calculix,namd,perlbench,gamess \
 --dram-list WideIO-266 WideIO2-1067 LPDDR3-2133 LPDDR4-3200 DDR3-2133L DDR4-2400R GDDR5-7000 HBM-1000 HMC HMC-RoBaCoVa \
 --output-dir ../ramulator_stats/spec2006/all/multiprogram --ref-dram DDR3-2133L
+
+python analyze_workloads.py --workload-dir ../characterize_result/ramulator/hadoop \
+--workload-list workload0 workload1 workload2 \
+--single-threaded-workload-lists grep-map0,grep-map1,grep-map2,grep-map3 wordcount-map0,wordcount-map1,wordcount-map2,wordcount-map3 sort-map0,sort-map1,sort-map2,sort-map3 \
+--dram-list DDR3-2133L DDR4-2400R GDDR5-7000 HBM-1000 HMC HMC-RoBaCoVa \
+--output-dir ../ramulator_stats/hadoop/highperf_dram/multiprogram --ref-dram DDR3-2133L
+
+python analyze_workloads.py --workload-dir ../characterize_result/ramulator/hadoop \
+--workload-list workload0 workload1 workload2 \
+--single-threaded-workload-lists grep-map0,grep-map1,grep-map2,grep-map3 wordcount-map0,wordcount-map1,wordcount-map2,wordcount-map3 sort-map0,sort-map1,sort-map2,sort-map3 \
+--dram-list WideIO-266 WideIO2-1067 LPDDR3-2133 LPDDR4-3200 \
+--output-dir ../ramulator_stats/hadoop/lp_dram/multiprogram --ref-dram LPDDR3-2133
+
+python analyze_workloads.py --workload-dir ../characterize_result/ramulator/hadoop \
+--workload-list workload0 workload1 workload2 \
+--single-threaded-workload-lists grep-map0,grep-map1,grep-map2,grep-map3 wordcount-map0,wordcount-map1,wordcount-map2,wordcount-map3 sort-map0,sort-map1,sort-map2,sort-map3 \
+--dram-list WideIO-266 WideIO2-1067 LPDDR3-2133 LPDDR4-3200 DDR3-2133L DDR4-2400R GDDR5-7000 HBM-1000 HMC HMC-RoBaCoVa \
+--output-dir ../ramulator_stats/hadoop/all/multiprogram --ref-dram DDR3-2133L
