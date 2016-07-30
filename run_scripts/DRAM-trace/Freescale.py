@@ -20,9 +20,9 @@ DRAM_list = [
   "GDDR5-7000",
   "HBM-1000",
   "WideIO-266",
-  "WideIO2-1067"
+  "WideIO2-1067",
   "HMC",
-  "HMC-RoBaCoVa"
+  "HMC-RoBaCoVa",
   "DDR3-800D",
   "DDR3-1066E",
   "DDR3-1333G",
