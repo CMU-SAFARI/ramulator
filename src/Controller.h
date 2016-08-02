@@ -27,6 +27,9 @@
 #include "GDDR5.h"
 #include "HBM.h"
 
+#include "libdrampower/LibDRAMPower.h"
+#include "xmlparser/MemSpecParser.h"
+
 using namespace std;
 
 namespace ramulator
@@ -66,6 +69,109 @@ public:
     VectorStat* record_write_conflicts;
 #endif
 
+    // DRAM power estimation statistics
+
+    ScalarStat act_energy;
+    ScalarStat pre_energy;
+    ScalarStat read_energy;
+    ScalarStat write_energy;
+
+    ScalarStat act_stdby_energy;
+    ScalarStat pre_stdby_energy;
+    ScalarStat idle_energy_act;
+    ScalarStat idle_energy_pre;
+
+    ScalarStat f_act_pd_energy;
+    ScalarStat f_pre_pd_energy;
+    ScalarStat s_act_pd_energy;
+    ScalarStat s_pre_pd_energy;
+    ScalarStat sref_energy;
+    ScalarStat sref_ref_energy;
+    ScalarStat sref_ref_act_energy;
+    ScalarStat sref_ref_pre_energy;
+
+    ScalarStat spup_energy;
+    ScalarStat spup_ref_energy;
+    ScalarStat spup_ref_act_energy;
+    ScalarStat spup_ref_pre_energy;
+    ScalarStat pup_act_energy;
+    ScalarStat pup_pre_energy;
+
+    ScalarStat IO_power;
+    ScalarStat WR_ODT_power;
+    ScalarStat TermRD_power;
+    ScalarStat TermWR_power;
+
+    ScalarStat read_io_energy;
+    ScalarStat write_term_energy;
+    ScalarStat read_oterm_energy;
+    ScalarStat write_oterm_energy;
+    ScalarStat io_term_energy;
+
+    ScalarStat ref_energy;
+
+    ScalarStat total_energy;
+    ScalarStat average_power;
+
+    // drampower counter
+
+    // Number of activate commands
+    ScalarStat numberofacts_s;
+    // Number of precharge commands
+    ScalarStat numberofpres_s;
+    // Number of reads commands
+    ScalarStat numberofreads_s;
+    // Number of writes commands
+    ScalarStat numberofwrites_s;
+    // Number of refresh commands
+    ScalarStat numberofrefs_s;
+    // Number of precharge cycles
+    ScalarStat precycles_s;
+    // Number of active cycles
+    ScalarStat actcycles_s;
+    // Number of Idle cycles in the active state
+    ScalarStat idlecycles_act_s;
+    // Number of Idle cycles in the precharge state
+    ScalarStat idlecycles_pre_s;
+    // Number of fast-exit activate power-downs
+    ScalarStat f_act_pdns_s;
+    // Number of slow-exit activate power-downs
+    ScalarStat s_act_pdns_s;
+    // Number of fast-exit precharged power-downs
+    ScalarStat f_pre_pdns_s;
+    // Number of slow-exit activate power-downs
+    ScalarStat s_pre_pdns_s;
+    // Number of self-refresh commands
+    ScalarStat numberofsrefs_s;
+    // Number of clock cycles in fast-exit activate power-down mode
+    ScalarStat f_act_pdcycles_s;
+    // Number of clock cycles in slow-exit activate power-down mode
+    ScalarStat s_act_pdcycles_s;
+    // Number of clock cycles in fast-exit precharged power-down mode
+    ScalarStat f_pre_pdcycles_s;
+    // Number of clock cycles in slow-exit precharged power-down mode
+    ScalarStat s_pre_pdcycles_s;
+    // Number of clock cycles in self-refresh mode
+    ScalarStat sref_cycles_s;
+    // Number of clock cycles in activate power-up mode
+    ScalarStat pup_act_cycles_s;
+    // Number of clock cycles in precharged power-up mode
+    ScalarStat pup_pre_cycles_s;
+    // Number of clock cycles in self-refresh power-up mode
+    ScalarStat spup_cycles_s;
+
+    // Number of active auto-refresh cycles in self-refresh mode
+    ScalarStat sref_ref_act_cycles_s;
+    // Number of precharged auto-refresh cycles in self-refresh mode
+    ScalarStat sref_ref_pre_cycles_s;
+    // Number of active auto-refresh cycles during self-refresh exit
+    ScalarStat spup_ref_act_cycles_s;
+    // Number of precharged auto-refresh cycles during self-refresh exit
+    ScalarStat spup_ref_pre_cycles_s;
+
+    libDRAMPower* drampower;
+    long update_counter = 0;
+
 public:
     /* Member Variables */
     long clk = 0;
@@ -96,6 +202,7 @@ public:
     bool record_cmd_trace = false;
     /* Commands to stdout */
     bool print_cmd_trace = false;
+    bool with_drampower = false;
 
     // ideal DRAM
     bool no_DRAM_latency = false;
@@ -135,7 +242,328 @@ public:
             for (unsigned int i = 0; i < channel->children.size(); i++)
                 cmd_trace_files[i].open(prefix + to_string(i) + suffix);
         }
+        if (configs["drampower_memspecs"] != "") {
+          with_drampower = true;
+          drampower = new libDRAMPower(
+              Data::MemSpecParser::getMemSpecFromXML(
+                  configs["drampower_memspecs"]),
+              true);
+        }
         fake_ideal_DRAM(configs);
+        if (with_drampower) {
+          // init DRAMPower stats
+          act_energy
+              .name("act_energy_" + to_string(channel->id))
+              .desc("act_energy_" + to_string(channel->id))
+              .precision(6)
+              ;
+          pre_energy
+              .name("pre_energy_" + to_string(channel->id))
+              .desc("pre_energy_" + to_string(channel->id))
+              .precision(6)
+              ;
+          read_energy
+              .name("read_energy_" + to_string(channel->id))
+              .desc("read_energy_" + to_string(channel->id))
+              .precision(6)
+              ;
+          write_energy
+              .name("write_energy_" + to_string(channel->id))
+              .desc("write_energy_" + to_string(channel->id))
+              .precision(6)
+              ;
+
+          act_stdby_energy
+              .name("act_stdby_energy_" + to_string(channel->id))
+              .desc("act_stdby_energy_" + to_string(channel->id))
+              .precision(6)
+              ;
+
+          pre_stdby_energy
+              .name("pre_stdby_energy_" + to_string(channel->id))
+              .desc("pre_stdby_energy_" + to_string(channel->id))
+              .precision(6)
+              ;
+
+          idle_energy_act
+              .name("idle_energy_act_" + to_string(channel->id))
+              .desc("idle_energy_act_" + to_string(channel->id))
+              .precision(6)
+              ;
+
+          idle_energy_pre
+              .name("idle_energy_pre_" + to_string(channel->id))
+              .desc("idle_energy_pre_" + to_string(channel->id))
+              .precision(6)
+              ;
+
+          f_act_pd_energy
+              .name("f_act_pd_energy_" + to_string(channel->id))
+              .desc("f_act_pd_energy_" + to_string(channel->id))
+              .precision(6)
+              ;
+          f_pre_pd_energy
+              .name("f_pre_pd_energy_" + to_string(channel->id))
+              .desc("f_pre_pd_energy_" + to_string(channel->id))
+              .precision(6)
+              ;
+          s_act_pd_energy
+              .name("s_act_pd_energy_" + to_string(channel->id))
+              .desc("s_act_pd_energy_" + to_string(channel->id))
+              .precision(6)
+              ;
+          s_pre_pd_energy
+              .name("s_pre_pd_energy_" + to_string(channel->id))
+              .desc("s_pre_pd_energy_" + to_string(channel->id))
+              .precision(6)
+              ;
+          sref_energy
+              .name("sref_energy_" + to_string(channel->id))
+              .desc("sref_energy_" + to_string(channel->id))
+              .precision(6)
+              ;
+          sref_ref_energy
+              .name("sref_ref_energy_" + to_string(channel->id))
+              .desc("sref_ref_energy_" + to_string(channel->id))
+              .precision(6)
+              ;
+          sref_ref_act_energy
+              .name("sref_ref_act_energy_" + to_string(channel->id))
+              .desc("sref_ref_act_energy_" + to_string(channel->id))
+              .precision(6)
+              ;
+          sref_ref_pre_energy
+              .name("sref_ref_pre_energy_" + to_string(channel->id))
+              .desc("sref_ref_pre_energy_" + to_string(channel->id))
+              .precision(6)
+              ;
+
+          spup_energy
+              .name("spup_energy_" + to_string(channel->id))
+              .desc("spup_energy_" + to_string(channel->id))
+              .precision(6)
+              ;
+          spup_ref_energy
+              .name("spup_ref_energy_" + to_string(channel->id))
+              .desc("spup_ref_energy_" + to_string(channel->id))
+              .precision(6)
+              ;
+          spup_ref_act_energy
+              .name("spup_ref_act_energy_" + to_string(channel->id))
+              .desc("spup_ref_act_energy_" + to_string(channel->id))
+              .precision(6)
+              ;
+          spup_ref_pre_energy
+              .name("spup_ref_pre_energy_" + to_string(channel->id))
+              .desc("spup_ref_pre_energy_" + to_string(channel->id))
+              .precision(6)
+              ;
+          pup_act_energy
+              .name("pup_act_energy_" + to_string(channel->id))
+              .desc("pup_act_energy_" + to_string(channel->id))
+              .precision(6)
+              ;
+          pup_pre_energy
+              .name("pup_pre_energy_" + to_string(channel->id))
+              .desc("pup_pre_energy_" + to_string(channel->id))
+              .precision(6)
+              ;
+
+          IO_power
+              .name("IO_power_" + to_string(channel->id))
+              .desc("IO_power_" + to_string(channel->id))
+              .precision(6)
+              ;
+          WR_ODT_power
+              .name("WR_ODT_power_" + to_string(channel->id))
+              .desc("WR_ODT_power_" + to_string(channel->id))
+              .precision(6)
+              ;
+          TermRD_power
+              .name("TermRD_power_" + to_string(channel->id))
+              .desc("TermRD_power_" + to_string(channel->id))
+              .precision(6)
+              ;
+          TermWR_power
+              .name("TermWR_power_" + to_string(channel->id))
+              .desc("TermWR_power_" + to_string(channel->id))
+              .precision(6)
+              ;
+
+          read_io_energy
+              .name("read_io_energy_" + to_string(channel->id))
+              .desc("read_io_energy_" + to_string(channel->id))
+              .precision(6)
+              ;
+          write_term_energy
+              .name("write_term_energy_" + to_string(channel->id))
+              .desc("write_term_energy_" + to_string(channel->id))
+              .precision(6)
+              ;
+          read_oterm_energy
+              .name("read_oterm_energy_" + to_string(channel->id))
+              .desc("read_oterm_energy_" + to_string(channel->id))
+              .precision(6)
+              ;
+          write_oterm_energy
+              .name("write_oterm_energy_" + to_string(channel->id))
+              .desc("write_oterm_energy_" + to_string(channel->id))
+              .precision(6)
+              ;
+          io_term_energy
+              .name("io_term_energy_" + to_string(channel->id))
+              .desc("io_term_energy_" + to_string(channel->id))
+              .precision(6)
+              ;
+
+          ref_energy
+              .name("ref_energy_" + to_string(channel->id))
+              .desc("ref_energy_" + to_string(channel->id))
+              .precision(6)
+              ;
+
+          total_energy
+              .name("total_energy_" + to_string(channel->id))
+              .desc("total_energy_" + to_string(channel->id))
+              .precision(6)
+              ;
+          average_power
+              .name("average_power_" + to_string(channel->id))
+              .desc("average_power_" + to_string(channel->id))
+              .precision(6)
+              ;
+
+          numberofacts_s
+              .name("numberofacts_s_" + to_string(channel->id))
+              .desc("Number of activate commands_" + to_string(channel->id))
+              .precision(0)
+              ;
+          numberofpres_s
+              .name("numberofpres_s_" + to_string(channel->id))
+              .desc("Number of precharge commands_" + to_string(channel->id))
+              .precision(0)
+              ;
+          numberofreads_s
+              .name("numberofreads_s_" + to_string(channel->id))
+              .desc("Number of reads commands_" + to_string(channel->id))
+              .precision(0)
+              ;
+          numberofwrites_s
+              .name("numberofwrites_s_" + to_string(channel->id))
+              .desc("Number of writes commands_" + to_string(channel->id))
+              .precision(0)
+              ;
+          numberofrefs_s
+              .name("numberofrefs_s_" + to_string(channel->id))
+              .desc("Number of refresh commands_" + to_string(channel->id))
+              .precision(0)
+              ;
+          precycles_s
+              .name("precycles_s_" + to_string(channel->id))
+              .desc("Number of precharge cycles_" + to_string(channel->id))
+              .precision(0)
+              ;
+          actcycles_s
+              .name("actcycles_s_" + to_string(channel->id))
+              .desc("Number of active cycles_" + to_string(channel->id))
+              .precision(0)
+              ;
+          idlecycles_act_s
+              .name("idlecycles_act_s_" + to_string(channel->id))
+              .desc("Number of Idle cycles in the active state_" + to_string(channel->id))
+              .precision(0)
+              ;
+          idlecycles_pre_s
+              .name("idlecycles_pre_s_" + to_string(channel->id))
+              .desc("Number of Idle cycles in the precharge state_" + to_string(channel->id))
+              .precision(0)
+              ;
+          f_act_pdns_s
+              .name("f_act_pdns_s_" + to_string(channel->id))
+              .desc("Number of fast-exit activate power-downs_" + to_string(channel->id))
+              .precision(0)
+              ;
+          s_act_pdns_s
+              .name("s_act_pdns_s_" + to_string(channel->id))
+              .desc("Number of slow-exit activate power-downs_" + to_string(channel->id))
+              .precision(0)
+              ;
+          f_pre_pdns_s
+              .name("f_pre_pdns_s_" + to_string(channel->id))
+              .desc("Number of fast-exit precharged power-downs_" + to_string(channel->id))
+              .precision(0)
+              ;
+          s_pre_pdns_s
+              .name("s_pre_pdns_s_" + to_string(channel->id))
+              .desc("Number of slow-exit activate power-downs_" + to_string(channel->id))
+              .precision(0)
+              ;
+          numberofsrefs_s
+              .name("numberofsrefs_s_" + to_string(channel->id))
+              .desc("Number of self-refresh commands_" + to_string(channel->id))
+              .precision(0)
+              ;
+          f_act_pdcycles_s
+              .name("f_act_pdcycles_s_" + to_string(channel->id))
+              .desc("Number of clock cycles in fast-exit activate power-down mode_" + to_string(channel->id))
+              .precision(0)
+              ;
+          s_act_pdcycles_s
+              .name("s_act_pdcycles_s_" + to_string(channel->id))
+              .desc("Number of clock cycles in slow-exit activate power-down mode_" + to_string(channel->id))
+              .precision(0)
+              ;
+          f_pre_pdcycles_s
+              .name("f_pre_pdcycles_s_" + to_string(channel->id))
+              .desc("Number of clock cycles in fast-exit precharged power-down mode_" + to_string(channel->id))
+              .precision(0)
+              ;
+          s_pre_pdcycles_s
+              .name("s_pre_pdcycles_s_" + to_string(channel->id))
+              .desc("Number of clock cycles in slow-exit precharged power-down mode_" + to_string(channel->id))
+              .precision(0)
+              ;
+          sref_cycles_s
+              .name("sref_cycles_s_" + to_string(channel->id))
+              .desc("Number of clock cycles in self-refresh mode_" + to_string(channel->id))
+              .precision(0)
+              ;
+          pup_act_cycles_s
+              .name("pup_act_cycles_s_" + to_string(channel->id))
+              .desc("Number of clock cycles in activate power-up mode_" + to_string(channel->id))
+              .precision(0)
+              ;
+          pup_pre_cycles_s
+              .name("pup_pre_cycles_s_" + to_string(channel->id))
+              .desc("Number of clock cycles in precharged power-up mode_" + to_string(channel->id))
+              .precision(0)
+              ;
+          spup_cycles_s
+              .name("spup_cycles_s_" + to_string(channel->id))
+              .desc("Number of clock cycles in self-refresh power-up mode_" + to_string(channel->id))
+              .precision(0)
+              ;
+          sref_ref_act_cycles_s
+              .name("sref_ref_act_cycles_s_" + to_string(channel->id))
+              .desc("Number of active auto-refresh cycles in self-refresh mode_" + to_string(channel->id))
+              .precision(0)
+              ;
+          sref_ref_pre_cycles_s
+              .name("sref_ref_pre_cycles_s_" + to_string(channel->id))
+              .desc("Number of precharged auto-refresh cycles in self-refresh mode_" + to_string(channel->id))
+              .precision(0)
+              ;
+          spup_ref_act_cycles_s
+              .name("spup_ref_act_cycles_s_" + to_string(channel->id))
+              .desc("Number of active auto-refresh cycles during self-refresh exit_" + to_string(channel->id))
+              .precision(0)
+              ;
+          spup_ref_pre_cycles_s
+              .name("spup_ref_pre_cycles_s_" + to_string(channel->id))
+              .desc("Number of precharged auto-refresh cycles during self-refresh exit_" + to_string(channel->id))
+              .precision(0)
+              ;
+        }
     }
 
     ~Controller(){
@@ -150,6 +578,81 @@ public:
     }
 
     void finish(long dram_cycles) {
+      // finalize DRAMPower
+      if (with_drampower) {
+        drampower->updateCounters(true); // last update
+        drampower->calcEnergy();
+        act_energy = drampower->getEnergy().act_energy;
+        pre_energy = drampower->getEnergy().pre_energy;
+        read_energy = drampower->getEnergy().read_energy;
+        write_energy = drampower->getEnergy().write_energy;
+
+        act_stdby_energy = drampower->getEnergy().act_stdby_energy;
+        pre_stdby_energy = drampower->getEnergy().pre_stdby_energy;
+        idle_energy_act = drampower->getEnergy().idle_energy_act;
+        idle_energy_pre = drampower->getEnergy().idle_energy_pre;
+
+        f_act_pd_energy = drampower->getEnergy().f_act_pd_energy;
+        f_pre_pd_energy = drampower->getEnergy().f_pre_pd_energy;
+        s_act_pd_energy = drampower->getEnergy().s_act_pd_energy;
+        s_pre_pd_energy = drampower->getEnergy().s_pre_pd_energy;
+        sref_energy = drampower->getEnergy().sref_energy;
+        sref_ref_energy = drampower->getEnergy().sref_ref_energy;
+        sref_ref_act_energy = drampower->getEnergy().sref_ref_act_energy;
+        sref_ref_pre_energy = drampower->getEnergy().sref_ref_pre_energy;
+
+        spup_energy = drampower->getEnergy().spup_energy;
+        spup_ref_energy = drampower->getEnergy().spup_ref_energy;
+        spup_ref_act_energy = drampower->getEnergy().spup_ref_act_energy;
+        spup_ref_pre_energy = drampower->getEnergy().spup_ref_pre_energy;
+        pup_act_energy = drampower->getEnergy().pup_act_energy;
+        pup_pre_energy = drampower->getEnergy().pup_pre_energy;
+
+        IO_power = drampower->getPower().IO_power;
+        WR_ODT_power = drampower->getPower().WR_ODT_power;
+        TermRD_power = drampower->getPower().TermRD_power;
+        TermWR_power = drampower->getPower().TermWR_power;
+
+        read_io_energy = drampower->getEnergy().read_io_energy;
+        write_term_energy = drampower->getEnergy().write_term_energy;
+        read_oterm_energy = drampower->getEnergy().read_oterm_energy;
+        write_oterm_energy = drampower->getEnergy().write_oterm_energy;
+        io_term_energy = drampower->getEnergy().io_term_energy;
+
+        ref_energy = drampower->getEnergy().ref_energy;
+
+        total_energy = drampower->getEnergy().total_energy;
+        average_power = drampower->getPower().average_power;
+        //drampower counter
+        numberofacts_s = drampower->counters.numberofacts;
+        numberofpres_s = drampower->counters.numberofpres;
+        numberofreads_s = drampower->counters.numberofreads;
+        numberofwrites_s = drampower->counters.numberofwrites;
+        numberofrefs_s = drampower->counters.numberofrefs;
+        precycles_s = drampower->counters.precycles;
+        actcycles_s = drampower->counters.actcycles;
+        idlecycles_act_s = drampower->counters.idlecycles_act;
+        idlecycles_pre_s = drampower->counters.idlecycles_pre;
+        f_act_pdns_s = drampower->counters.f_act_pdns;
+        s_act_pdns_s = drampower->counters.s_act_pdns;
+        f_pre_pdns_s = drampower->counters.f_pre_pdns;
+        s_pre_pdns_s = drampower->counters.s_pre_pdns;
+        numberofsrefs_s = drampower->counters.numberofsrefs;
+        f_act_pdcycles_s = drampower->counters.f_act_pdcycles;
+        s_act_pdcycles_s = drampower->counters.s_act_pdcycles;
+        f_pre_pdcycles_s = drampower->counters.f_pre_pdcycles;
+        s_pre_pdcycles_s = drampower->counters.s_pre_pdcycles;
+        sref_cycles_s = drampower->counters.sref_cycles;
+        pup_act_cycles_s = drampower->counters.pup_act_cycles;
+        pup_pre_cycles_s = drampower->counters.pup_pre_cycles;
+        spup_cycles_s = drampower->counters.spup_cycles;
+        sref_ref_act_cycles_s = drampower->counters.sref_ref_act_cycles;
+        sref_ref_pre_cycles_s = drampower->counters.sref_ref_pre_cycles;
+        spup_ref_act_cycles_s = drampower->counters.spup_ref_act_cycles;
+        spup_ref_pre_cycles_s = drampower->counters.spup_ref_pre_cycles;
+      }
+
+      // finalize DRAM status
       channel->finish(dram_cycles);
     }
 
@@ -370,6 +873,25 @@ private:
     void issue_cmd(typename T::Command cmd, const vector<int>& addr_vec)
     {
         assert(is_ready(cmd, addr_vec));
+
+        if (with_drampower) {
+          // update power estimation
+
+          const string& cmd_name = channel->spec->command_name[int(cmd)];
+          int bank_id = addr_vec[int(T::Level::Bank)];
+          if (channel->spec->standard_name == "DDR4" || channel->spec->standard_name == "GDDR5" || channel->spec->standard_name == "HBM") {
+              // if has bankgroup
+              bank_id += addr_vec[int(T::Level::Bank) - 1] * channel->spec->org_entry.count[int(T::Level::Bank)];
+          }
+          drampower->doCommand(Data::MemCommand::getTypeFromName(cmd_name), bank_id, clk);
+
+          update_counter++;
+          if (update_counter == 1000000) {
+              drampower->updateCounters(false); // not the last update
+              update_counter = 0;
+          }
+        }
+
         if (!no_DRAM_latency) {
           channel->update(cmd, addr_vec.data(), clk);
           rowtable->update(cmd, addr_vec, clk);
@@ -387,8 +909,9 @@ private:
                 file<<endl;
             else{
                 int bank_id = addr_vec[int(T::Level::Bank)];
-                if (channel->spec->standard_name == "DDR4" || channel->spec->standard_name == "GDDR5")
+                if (channel->spec->standard_name == "DDR4" || channel->spec->standard_name == "GDDR5" || channel->spec->standard_name == "HBM") {
                     bank_id += addr_vec[int(T::Level::Bank) - 1] * channel->spec->org_entry.count[int(T::Level::Bank)];
+                }
                 file<<','<<bank_id<<endl;
             }
         }
