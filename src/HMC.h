@@ -193,6 +193,7 @@ public:
     enum class Speed : int
     {
         HMC_2500,
+        HMC_2500_unlimit_bandwidth,
         MAX
     };
 
@@ -211,7 +212,8 @@ public:
         int nPD, nXP, nXPDLL; // XPDLL not found in DDR4??
         int nCKESR, nXS, nXSDLL; // nXSDLL TBD (nDLLK), nXS = (tRFC+10ns)/tCK
     } speed_table[int(Speed::MAX)] = {
-          {2500, 1250, 0.8, 4, 4, 6, 2, 17, 17, 17, 13, 34, 51, 9, 3, 9, 19, 7, 8, 17, 200, 9750, 6, 8, 0, 7, 0, 0}
+          {2500, 1250, 0.8, 4, 4, 6, 2, 17, 17, 17, 13, 34, 51, 9, 3, 9, 19, 7, 8, 17, 200, 9750, 6, 8, 0, 7, 0, 0},
+          {2500, 1250, 0.8, 0, 1, 1, 2, 17, 17, 17, 13, 34, 51, 9, 3, 9, 19, 7, 8, 17, 200, 9750, 6, 8, 0, 7, 0, 0},
     }, speed_entry;
 
     int read_latency;

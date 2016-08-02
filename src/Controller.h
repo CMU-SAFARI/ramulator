@@ -109,9 +109,9 @@ public:
         if (configs["unlimit_bandwidth"] == "true") {
           unlimit_bandwidth = true;
           printf("nBL: %d\n", channel->spec->speed_entry.nBL);
-          channel->spec->speed_entry.nBL = 0;
-          channel->spec->read_latency = channel->spec->speed_entry.nCL;
-          channel->spec->speed_entry.nCCD = 1;
+          assert(channel->spec->speed_entry.nBL == 0);
+          assert(channel->spec->read_latency == channel->spec->speed_entry.nCL);
+          assert(channel->spec->speed_entry.nCCD == 1);
         }
     }
 

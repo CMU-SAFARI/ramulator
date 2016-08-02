@@ -30,6 +30,7 @@ map<string, enum GDDR5::Speed> GDDR5::speed_map = {
     {"GDDR5_7000_disable_bg", GDDR5::Speed::GDDR5_7000_disable_bg},
     {"GDDR5_7000_larger_REFI", GDDR5::Speed::GDDR5_7000_larger_REFI},
     {"GDDR5_7000_disable_bg_larger_REFI", GDDR5::Speed::GDDR5_7000_disable_bg_larger_REFI},
+    {"GDDR5_7000_unlimit_bandwidth", GDDR5::Speed::GDDR5_7000_unlimit_bandwidth},
 };
 
 GDDR5::GDDR5(Org org, Speed speed) : 

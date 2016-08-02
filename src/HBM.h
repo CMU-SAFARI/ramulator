@@ -172,6 +172,7 @@ public:
     enum class Speed : int
     {
         HBM_1Gbps,
+        HBM_1Gbps_unlimit_bandwidth,
         MAX
     };
 
@@ -190,7 +191,8 @@ public:
         int nPD, nXP;
         int nCKESR, nXS;
     } speed_table[int(Speed::MAX)] = {
-        {1000, 500, 2.0, 2, 2, 3, 7, 7, 6, 7, 4, 17, 24, 7, 2, 4, 8, 4, 5, 20, 0, 1950, 0, 5, 5, 5, 0}
+        {1000, 500, 2.0, 2, 2, 3, 7, 7, 6, 7, 4, 17, 24, 7, 2, 4, 8, 4, 5, 20, 0, 1950, 0, 5, 5, 5, 0},
+        {1000, 500, 2.0, 0, 1, 1, 7, 7, 6, 7, 4, 17, 24, 7, 2, 4, 8, 4, 5, 20, 0, 1950, 0, 5, 5, 5, 0},
     }, speed_entry;
 
     int read_latency;

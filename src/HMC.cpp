@@ -25,7 +25,7 @@ map<string, enum HMC::Org> HMC::org_map = {
 };
 
 map<string, enum HMC::Speed> HMC::speed_map = {
-    {"HMC_2500", HMC::Speed::HMC_2500},
+    {"HMC_2500_unlimit_bandwidth", HMC::Speed::HMC_2500_unlimit_bandwidth},
 };
 
 map<string, enum HMC::MaxBlock> HMC::maxblock_map = {

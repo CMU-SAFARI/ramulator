@@ -23,6 +23,7 @@ map<string, enum HBM::Org> HBM::org_map = {
 
 map<string, enum HBM::Speed> HBM::speed_map = {
     {"HBM_1Gbps", HBM::Speed::HBM_1Gbps},
+    {"HBM_1Gbps_unlimit_bandwidth", HBM::Speed::HBM_1Gbps_unlimit_bandwidth},
 };
 
 HBM::HBM(Org org, Speed speed)
