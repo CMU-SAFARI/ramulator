@@ -11,8 +11,8 @@ CXX := clang++
 # CXX := g++-5
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S), Linux)
-  CXXFLAGS := -O3 -std=c++11 -g -Wall
-  LDFLAGS := -lboost_program_options
+  CXXFLAGS := -O3 -std=c++11 -g -Wall -I/home/tianshi/tianshi-Workspace/DRAMPower/src -L/home/tianshi/tianshi-Workspace/DRAMPower/src
+  LDFLAGS := -lboost_program_options -ldrampowerxml -ldrampower -lxerces-c
 endif
 ifeq ($(UNAME_S), Darwin)
   CXXFLAGS := -O3 -std=c++11 -g -Wall -I$(BOOST_PATH)/include
@@ -41,7 +41,10 @@ endif
 
 
 ramulator: $(MAIN) $(OBJS) $(SRCDIR)/*.h | depend
-	$(CXX) $(CXXFLAGS) -DRAMULATOR -o $@ $(MAIN) $(OBJS) $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) -DRAMULATOR -o $@ $(MAIN) $(INC) $(OBJS) $(LIB) $(LDFLAGS)
+
+ramulator_debug: $(MAIN) $(OBJS) $(SRCDIR)/*.h | depend
+	$(CXX) $(CXXFLAGS) -DRAMULATOR -o $@ $(MAIN) $(INC) $(OBJS) $(LIB) $(LDFLAGS)
 
 $(OBJS): | $(OBJDIR)
 
@@ -49,4 +52,4 @@ $(OBJDIR):
 	@mkdir -p $@
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.cpp
-	$(CXX) $(CXXFLAGS) -DRAMULATOR -c -o $@ $<
+	$(CXX) $(CXXFLAGS) -DRAMULATOR -c -o $@ $(INC) $(LIB) $(LDFLAGS) $<
