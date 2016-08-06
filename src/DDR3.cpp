@@ -31,6 +31,7 @@ map<string, enum DDR3::Speed> DDR3::speed_map = {
     {"DDR3_2133L", DDR3::Speed::DDR3_2133L}, {"DDR3_2133M", DDR3::Speed::DDR3_2133M},
     {"DDR3_2133_14", DDR3::Speed::DDR3_2133_14},
     {"DDR3_2133L_unlimit_bandwidth", DDR3::Speed::DDR3_2133L_unlimit_bandwidth},
+    {"DDR3_2133_14_unlimit_bandwidth", DDR3::Speed::DDR3_2133_14_unlimit_bandwidth},
 };
 
 
