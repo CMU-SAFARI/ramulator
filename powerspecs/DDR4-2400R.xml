@@ -1,0 +1,62 @@
+<!DOCTYPE memspec SYSTEM "memspec.dtd">
+<memspec>
+
+  <parameter id="memoryId" type="string" value="MICRON_2Gb_DDR4-2400_16bit_A" />
+  <parameter id="memoryType" type="string" value="DDR4" />
+  <memarchitecturespec>
+    <parameter id="width" type="uint" value="16" />
+    <parameter id="nbrOfBankGroups" type="uint" value="4" />
+    <parameter id="nbrOfBanks" type="uint" value="16" />
+    <parameter id="nbrOfRanks" type="uint" value="1" />
+    <parameter id="nbrOfColumns" type="uint" value="1024" />
+    <parameter id="nbrOfRows" type="uint" value="16384" />
+    <parameter id="dataRate" type="uint" value="2" />
+    <parameter id="burstLength" type="uint" value="8" />
+  </memarchitecturespec>
+  <memtimingspec>
+      <parameter id="clkMhz" type="double" value="1200" />
+      <parameter id="REFI" type="uint" value="9360" />
+      <parameter id="RFC" type="uint" value="193" />
+      <parameter id="RL" type="uint" value="16" />
+      <parameter id="WL" type="uint" value="16" />
+      <parameter id="CL" type="uint" value="16" />
+      <parameter id="AL" type="uint" value="0" />
+      <parameter id="RP" type="uint" value="16" />
+      <parameter id="RAS" type="uint" value="39" />
+      <parameter id="RCD" type="uint" value="16" />
+      <parameter id="RC" type="uint" value="55" />
+      <parameter id="FAW" type="uint" value="36" />
+      <parameter id="RTP" type="uint" value="9" />
+      <parameter id="WR" type="uint" value="18" />
+      <parameter id="RRD_S" type="uint" value="7" />
+      <parameter id="RRD_L" type="uint" value="8" />
+      <parameter id="CCD_S" type="uint" value="4" />
+      <parameter id="CCD_L" type="uint" value="6" />
+      <parameter id="WTR_S" type="uint" value="3" />
+      <parameter id="WTR_L" type="uint" value="9" />
+      <parameter id="DQSCK" type="uint" value="2" />
+      <parameter id="XP" type="uint" value="8" />
+      <parameter id="XPDLL" type="uint" value="10" />
+      <parameter id="XS" type="uint" value="204" />
+      <parameter id="XSDLL" type="uint" value="768" />
+      <parameter id="CKE" type="uint" value="6" />
+      <parameter id="CKESR" type="uint" value="7" />
+  </memtimingspec>
+  <mempowerspec>
+      <parameter id="idd0" type="double" value="68.0" />
+      <parameter id="idd02" type="double" value="4.6" />
+      <parameter id="idd2p0" type="double" value="32.0" />
+      <parameter id="idd2p1" type="double" value="32.0" />
+      <parameter id="idd2n" type="double" value="50.0" />
+      <parameter id="idd3p0" type="double" value="22.0" />
+      <parameter id="idd3p1" type="double" value="22.0" />
+      <parameter id="idd3n" type="double" value="67.0" />
+      <parameter id="idd4r" type="double" value="230.0" />
+      <parameter id="idd4w" type="double" value="314.0" />
+      <parameter id="idd5" type="double" value="192.0" />
+      <parameter id="idd6" type="double" value="20.0" />
+      <parameter id="idd62" type="double" value="2.6" />
+      <parameter id="vdd" type="double" value="1.2" />
+      <parameter id="vdd2" type="double" value="2.5" />
+  </mempowerspec>
+</memspec>
