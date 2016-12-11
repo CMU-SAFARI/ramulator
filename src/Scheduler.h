@@ -267,11 +267,10 @@ public:
         int row = *end;
 
         auto itr = table.find(rowgroup);
-        auto entry = table[rowgroup];
-        if (itr == table.end() || entry.row != row)
+        if (itr == table.end() || itr->second.row != row)
             return 0;
 
-        return entry.hits;
+        return itr->second.hits;
     }
 };
 
