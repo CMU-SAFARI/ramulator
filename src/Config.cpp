@@ -56,6 +56,8 @@ void Config::parse(const string& fname)
           mem_tick = atoi(tokens[1].c_str());
         } else if (tokens[0] == "expected_limit_insts") {
           expected_limit_insts = atoi(tokens[1].c_str());
+        } else if (tokens[0] == "warmup_insts") {
+          warmup_insts = atoi(tokens[1].c_str());
         }
     }
     file.close();

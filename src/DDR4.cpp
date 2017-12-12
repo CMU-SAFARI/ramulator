@@ -21,6 +21,7 @@ map<string, enum DDR4::Speed> DDR4::speed_map = {
     {"DDR4_1866M", DDR4::Speed::DDR4_1866M}, {"DDR4_1866N", DDR4::Speed::DDR4_1866N},
     {"DDR4_2133P", DDR4::Speed::DDR4_2133P}, {"DDR4_2133R", DDR4::Speed::DDR4_2133R},
     {"DDR4_2400R", DDR4::Speed::DDR4_2400R}, {"DDR4_2400U", DDR4::Speed::DDR4_2400U},
+    {"DDR4_3200", DDR4::Speed::DDR4_3200},
 };
 
 
@@ -52,40 +53,40 @@ void DDR4::set_rank_number(int rank) {
 
 void DDR4::init_speed()
 {
-    const static int RRDS_TABLE[2][4] = {
-        {4, 4, 4, 4},
-        {5, 5, 6, 7}
+    const static int RRDS_TABLE[2][5] = {
+        {4, 4, 4, 4, 4},
+        {5, 5, 6, 7, 9}
     };
-    const static int RRDL_TABLE[2][4] = {
-        {5, 5, 6, 6},
-        {6, 6, 7, 8}
+    const static int RRDL_TABLE[2][5] = {
+        {5, 5, 6, 6, 8},
+        {6, 6, 7, 8, 11}
     };
-    const static int FAW_TABLE[3][4] = {
-        {16, 16, 16, 16},
-        {20, 22, 23, 26},
-        {28, 28, 32, 36}
+    const static int FAW_TABLE[3][5] = {
+        {16, 16, 16, 16, 16},
+        {20, 22, 23, 26, 34},
+        {28, 28, 32, 36, 48}
     };
-    const static int RFC_TABLE[int(RefreshMode::MAX)][3][4] = {{   
-            {128, 150, 171, 192},
-            {208, 243, 278, 312},
-            {280, 327, 374, 420}
+    const static int RFC_TABLE[int(RefreshMode::MAX)][3][5] = {{   
+            {128, 150, 171, 192, 256},
+            {208, 243, 278, 312, 416},
+            {280, 327, 374, 420, 560}
         },{
-            {88, 103, 118, 132},
-            {128, 150, 171, 192},
-            {208, 243, 278, 312} 
+            {88, 103, 118, 132,  176},
+            {128, 150, 171, 192, 256},
+            {208, 243, 278, 312, 416} 
         },{
-            {72, 84, 96, 108},
-            {88, 103, 118, 132},
-            {128, 150, 171, 192}  
+            {72, 84, 96, 108, 144},
+            {88, 103, 118, 132, 176},
+            {128, 150, 171, 192, 256}  
         }
     };
-    const static int REFI_TABLE[4] = {
-        6240, 7280, 8320, 9360
+    const static int REFI_TABLE[5] = {
+        6240, 7280, 8320, 9360, 12480
     };
-    const static int XS_TABLE[3][4] = {
-        {136, 159, 182, 204},
-        {216, 252, 288, 324},
-        {288, 336, 384, 432}
+    const static int XS_TABLE[3][5] = {
+        {136, 159, 182, 204, 272},
+        {216, 252, 288, 324, 532},
+        {288, 336, 384, 432, 576}
     };
 
     int speed = 0, density = 0;
@@ -94,6 +95,7 @@ void DDR4::init_speed()
         case 1866: speed = 1; break;
         case 2133: speed = 2; break;
         case 2400: speed = 3; break;
+        case 3200: speed = 4; break;
         default: assert(false);
     };
     switch (org_entry.size >> 10){

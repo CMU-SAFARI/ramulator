@@ -26,7 +26,8 @@ public:
 
     enum class Type {
         FCFS, FRFCFS, FRFCFS_Cap, FRFCFS_PriorHit, MAX
-    } type = Type::FRFCFS_PriorHit;
+    } type = Type::FRFCFS_Cap;
+    //} type = Type::FCFS;
 
     long cap = 16;
 
@@ -258,7 +259,7 @@ public:
         } /* closing */
     }
 
-    int get_hits(vector<int>& addr_vec)
+    int get_hits(const vector<int>& addr_vec, const bool to_opened_row = false)
     {
         auto begin = addr_vec.begin();
         auto end = begin + int(T::Level::Row);
@@ -267,10 +268,26 @@ public:
         int row = *end;
 
         auto itr = table.find(rowgroup);
-        if (itr == table.end() || itr->second.row != row)
+        if (itr == table.end())
+            return 0;
+
+        if(!to_opened_row && (itr->second.row != row))
             return 0;
 
         return itr->second.hits;
+    }
+
+    int get_open_row(const vector<int>& addr_vec) {
+        auto begin = addr_vec.begin();
+        auto end = begin + int(T::Level::Row);
+
+        vector<int> rowgroup(begin, end);
+
+        auto itr = table.find(rowgroup);
+        if(itr == table.end())
+            return -1;
+
+        return itr->second.row;
     }
 };
 

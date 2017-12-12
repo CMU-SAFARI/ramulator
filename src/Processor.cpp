@@ -52,6 +52,10 @@ Processor::Processor(const Config& configs,
 
 void Processor::tick() {
   cpu_cycles++;
+
+  if((int(cpu_cycles.value()) % 50000000) == 0)
+      printf("CPU heartbeat, cycles: %d \n", (int(cpu_cycles.value())));
+
   if (!(no_core_caches && no_shared_cache)) {
     cachesys->tick();
   }
@@ -110,6 +114,26 @@ bool Processor::has_reached_limit() {
     }
   }
   return true;
+}
+
+long Processor::get_insts() {
+    long insts_total = 0;
+    for (unsigned int i = 0 ; i < cores.size(); i++) {
+        insts_total += cores[i]->get_insts();
+    }
+
+    return insts_total;
+}
+
+void Processor::reset_stats() {
+    for (unsigned int i = 0 ; i < cores.size(); i++) {
+        cores[i]->reset_stats();
+    }
+
+    ipc = 0;
+
+    for (unsigned int i = 0; i < ipcs.size(); i++)
+        ipcs[i] = -1;
 }
 
 Core::Core(const Config& configs, int coreid,
@@ -246,6 +270,10 @@ void Core::tick()
     }
     if (!more_reqs) {
       if (!reached_limit) { // if the length of this trace is shorter than expected length, then record it when the whole trace finishes, and set reached_limit to true.
+        // Hasan: overriding this behavior. We start the trace from the
+        // beginning until the requested amount of instructions are
+        // simulated. This should never be reached now.
+        assert(false && "Shouldn't be reached since we start over the trace");
         record_cycs = clk;
         record_insts = long(cpu_inst.value());
         memory.record_core(id);
@@ -263,6 +291,10 @@ bool Core::has_reached_limit() {
   return reached_limit;
 }
 
+long Core::get_insts() {
+    return long(cpu_inst.value());
+}
+
 void Core::receive(Request& req)
 {
     window.set_ready(req.addr, ~(l1_blocksz - 1l));
@@ -270,6 +302,13 @@ void Core::receive(Request& req)
       memory_access_cycles += (req.depart - max(last, req.arrive));
       last = req.depart;
     }
+}
+
+void Core::reset_stats() {
+    clk = 0;
+    retired = 0;
+    cpu_inst = 0;
+    reached_limit = false;
 }
 
 bool Window::is_full()
@@ -379,9 +418,11 @@ bool Trace::get_filtered_request(long& bubble_cnt, long& req_addr, Request::Type
     if (file.eof() || line.size() == 0) {
         file.clear();
         file.seekg(0, file.beg);
-        has_write = false;
-        line_num = 0;
-        return false;
+        line_num = 0; //Hasan
+        getline(file, line); // Hasan: starting over the file
+        //has_write = false;
+        line_num++; //Hasan
+        //return false;
     }
 
     size_t pos, end;

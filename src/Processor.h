@@ -67,9 +67,11 @@ public:
         std::shared_ptr<CacheSystem> cachesys, MemoryBase& memory);
     void tick();
     void receive(Request& req);
+    void reset_stats();
     double calc_ipc();
     bool finished();
     bool has_reached_limit();
+    long get_insts(); // the number of the instructions issued to the core
     function<void(Request&)> callback;
 
     bool no_core_caches = true;
@@ -90,7 +92,7 @@ public:
     ScalarStat record_insts;
     long expected_limit_insts;
     // This is set true iff expected number of instructions has been executed or all instructions are executed.
-    bool reached_limit = false;;
+    bool reached_limit = false;
 
 private:
     Trace trace;
@@ -113,8 +115,10 @@ public:
         function<bool(Request)> send, MemoryBase& memory);
     void tick();
     void receive(Request& req);
+    void reset_stats();
     bool finished();
     bool has_reached_limit();
+    long get_insts(); // the total number of instructions issued to all cores
 
     std::vector<std::unique_ptr<Core>> cores;
     std::vector<double> ipcs;

@@ -31,6 +31,10 @@ typedef std::vector<Counter> VCounter;
 typedef std::vector<Result> VResult;
 typedef std::numeric_limits<Counter> CounterLimits;
 
+class StatBase;
+extern std::vector<StatBase*> all_stats;
+void reset_stats();
+
 // Flags
 const uint16_t init      = 0x00000001;
 const uint16_t display   = 0x00000002;
@@ -58,6 +62,11 @@ class Flags {
 
 class StatBase {
  public:
+    StatBase() {
+        all_stats.push_back(this);
+    }
+
+
   // TODO implement print for Distribution, Histogram,
   // AverageDeviation, StandardDeviation
   virtual void print(std::ofstream& file) = 0;

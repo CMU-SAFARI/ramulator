@@ -25,6 +25,8 @@ using namespace std;
 namespace ramulator
 {
 
+    extern bool warmup_complete;
+
 template <typename T>
 class Controller
 {
@@ -42,6 +44,7 @@ protected:
     VectorStat write_row_hits;
     VectorStat write_row_misses;
     VectorStat write_row_conflicts;
+    ScalarStat useless_activates;
 
     ScalarStat read_latency_avg;
     ScalarStat read_latency_sum;
@@ -80,6 +83,11 @@ public:
 
     Queue readq;  // queue for read requests
     Queue writeq;  // queue for write requests
+    Queue actq; // read and write requests for which activate was issued are moved to 
+                   // actq, which has higher priority than readq and writeq.
+                   // This is an optimization
+                   // for avoiding useless activations (i.e., PRECHARGE
+                   // after ACTIVATE w/o READ of WRITE command)
     Queue otherq;  // queue for all "other" requests (e.g., refresh)
 
     deque<Request> pending;  // read requests that are about to receive data from DRAM
@@ -167,6 +175,12 @@ public:
             .init(configs.get_core_num())
             .name("write_row_conflicts_channel_"+to_string(channel->id) + "_core")
             .desc("Number of row conflicts for write requests per channel per core")
+            .precision(0)
+            ;
+
+        useless_activates
+            .name("useless_activates_"+to_string(channel->id)+ "_core")
+            .desc("Number of useless activations. E.g, ACT -> PRE w/o RD or WR")
             .precision(0)
             ;
 
@@ -340,7 +354,10 @@ public:
         /*** 3. Should we schedule writes? ***/
         if (!write_mode) {
             // yes -- write queue is almost full or read queue is empty
-            if (writeq.size() >= int(0.8 * writeq.max) || readq.size() == 0)
+            if (writeq.size() >= int(0.8 * writeq.max) 
+                    /*|| readq.size() == 0*/) // Hasan: Switching to write mode when there are just a few 
+                                              // write requests, even if the read queue is empty, incurs a lot of overhead. 
+                                              // Commented out the read request queue empty condition
                 write_mode = true;
         }
         else {
@@ -350,11 +367,21 @@ public:
         }
 
         /*** 4. Find the best command to schedule, if any ***/
-        Queue* queue = !write_mode ? &readq : &writeq;
-        if (otherq.size())
-            queue = &otherq;  // "other" requests are rare, so we give them precedence over reads/writes
+
+        // First check the actq (which has higher priority) to see if there
+        // are requests available to service in this cycle
+        Queue* queue = &actq;
 
         auto req = scheduler->get_head(queue->q);
+        if (req == queue->q.end() || !is_ready(req)) {
+            queue = !write_mode ? &readq : &writeq;
+
+            if (otherq.size())
+                queue = &otherq;  // "other" requests are rare, so we give them precedence over reads/writes
+
+            req = scheduler->get_head(queue->q);
+        }
+
         if (req == queue->q.end() || !is_ready(req)) {
             // we couldn't find a command to schedule -- let's try to be speculative
             auto cmd = T::Command::PRE;
@@ -404,8 +431,15 @@ public:
         issue_cmd(cmd, get_addr_vec(cmd, req));
 
         // check whether this is the last command (which finishes the request)
-        if (cmd != channel->spec->translate[int(req->type)])
+        if (cmd != channel->spec->translate[int(req->type)]){
+            if(channel->spec->is_opening(cmd)) {
+                // promote the request that caused issuing activation to actq
+                actq.q.push_back(*req);
+                queue->q.erase(req);
+            }
+
             return;
+        }
 
         // set a future completion time for read requests
         if (req->type == Request::Type::READ) {
@@ -492,6 +526,13 @@ private:
     {
         assert(is_ready(cmd, addr_vec));
         channel->update(cmd, addr_vec.data(), clk);
+
+        if(cmd == T::Command::PRE){
+            if(rowtable->get_hits(addr_vec, true) == 0){
+                useless_activates++;
+            }
+        }
+ 
         rowtable->update(cmd, addr_vec, clk);
         if (record_cmd_trace){
             // select rank
