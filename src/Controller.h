@@ -92,6 +92,8 @@ public:
 
     deque<Request> pending;  // read requests that are about to receive data from DRAM
     bool write_mode = false;  // whether write requests should be prioritized over reads
+    float wr_high_watermark = 0.8f; // threshold for switching to write mode
+    float wr_low_watermark = 0.2f; // threshold for switching back to read mode
     //long refreshed = 0;  // last time refresh requests were generated
 
     /* Command trace for DRAMPower 3.1 */
@@ -354,7 +356,7 @@ public:
         /*** 3. Should we schedule writes? ***/
         if (!write_mode) {
             // yes -- write queue is almost full or read queue is empty
-            if (writeq.size() >= int(0.8 * writeq.max) 
+            if (writeq.size() > int(wr_high_watermark * writeq.max) 
                     /*|| readq.size() == 0*/) // Hasan: Switching to write mode when there are just a few 
                                               // write requests, even if the read queue is empty, incurs a lot of overhead. 
                                               // Commented out the read request queue empty condition
@@ -362,7 +364,7 @@ public:
         }
         else {
             // no -- write queue is almost empty and read queue is not empty
-            if (writeq.size() <= int(0.2 * writeq.max) && readq.size() != 0)
+            if (writeq.size() < int(wr_low_watermark * writeq.max) && readq.size() != 0)
                 write_mode = false;
         }
 
@@ -502,6 +504,14 @@ public:
     // For telling whether this channel is under refresh
     bool is_refresh() {
       return clk <= channel->end_of_refreshing;
+    }
+
+    void set_high_writeq_watermark(const float watermark) {
+       wr_high_watermark = watermark; 
+    }
+
+    void set_low_writeq_watermark(const float watermark) {
+       wr_low_watermark = watermark;
     }
 
     void record_core(int coreid) {

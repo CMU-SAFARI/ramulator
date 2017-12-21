@@ -62,6 +62,11 @@ void run_dramtrace(const Config& configs, Memory<T, Controller>& memory, const c
                 else if (type == Request::Type::WRITE) writes++;
             }
         }
+        else {
+            memory.set_high_writeq_watermark(0.0f); // make sure that all write requests in the 
+                                                    // write queue are drained
+        }
+
         memory.tick();
         clks ++;
         Stats::curTick++; // memory clock, global, for Statistics

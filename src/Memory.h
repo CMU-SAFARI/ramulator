@@ -35,6 +35,8 @@ public:
     virtual void finish(void) = 0;
     virtual long page_allocator(long addr, int coreid) = 0;
     virtual void record_core(int coreid) = 0;
+    virtual void set_high_writeq_watermark(const float watermark) = 0;
+    virtual void set_low_writeq_watermark(const float watermark) = 0;
 };
 
 template <class T, template<typename> class Controller = Controller >
@@ -326,8 +328,18 @@ public:
     {
         int reqs = 0;
         for (auto ctrl: ctrls)
-            reqs += ctrl->readq.size() + ctrl->writeq.size() + ctrl->otherq.size() + ctrl->pending.size();
+            reqs += ctrl->readq.size() + ctrl->writeq.size() + ctrl->otherq.size() + ctrl->actq.size() + ctrl->pending.size();
         return reqs;
+    }
+
+    void set_high_writeq_watermark(const float watermark) {
+        for (auto ctrl: ctrls)
+            ctrl->set_high_writeq_watermark(watermark);
+    }
+
+    void set_low_writeq_watermark(const float watermark) {
+    for (auto ctrl: ctrls)
+        ctrl->set_low_writeq_watermark(watermark);
     }
 
     void finish(void) {
