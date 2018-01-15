@@ -163,4 +163,11 @@ void Controller<TLDRAM>::tick(){
     queue->q.erase(req);
 }
 
+template<>
+void Controller<TLDRAM>::cmd_issue_autoprecharge(typename TLDRAM::Command& cmd,
+                                                    const vector<int>& addr_vec) {
+    //TLDRAM currently does not have autoprecharge commands
+    return;
+}
+
 } /* namespace ramulator */

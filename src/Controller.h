@@ -433,7 +433,8 @@ public:
         issue_cmd(cmd, get_addr_vec(cmd, req));
 
         // check whether this is the last command (which finishes the request)
-        if (cmd != channel->spec->translate[int(req->type)]){
+        //if (cmd != channel->spec->translate[int(req->type)]){
+        if (!(channel->spec->is_accessing(cmd) || channel->spec->is_refreshing(cmd))) {
             if(channel->spec->is_opening(cmd)) {
                 // promote the request that caused issuing activation to actq
                 actq.q.push_back(*req);
@@ -532,8 +533,59 @@ private:
         return channel->decode(cmd, req->addr_vec.data());
     }
 
+    // upgrade to an autoprecharge command
+    void cmd_issue_autoprecharge(typename T::Command& cmd,
+                                            const vector<int>& addr_vec) {
+
+        // currently, autoprecharge is only used with closed row policy
+        if(channel->spec->is_accessing(cmd) && rowpolicy->type == RowPolicy<T>::Type::ClosedAP) {
+            // check if it is the last request to the opened row
+            Queue* queue = write_mode ? &writeq : &readq;
+
+            auto begin = addr_vec.begin();
+            vector<int> rowgroup(begin, begin + int(T::Level::Row) + 1);
+
+			int num_row_hits = 0;
+
+            for (auto itr = queue->q.begin(); itr != queue->q.end(); ++itr) {
+                if (is_row_hit(itr)) { 
+                    auto begin2 = itr->addr_vec.begin();
+                    vector<int> rowgroup2(begin2, begin2 + int(T::Level::Row) + 1);
+                    if(rowgroup == rowgroup2)
+                        num_row_hits++;
+                }
+            }
+
+            if(num_row_hits == 0) {
+                Queue* queue = &actq;
+                for (auto itr = queue->q.begin(); itr != queue->q.end(); ++itr) {
+                    if (is_row_hit(itr)) {
+                        auto begin2 = itr->addr_vec.begin();
+                        vector<int> rowgroup2(begin2, begin2 + int(T::Level::Row) + 1);
+                        if(rowgroup == rowgroup2)
+                            num_row_hits++;
+                    }
+                }
+            }
+
+            assert(num_row_hits > 0); // The current request should be a hit, 
+                                      // so there should be at least one request 
+                                      // that hits in the current open row
+            if(num_row_hits == 1) {
+                if(cmd == T::Command::RD)
+                    cmd = T::Command::RDA;
+                else if (cmd == T::Command::WR)
+                    cmd = T::Command::WRA;
+                else
+                    assert(false && "Unimplemented command type.");
+            }
+        }
+
+    }
+
     void issue_cmd(typename T::Command cmd, const vector<int>& addr_vec)
     {
+        cmd_issue_autoprecharge(cmd, addr_vec);
         assert(is_ready(cmd, addr_vec));
         channel->update(cmd, addr_vec.data(), clk);
 
@@ -583,6 +635,10 @@ void Controller<ALDRAM>::update_temp(ALDRAM::Temp current_temperature);
 
 template <>
 void Controller<TLDRAM>::tick();
+
+template <>
+void Controller<TLDRAM>::cmd_issue_autoprecharge(typename TLDRAM::Command& cmd,
+                                                    const vector<int>& addr_vec);
 
 } /*namespace ramulator*/
 

@@ -163,7 +163,7 @@ public:
     Controller<T>* ctrl;
 
     enum class Type {
-        Closed, Opened, Timeout, MAX
+        Closed, ClosedAP, Opened, Timeout, MAX
     } type = Type::Opened;
 
     int timeout = 50;
@@ -178,6 +178,15 @@ public:
 private:
     function<vector<int>(typename T::Command)> policy[int(Type::MAX)] = {
         // Closed
+        [this] (typename T::Command cmd) -> vector<int> {
+            for (auto& kv : this->ctrl->rowtable->table) {
+                if (!this->ctrl->is_ready(cmd, kv.first))
+                    continue;
+                return kv.first;
+            }
+            return vector<int>();},
+
+        // ClosedAP
         [this] (typename T::Command cmd) -> vector<int> {
             for (auto& kv : this->ctrl->rowtable->table) {
                 if (!this->ctrl->is_ready(cmd, kv.first))
@@ -246,7 +255,12 @@ public:
         if (spec->is_closing(cmd)) {
           // we are closing one or more rows -- remove their entries
           int n_rm = 0;
-          int scope = int(spec->scope[int(cmd)]);
+          int scope;
+          if (spec->is_accessing(cmd))
+            scope = int(T::Level::Row) - 1; //special condition for RDA and WRA
+          else
+            scope = int(spec->scope[int(cmd)]);
+
           for (auto it = table.begin(); it != table.end();) {
             if (equal(begin, begin + scope + 1, it->first.begin())) {
               n_rm++;
@@ -255,6 +269,7 @@ public:
             else
               it++;
           }
+
           assert(n_rm > 0);
         } /* closing */
     }
