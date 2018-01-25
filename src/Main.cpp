@@ -101,6 +101,12 @@ void run_cputrace(const Config& configs, Memory<T, Controller>& memory, const st
                 is_warming_up = true;
         }
 
+        if (is_warming_up && proc.has_reached_limit()) {
+            printf("WARNING: The end of the input trace file was reached during warmup. "
+                    "Consider changing warmup_insts in the config file. \n");
+            break;
+        }
+
     }
 
     warmup_complete = true;

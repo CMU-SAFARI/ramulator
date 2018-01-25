@@ -143,6 +143,10 @@ Core::Core(const Config& configs, int coreid,
     no_shared_cache(!configs.has_l3_cache()),
     llc(llc), trace(trace_fname), memory(memory)
 {
+  // set expected limit instruction for calculating weighted speedup
+  expected_limit_insts = configs.get_expected_limit_insts();
+  trace.expected_limit_insts = expected_limit_insts;
+
   // Build cache hierarchy
   if (no_core_caches) {
     send = send_next;
@@ -171,9 +175,7 @@ Core::Core(const Config& configs, int coreid,
     req_addr = memory.page_allocator(req_addr, id);
   }
 
-  // set expected limit instruction for calculating weighted speedup
-  expected_limit_insts = configs.get_expected_limit_insts();
-
+  
   // regStats
   record_cycs.name("record_cycs_core_" + to_string(id))
              .desc("Record cycle number for calculating weighted speedup. (Only valid when expected limit instruction number is non zero in config file.)")
@@ -273,7 +275,7 @@ void Core::tick()
         // Hasan: overriding this behavior. We start the trace from the
         // beginning until the requested amount of instructions are
         // simulated. This should never be reached now.
-        assert(false && "Shouldn't be reached since we start over the trace");
+        assert((expected_limit_insts == 0) && "Shouldn't be reached when expected_limit_insts > 0 since we start over the trace");
         record_cycs = clk;
         record_insts = long(cpu_inst.value());
         memory.record_core(id);
@@ -308,7 +310,6 @@ void Core::reset_stats() {
     clk = 0;
     retired = 0;
     cpu_inst = 0;
-    reached_limit = false;
 }
 
 bool Window::is_full()
@@ -418,11 +419,16 @@ bool Trace::get_filtered_request(long& bubble_cnt, long& req_addr, Request::Type
     if (file.eof() || line.size() == 0) {
         file.clear();
         file.seekg(0, file.beg);
-        line_num = 0; //Hasan
-        getline(file, line); // Hasan: starting over the file
-        //has_write = false;
-        line_num++; //Hasan
-        //return false;
+        line_num = 0;
+
+        if(expected_limit_insts == 0) {
+            has_write = false;
+            return false;
+        }
+        else { // starting over the input trace file
+            getline(file, line);
+            line_num++;
+        }
     }
 
     size_t pos, end;

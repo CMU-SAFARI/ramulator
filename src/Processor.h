@@ -27,6 +27,8 @@ public:
     // [address(hex)] [R/W]
     bool get_dramtrace_request(long& req_addr, Request::Type& req_type);
 
+    long expected_limit_insts = 0;
+
 private:
     std::ifstream file;
     std::string trace_name;
