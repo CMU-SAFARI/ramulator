@@ -185,7 +185,7 @@ bool Cache::send(Request req) {
 
     // Send the request to next level;
     if (!is_last_level) {
-      lower_cache->send(req);
+      return lower_cache->send(req);
     } else {
       cachesys->wait_list.push_back(
           make_pair(cachesys->clk + latency[int(level)], req));
