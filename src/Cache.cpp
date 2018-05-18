@@ -185,7 +185,9 @@ bool Cache::send(Request req) {
 
     // Send the request to next level;
     if (!is_last_level) {
-      lower_cache->send(req);
+      if(!lower_cache->send(req)) {
+        retry_list.push_back(req);
+      }
     } else {
       cachesys->wait_list.push_back(
           make_pair(cachesys->clk + latency[int(level)], req));
@@ -380,6 +382,18 @@ void Cache::callback(Request& req) {
       hc->callback(req);
     }
   }
+}
+
+void Cache::tick() {
+
+    if(!lower_cache->is_last_level)
+        lower_cache->tick();
+
+    for (auto it = retry_list.begin(); it != retry_list.end(); it++) {
+        if(lower_cache->send(*it))
+            it = retry_list.erase(it);
+    }
+
 }
 
 void CacheSystem::tick() {

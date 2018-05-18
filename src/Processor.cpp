@@ -164,6 +164,8 @@ Core::Core(const Config& configs, int coreid,
       caches[0]->concatlower(llc);
     }
     caches[1]->concatlower(caches[0].get());
+
+    first_level_cache = caches[1].get();
   }
   if (no_core_caches) {
     more_reqs = trace.get_filtered_request(
@@ -209,6 +211,9 @@ double Core::calc_ipc()
 void Core::tick()
 {
     clk++;
+
+    if(first_level_cache != nullptr)
+        first_level_cache->tick();
 
     retired += window.retire();
 

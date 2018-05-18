@@ -53,6 +53,8 @@ public:
   Cache(int size, int assoc, int block_size, int mshr_entry_num,
       Level level, std::shared_ptr<CacheSystem> cachesys);
 
+  void tick();
+
   // L1, L2, L3 accumulated latencies
   int latency[int(Level::MAX)] = {4, 4 + 12, 4 + 12 + 31};
   int latency_each[int(Level::MAX)] = {4, 12, 31};
@@ -81,6 +83,7 @@ protected:
   unsigned int tag_offset;
   unsigned int mshr_entry_num;
   std::vector<std::pair<long, std::list<Line>::iterator>> mshr_entries;
+  std::list<Request> retry_list;
 
   std::map<int, std::list<Line> > cache_lines;
 

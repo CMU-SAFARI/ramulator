@@ -106,6 +106,8 @@ private:
     bool more_reqs;
     long last = 0;
 
+    Cache* first_level_cache = nullptr;
+
     ScalarStat memory_access_cycles;
     ScalarStat cpu_inst;
     MemoryBase& memory;
