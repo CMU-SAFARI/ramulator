@@ -389,7 +389,8 @@ bool Trace::get_unfiltered_request(long& bubble_cnt, long& req_addr, Request::Ty
     if (file.eof()) {
       file.clear();
       file.seekg(0, file.beg);
-      return false;
+      getline(file, line);
+      //return false;
     }
     size_t pos, end;
     bubble_cnt = std::stoul(line, &pos, 10);
