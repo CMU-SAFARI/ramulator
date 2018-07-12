@@ -324,6 +324,8 @@ void DDR4::init_timing()
     // RAS <-> REF
     t[int(Command::PRE)].push_back({Command::REF, 1, s.nRP});
     t[int(Command::PREA)].push_back({Command::REF, 1, s.nRP});
+    t[int(Command::RDA)].push_back({Command::REF, 1, s.nRTP + s.nRP});
+    t[int(Command::WRA)].push_back({Command::REF, 1, s.nCWL + s.nBL + s.nWR + s.nRP});
     t[int(Command::REF)].push_back({Command::ACT, 1, s.nRFC});
 
     // RAS <-> PD
