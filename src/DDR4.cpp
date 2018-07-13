@@ -85,7 +85,7 @@ void DDR4::init_speed()
     };
     const static int XS_TABLE[3][5] = {
         {136, 159, 182, 204, 272},
-        {216, 252, 288, 324, 532},
+        {216, 252, 288, 324, 432},
         {288, 336, 384, 432, 576}
     };
 
@@ -273,10 +273,10 @@ void DDR4::init_timing()
     t[int(Command::WR)].push_back({Command::WRA, 1, s.nCCDS});
     t[int(Command::WRA)].push_back({Command::WR, 1, s.nCCDS});
     t[int(Command::WRA)].push_back({Command::WRA, 1, s.nCCDS});
-    t[int(Command::RD)].push_back({Command::WR, 1, s.nCL + s.nCCDS + 2 - s.nCWL});
-    t[int(Command::RD)].push_back({Command::WRA, 1, s.nCL + s.nCCDS + 2 - s.nCWL});
-    t[int(Command::RDA)].push_back({Command::WR, 1, s.nCL + s.nCCDS + 2 - s.nCWL});
-    t[int(Command::RDA)].push_back({Command::WRA, 1, s.nCL + s.nCCDS + 2 - s.nCWL});
+    t[int(Command::RD)].push_back({Command::WR, 1, s.nCL + s.nBL + 2 - s.nCWL});
+    t[int(Command::RD)].push_back({Command::WRA, 1, s.nCL + s.nBL + 2 - s.nCWL});
+    t[int(Command::RDA)].push_back({Command::WR, 1, s.nCL + s.nBL + 2 - s.nCWL});
+    t[int(Command::RDA)].push_back({Command::WRA, 1, s.nCL + s.nBL + 2 - s.nCWL});
     t[int(Command::WR)].push_back({Command::RD, 1, s.nCWL + s.nBL + s.nWTRS});
     t[int(Command::WR)].push_back({Command::RDA, 1, s.nCWL + s.nBL + s.nWTRS});
     t[int(Command::WRA)].push_back({Command::RD, 1, s.nCWL + s.nBL + s.nWTRS});
@@ -324,6 +324,8 @@ void DDR4::init_timing()
     // RAS <-> REF
     t[int(Command::PRE)].push_back({Command::REF, 1, s.nRP});
     t[int(Command::PREA)].push_back({Command::REF, 1, s.nRP});
+    t[int(Command::RDA)].push_back({Command::REF, 1, s.nRTP + s.nRP});
+    t[int(Command::WRA)].push_back({Command::REF, 1, s.nCWL + s.nBL + s.nWR + s.nRP});
     t[int(Command::REF)].push_back({Command::ACT, 1, s.nRFC});
 
     // RAS <-> PD
@@ -366,10 +368,6 @@ void DDR4::init_timing()
     t[int(Command::RD)].push_back({Command::RDA, 1, s.nCCDL});
     t[int(Command::RDA)].push_back({Command::RD, 1, s.nCCDL});
     t[int(Command::RDA)].push_back({Command::RDA, 1, s.nCCDL});
-    t[int(Command::WR)].push_back({Command::WR, 1, s.nCCDL});
-    t[int(Command::WR)].push_back({Command::WRA, 1, s.nCCDL});
-    t[int(Command::WRA)].push_back({Command::WR, 1, s.nCCDL});
-    t[int(Command::WRA)].push_back({Command::WRA, 1, s.nCCDL});
     t[int(Command::WR)].push_back({Command::WR, 1, s.nCCDL});
     t[int(Command::WR)].push_back({Command::WRA, 1, s.nCCDL});
     t[int(Command::WRA)].push_back({Command::WR, 1, s.nCCDL});
