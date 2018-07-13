@@ -273,10 +273,10 @@ void DDR4::init_timing()
     t[int(Command::WR)].push_back({Command::WRA, 1, s.nCCDS});
     t[int(Command::WRA)].push_back({Command::WR, 1, s.nCCDS});
     t[int(Command::WRA)].push_back({Command::WRA, 1, s.nCCDS});
-    t[int(Command::RD)].push_back({Command::WR, 1, s.nCL + s.nCCDS + 2 - s.nCWL});
-    t[int(Command::RD)].push_back({Command::WRA, 1, s.nCL + s.nCCDS + 2 - s.nCWL});
-    t[int(Command::RDA)].push_back({Command::WR, 1, s.nCL + s.nCCDS + 2 - s.nCWL});
-    t[int(Command::RDA)].push_back({Command::WRA, 1, s.nCL + s.nCCDS + 2 - s.nCWL});
+    t[int(Command::RD)].push_back({Command::WR, 1, s.nCL + s.nBL + 2 - s.nCWL});
+    t[int(Command::RD)].push_back({Command::WRA, 1, s.nCL + s.nBL + 2 - s.nCWL});
+    t[int(Command::RDA)].push_back({Command::WR, 1, s.nCL + s.nBL + 2 - s.nCWL});
+    t[int(Command::RDA)].push_back({Command::WRA, 1, s.nCL + s.nBL + 2 - s.nCWL});
     t[int(Command::WR)].push_back({Command::RD, 1, s.nCWL + s.nBL + s.nWTRS});
     t[int(Command::WR)].push_back({Command::RDA, 1, s.nCWL + s.nBL + s.nWTRS});
     t[int(Command::WRA)].push_back({Command::RD, 1, s.nCWL + s.nBL + s.nWTRS});
