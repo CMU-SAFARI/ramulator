@@ -54,33 +54,18 @@ void STTMRAM::init_speed()
     // nRRD, nFAW
     int page = (org_entry.dq * org_entry.count[int(Level::Column)]) >> 13;
     switch (speed_entry.rate) {
-        //case 800:  speed_entry.nRRD = (page==1) ? 4 : 4; speed_entry.nFAW = (page==1) ? 16 : 20; break;
-      //  case 1066: speed_entry.nRRD = (page==1) ? 4 : 6; speed_entry.nFAW = (page==1) ? 20 : 27; break;
-      //  case 1333: speed_entry.nRRD = (page==1) ? 4 : 5; speed_entry.nFAW = (page==1) ? 20 : 30; break;
           case 1600: speed_entry.nRRD = ceil(speed_entry.nRRD  * ((page==1) ? 5 : 6) /10.0); speed_entry.nFAW = ceil(speed_entry.nFAW *((page==1) ? 24 : 32)/10.0); break;
-        //case 1866: speed_entry.nRRD = (page==1) ? 5 : 6; speed_entry.nFAW = (page==1) ? 26 : 33; break;
-        //case 2133: speed_entry.nRRD = (page==1) ? 5 : 6; speed_entry.nFAW = (page==1) ? 27 : 34; break;
         default: assert(false);
     }
 
     // nRFC, nXS
     int chip = org_entry.size;
     switch (speed_entry.rate) {
-        //case 800:  speed_entry.nRFC = (chip==512) ? 36  : (chip==1<<10) ? 44  : (chip==1<<11) ? 64  : (chip==1<<12) ? 104 : 140; break;
-        //case 1066: speed_entry.nRFC = (chip==512) ? 48  : (chip==1<<10) ? 59  : (chip==1<<11) ? 86  : (chip==1<<12) ? 139 : 187; break;
-        //case 1333: speed_entry.nRFC = (chip==512) ? 60  : (chip==1<<10) ? 74  : (chip==1<<11) ? 107 : (chip==1<<12) ? 174 : 234; break;
         case 1600: speed_entry.nRFC = 1; break;
-        //case 1866: speed_entry.nRFC = (chip==512) ? 84  : (chip==1<<10) ? 103 : (chip==1<<11) ? 150 : (chip==1<<12) ? 243 : 327; break;
-        //case 2133: speed_entry.nRFC = (chip==512) ? 96  : (chip==1<<10) ? 118 : (chip==1<<11) ? 171 : (chip==1<<12) ? 278 : 374; break;
         default: assert(false);
     }
     switch (speed_entry.rate) {
-        //case 800:  speed_entry.nXS  = (chip==512) ? 40  : (chip==1<<10) ? 48  : (chip==1<<11) ? 68  : (chip==1<<12) ? 108 : 144; break;
-        //case 1066: speed_entry.nXS  = (chip==512) ? 54  : (chip==1<<10) ? 64  : (chip==1<<11) ? 91  : (chip==1<<12) ? 144 : 192; break;
-      //  case 1333: speed_entry.nXS  = (chip==512) ? 67  : (chip==1<<10) ? 80  : (chip==1<<11) ? 114 : (chip==1<<12) ? 180 : 240; break;
           case 1600: speed_entry.nXS  = ceil(speed_entry.nXS * ((chip==512) ? 80  : (chip==1<<10) ? 96  : (chip==1<<11) ? 136 : (chip==1<<12) ? 216 : 288) /10.0); break;
-      //  case 1866: speed_entry.nXS  = (chip==512) ? 94  : (chip==1<<10) ? 112 : (chip==1<<11) ? 159 : (chip==1<<12) ? 252 : 336; break;
-        //case 2133: speed_entry.nXS  = (chip==512) ? 107 : (chip==1<<10) ? 128 : (chip==1<<11) ? 182 : (chip==1<<12) ? 288 : 384; break;
         default: assert(false);
     }
 }
