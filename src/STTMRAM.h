@@ -1,3 +1,12 @@
+/*
+*
+* The timing parameters used in this file are provided by the following study:
+* Kazi Asifuzzaman, Rommel Sanchez Verdejo, and Petar Radojkovic.2017.
+* Enabling a reliable STT-MRAM main memory simulation.
+* In Proceedings of the International Symposium on Memory Systems (MEMSYS '17).
+* Washington DC, USA, 283-292. DOI: https://doi.org/10.1145/3132402.3132416
+*
+*/
 #ifndef __STTMRAM_H
 #define __STTMRAM_H
 
@@ -181,10 +190,9 @@ public:
         int nPD, nXP, nXPDLL;
         int nCKESR, nXS, nXSDLL;
     } speed_table[int(Speed::MAX)] = {
-      //rate  freq          tCK nBL nCCD nRTRS nCL nRCD  nRP nCWL nRAS  nRC nRTP  nWTR  nWR nRRD  nFAW  nRFC  nREFI nPD nXP nXPDLL  nCKESR  nXS nXSDLL
-        {1600, (400.0/3)*6, 1.25, 4, 4,   2,   11, 14,  14,  8,   28,   39,  6,    6,   12,  12,   12,   12,    6240, 4, 5, 20,        5,     0,   512}, //1.2x
-        {1600, (400.0/3)*6, 1.25, 4, 4,   2,   11, 17,  17,  8,   28,   39,  6,    6,   12,  15,   15,   15,    6240, 4, 5, 20,        5,     0,   512}, //1.5x
-        {1600, (400.0/3)*6, 1.25, 4, 4,   2,   11, 22,  22,  8,   28,   39,  6,    6,   12,  20,   20,   20,    6240, 4, 5, 20,        5,     0,   512}, //2.0x
+          {1600, (400.0/3)*6, 1.25, 4, 4,   2,   11, 14,  14,  8,   20,   34,  6,    6,   12,  12,   12,   1,    6240, 4, 5, 20,        5,     0,   512}, //1.2x
+          {1600, (400.0/3)*6, 1.25, 4, 4,   2,   11, 17,  17,  8,   23,   40,  6,    6,   12,  15,   15,   1,    6240, 4, 5, 20,        5,     0,   512}, //1.5x
+          {1600, (400.0/3)*6, 1.25, 4, 4,   2,   11, 22,  22,  8,   28,   50,  6,    6,   12,  20,   20,   1,    6240, 4, 5, 20,        5,     0,   512}, //2.0x
     }, speed_entry;
 
     int read_latency;

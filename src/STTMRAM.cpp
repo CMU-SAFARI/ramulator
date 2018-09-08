@@ -1,3 +1,12 @@
+/*
+*
+* The timing parameters used in this file are provided by the following study:
+* Kazi Asifuzzaman, Rommel Sanchez Verdejo, and Petar Radojkovic.2017.
+* Enabling a reliable STT-MRAM main memory simulation.
+* In Proceedings of the International Symposium on Memory Systems (MEMSYS '17).
+* Washington DC, USA, 283-292. DOI: https://doi.org/10.1145/3132402.3132416
+*
+*/
 #include "STTMRAM.h"
 #include "DRAM.h"
 #include <vector>
