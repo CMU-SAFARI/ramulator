@@ -26,6 +26,7 @@
 #include "SALP.h"
 #include "ALDRAM.h"
 #include "TLDRAM.h"
+#include "STTMRAM.h"
 
 using namespace std;
 using namespace ramulator;
@@ -63,7 +64,7 @@ void run_dramtrace(const Config& configs, Memory<T, Controller>& memory, const c
             }
         }
         else {
-            memory.set_high_writeq_watermark(0.0f); // make sure that all write requests in the 
+            memory.set_high_writeq_watermark(0.0f); // make sure that all write requests in the
                                                     // write queue are drained
         }
 
@@ -114,7 +115,7 @@ void run_cputrace(const Config& configs, Memory<T, Controller>& memory, const st
     Stats::reset_stats();
     proc.reset_stats();
     assert(proc.get_insts() == 0);
-    
+
     printf("Starting the simulation...\n");
 
     int tick_mult = cpu_tick * mem_tick;
@@ -138,7 +139,7 @@ void run_cputrace(const Config& configs, Memory<T, Controller>& memory, const st
                 }
             }
         }
-        
+
         if (((i % tick_mult) % cpu_tick) == 0) // TODO_hasan: Better if the processor ticks the memory controller
             memory.tick();
 
@@ -241,6 +242,9 @@ int main(int argc, const char *argv[])
       WideIO2* wio2 = new WideIO2(configs["org"], configs["speed"], configs.get_channels());
       wio2->channel_width *= 2;
       start_run(configs, wio2, files);
+    } else if (standard == "STTMRAM") {
+      STTMRAM* sttmram = new STTMRAM(configs["org"], configs["speed"]);
+      start_run(configs, sttmram, files);
     }
     // Various refresh mechanisms
       else if (standard == "DSARP") {
