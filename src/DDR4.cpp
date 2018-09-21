@@ -9,6 +9,7 @@ using namespace std;
 using namespace ramulator;
 
 string DDR4::standard_name = "DDR4";
+string DDR4::level_str [int(Level::MAX)] = {"Ch", "Ra", "Bg", "Ba", "Ro", "Co"};
 
 map<string, enum DDR4::Org> DDR4::org_map = {
     {"DDR4_2Gb_x4", DDR4::Org::DDR4_2Gb_x4}, {"DDR4_2Gb_x8", DDR4::Org::DDR4_2Gb_x8}, {"DDR4_2Gb_x16", DDR4::Org::DDR4_2Gb_x16},

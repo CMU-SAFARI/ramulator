@@ -18,6 +18,7 @@ using namespace std;
 using namespace ramulator;
 
 string STTMRAM::standard_name = "STTMRAM";
+string STTMRAM::level_str [int(Level::MAX)] = {"Ch", "Ra", "Ba", "Ro", "Co"};
 
 map<string, enum STTMRAM::Org> STTMRAM::org_map = {
     {"STTMRAM_512Mb_x4", STTMRAM::Org::STTMRAM_512Mb_x4}, {"STTMRAM_512Mb_x8", STTMRAM::Org::STTMRAM_512Mb_x8}, {"STTMRAM_512Mb_x16", STTMRAM::Org::STTMRAM_512Mb_x16},

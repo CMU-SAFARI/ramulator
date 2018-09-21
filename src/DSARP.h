@@ -70,6 +70,8 @@ public:
     {
       Channel, Rank, Bank, SubArray, Row, Column, MAX
     };
+    
+    static std::string level_str [int(Level::MAX)];
 
     /* Command */
     enum class Command : int
