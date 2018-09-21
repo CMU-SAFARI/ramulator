@@ -123,9 +123,7 @@ public:
         use_mapping_file = false;
         if (spec->standard_name.substr(0, 4) == "DDR3"){
             init_mapping_with_file(configs["mapping"]);
-            dump_mapping = false;
-            if (configs["dump_mapping"].find("true") != string::npos)
-                dump_mapping = true;
+            // dump_mapping = true;
             use_mapping_file = true;
         }
         // If hi address bits will not be assigned to Rows
