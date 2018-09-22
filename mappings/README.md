@@ -9,7 +9,7 @@ You can specify which physical address is mapped to which channel/rank/bank/row/
 ```bash
 ./ramulator <config_file> --mode=cpu/dram --stats <stat_file> --mapping <mapping_file> trace0 trace1 ...
 ```
-> --mapping option is completely optional. If not specified, Ramulator uses row interleaving scheme. 
+> --mapping option is completely optional. If not specified, Ramulator uses single channel cache line interleaving scheme. 
 
 ## Syntax of mapping file
 
