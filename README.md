@@ -59,10 +59,13 @@ Ramulator supports three different usage modes.
   \[6\]), from which it receives memory request as they are generated.
 
 For some of the DRAM standards, Ramulator is also capable of reporting
-power consumption by relying on DRAMPower \[7\] as the backend. 
+power consumption by relying on either VAMPIRE \[7\] or DRAMPower \[8\] 
+as the backend. 
 
 [\[6\] The gem5 Simulator System.](http://www.gem5.org)  
-[\[7\] Chandrasekar et al. *DRAMPower: Open-Source DRAM Power & Energy
+[\[7\] Ghose et al. *What Your DRAM Power Models Are Not Telling You:
+Lessons from a Detailed Experimental Study.* SIGMETRICS 2018.](https://github.com/CMU-SAFARI/VAMPIRE)
+[\[8\] Chandrasekar et al. *DRAMPower: Open-Source DRAM Power & Energy
 Estimation Tool.* IEEE CAL 2015.](http://www.drampower.info)
 
 
@@ -149,7 +152,7 @@ designated lines in the script's source code:
 
 * Ramulator
 * DRAMSim2 (https://wiki.umd.edu/DRAMSim2): `test_ddr3.py` lines 39-40
-* USIMM, (http://www.cs.utah.edu/~rajeev/jwac12): `test_ddr3.py` lines 54-55
+* USIMM (http://www.cs.utah.edu/~rajeev/jwac12): `test_ddr3.py` lines 54-55
 * DrSim (http://lph.ece.utexas.edu/public/Main/DrSim): `test_ddr3.py` lines 66-67
 * NVMain (http://wiki.nvmain.org): `test_ddr3.py`  lines 78-79
 
@@ -181,11 +184,14 @@ CPU trace driven simulations.
 ### Power Estimation
 
 For estimating power consumption, Ramulator can record the trace of every DRAM
-command it issues to a file in DRAMPower \[7\] format.  To do so, please turn
+command it issues to a file in DRAMPower \[8\] format.  To do so, please turn
 on the `record_cmd_trace` variable in the configuration file.  The resulting
 DRAM command trace (e.g., `cmd-trace-chan-N-rank-M.cmdtrace`) should be fed
-into DRAMPower with the correct configuration (standard/speed/organization)
-to estimate energy/power usage for a single rank (a limitation of DRAMPower).
+into a compatible DRAM energy simulator such as 
+[VAMPIRE](https://github.com/CMU-SAFARI/VAMPIRE) \[7\] or 
+[DRAMPower](http://www.drampower.info) \[8\] with the correct configuration 
+(standard/speed/organization) to estimate energy/power usage for a single rank
+(a current limitation of both VAMPIRE and DRAMPower).
 
 
 ### Contributors
