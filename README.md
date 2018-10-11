@@ -64,7 +64,7 @@ as the backend.
 
 [\[6\] The gem5 Simulator System.](http://www.gem5.org)  
 [\[7\] Ghose et al. *What Your DRAM Power Models Are Not Telling You:
-Lessons from a Detailed Experimental Study.* SIGMETRICS 2018.](https://github.com/CMU-SAFARI/VAMPIRE)
+Lessons from a Detailed Experimental Study.* SIGMETRICS 2018.](https://github.com/CMU-SAFARI/VAMPIRE)  
 [\[8\] Chandrasekar et al. *DRAMPower: Open-Source DRAM Power & Energy
 Estimation Tool.* IEEE CAL 2015.](http://www.drampower.info)
 
