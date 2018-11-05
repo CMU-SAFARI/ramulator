@@ -121,10 +121,13 @@ public:
         
         // Parsing mapping file and initialize mapping table
         use_mapping_file = false;
+        dump_mapping = false;
         if (spec->standard_name.substr(0, 4) == "DDR3"){
-            init_mapping_with_file(configs["mapping"]);
-            // dump_mapping = true;
-            use_mapping_file = true;
+            if (configs["mapping"] != "defaultmapping"){
+              init_mapping_with_file(configs["mapping"]);
+              // dump_mapping = true;
+              use_mapping_file = true;
+            }
         }
         // If hi address bits will not be assigned to Rows
         // then the chips must not be LPDDRx 6Gb, 12Gb etc.
@@ -451,7 +454,7 @@ public:
     
     void apply_mapping(long addr, std::vector<int>& addr_vec){
         int *sz = spec->org_entry.count;
-        int addr_total_bits = 48; //TODO: Hardcoded -> bad!
+        int addr_total_bits = sizeof(addr_vec)*8;
         int addr_bits [int(T::Level::MAX)];
         for (int i = 0 ; i < int(T::Level::MAX) ; i ++)
         {
@@ -461,8 +464,8 @@ public:
                 addr_total_bits -= addr_bits[i];
             }
         }
-        // Row address is an integer. 
-        addr_bits[int(T::Level::Row)] = min(32, max(addr_total_bits, calc_log2(sz[int(T::Level::Row)])));
+        // Row address is an integer.
+        addr_bits[int(T::Level::Row)] = min((int)sizeof(int)*8, max(addr_total_bits, calc_log2(sz[int(T::Level::Row)])));
 
         // printf("Address: %lx => ",addr);
         for (unsigned int lvl = 0; lvl < int(T::Level::MAX); lvl++)

@@ -214,7 +214,7 @@ int main(int argc, const char *argv[])
       configs.add("mapping", argv[trace_start+1]);
       trace_start += 2;
     } else {
-      configs.add("mapping", "mappings/cacheline_interleaving.map");
+      configs.add("mapping", "defaultmapping");
     }
     
     std::vector<const char*> files(&argv[trace_start], &argv[argc]);

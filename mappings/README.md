@@ -9,17 +9,19 @@ You can specify which physical address is mapped to which channel/rank/bank/row/
 ```bash
 ./ramulator <config_file> --mode=cpu/dram --stats <stat_file> --mapping <mapping_file> trace0 trace1 ...
 ```
-> --mapping option is completely optional. If not specified, Ramulator uses single channel cache line interleaving scheme. 
+> --mapping option is completely optional. If not specified, Ramulator uses the default mapping, which is RoBaRaCoCh defined in `Memory.h:81`.
 
 ## Syntax of mapping file
 
 ### Commenting like `bash`
 Just put `#` and the rest in that line is ignored. 
 
-### Bit Indices 
-Please note that index of the least significant bit is 0.  
+### Bit Indices
+Please note that index of the least significant bit is 0.
 
-### Bit assignments 
+Please note that at this stage of the simulator, physical addresses do not include cacheline offset bits.
+
+### Bit assignments
 ```
 Ba 2 = 13 # BankAddress[2] := PhysicalAddress[13] 
 ```
