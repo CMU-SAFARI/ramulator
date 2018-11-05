@@ -10,6 +10,7 @@ using namespace std;
 using namespace ramulator;
 
 string TLDRAM::standard_name = "TLDRAM";
+string TLDRAM::level_str [int(Level::MAX)] = {"Ch", "Ra", "Ba", "Ro", "Co"};
 
 map<string, enum TLDRAM::Org> TLDRAM::org_map = {
     {"TLDRAM_512Mb_x4", TLDRAM::Org::TLDRAM_512Mb_x4},

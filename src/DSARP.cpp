@@ -20,6 +20,7 @@ using namespace std;
 using namespace ramulator;
 
 string DSARP::standard_name = "DSARP";
+string DSARP::level_str [int(Level::MAX)] = {"Ch", "Ra", "Ba", "Sa", "Ro", "Co"};
 
 map<string, enum DSARP::Org> DSARP::org_map = {
   {"DSARP_8Gb_x8", DSARP::Org::DSARP_8Gb_x8},
