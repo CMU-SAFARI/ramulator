@@ -27,6 +27,7 @@
 #include "ALDRAM.h"
 #include "TLDRAM.h"
 #include "STTMRAM.h"
+#include "PCM.h"
 
 using namespace std;
 using namespace ramulator;
@@ -208,7 +209,7 @@ int main(int argc, const char *argv[])
       Stats::statlist.output(standard+".stats");
       stats_out = standard + string(".stats");
     }
-    
+
     // A separate file defines mapping for easy config.
     if (strcmp(argv[trace_start], "--mapping") == 0) {
       configs.add("mapping", argv[trace_start+1]);
@@ -216,7 +217,7 @@ int main(int argc, const char *argv[])
     } else {
       configs.add("mapping", "defaultmapping");
     }
-    
+
     std::vector<const char*> files(&argv[trace_start], &argv[argc]);
     configs.set_core_num(argc - trace_start);
 
@@ -254,6 +255,9 @@ int main(int argc, const char *argv[])
     } else if (standard == "STTMRAM") {
       STTMRAM* sttmram = new STTMRAM(configs["org"], configs["speed"]);
       start_run(configs, sttmram, files);
+    } else if (standard == "PCM") {
+      PCM* pcm = new PCM(configs["org"], configs["speed"]);
+      start_run(configs, pcm, files);
     }
     // Various refresh mechanisms
       else if (standard == "DSARP") {
