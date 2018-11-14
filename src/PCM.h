@@ -1,14 +1,15 @@
 /*
 *
 * The timing parameters used in this file are provided by the following study:
-* Kazi Asifuzzaman, Rommel Sanchez Verdejo, and Petar Radojkovic.2017.
-* Enabling a reliable STT-MRAM main memory simulation.
-* In Proceedings of the International Symposium on Memory Systems (MEMSYS '17).
-* Washington DC, USA, 283-292. DOI: https://doi.org/10.1145/3132402.3132416
+* Benjamin C. Lee, Engin Ipek, Onur Mutlu, and Doug Burger. 2009.
+* Architecting phase change memory as a scalable dram alternative.
+* In Proceedings of the 36th annual international symposium on Computer architecture (ISCA '09).
+* ACM, New York, NY, USA, 2-13.
+* DOI: https://doi.org/10.1145/1555754.1555758
 *
 */
-#ifndef __STTMRAM_H
-#define __STTMRAM_H
+#ifndef __PCM_H
+#define __PCM_H
 
 #include "DRAM.h"
 #include "Request.h"
@@ -22,14 +23,14 @@ using namespace std;
 namespace ramulator
 {
 
-class STTMRAM
+class PCM
 {
 public:
     static string standard_name;
     enum class Org;
     enum class Speed;
-    STTMRAM(Org org, Speed speed);
-    STTMRAM(const string& org_str, const string& speed_str);
+    PCM(Org org, Speed speed);
+    PCM(const string& org_str, const string& speed_str);
 
     static map<string, enum Org> org_map;
     static map<string, enum Speed> speed_map;
@@ -38,7 +39,6 @@ public:
     {
         Channel, Rank, Bank, Row, Column, MAX
     };
-
     static std::string level_str [int(Level::MAX)];
 
     /*** Command ***/
@@ -124,12 +124,12 @@ public:
     };
 
     /* Prerequisite */
-    function<Command(DRAM<STTMRAM>*, Command cmd, int)> prereq[int(Level::MAX)][int(Command::MAX)];
+    function<Command(DRAM<PCM>*, Command cmd, int)> prereq[int(Level::MAX)][int(Command::MAX)];
 
     // SAUGATA: added function object container for row hit status
     /* Row hit */
-    function<bool(DRAM<STTMRAM>*, Command cmd, int)> rowhit[int(Level::MAX)][int(Command::MAX)];
-    function<bool(DRAM<STTMRAM>*, Command cmd, int)> rowopen[int(Level::MAX)][int(Command::MAX)];
+    function<bool(DRAM<PCM>*, Command cmd, int)> rowhit[int(Level::MAX)][int(Command::MAX)];
+    function<bool(DRAM<PCM>*, Command cmd, int)> rowopen[int(Level::MAX)][int(Command::MAX)];
 
     /* Timing */
     struct TimingEntry
@@ -142,16 +142,16 @@ public:
     vector<TimingEntry> timing[int(Level::MAX)][int(Command::MAX)];
 
     /* Lambda */
-    function<void(DRAM<STTMRAM>*, int)> lambda[int(Level::MAX)][int(Command::MAX)];
+    function<void(DRAM<PCM>*, int)> lambda[int(Level::MAX)][int(Command::MAX)];
 
     /* Organization */
     enum class Org : int
     {
-        STTMRAM_512Mb_x4, STTMRAM_512Mb_x8, STTMRAM_512Mb_x16,
-        STTMRAM_1Gb_x4,   STTMRAM_1Gb_x8,   STTMRAM_1Gb_x16,
-        STTMRAM_2Gb_x4,   STTMRAM_2Gb_x8,   STTMRAM_2Gb_x16,
-        STTMRAM_4Gb_x4,   STTMRAM_4Gb_x8,   STTMRAM_4Gb_x16,
-        STTMRAM_8Gb_x4,   STTMRAM_8Gb_x8,   STTMRAM_8Gb_x16,
+        PCM_512Mb_x4, PCM_512Mb_x8, PCM_512Mb_x16,
+        PCM_1Gb_x4,   PCM_1Gb_x8,   PCM_1Gb_x16,
+        PCM_2Gb_x4,   PCM_2Gb_x8,   PCM_2Gb_x16,
+        PCM_4Gb_x4,   PCM_4Gb_x8,   PCM_4Gb_x16,
+        PCM_8Gb_x4,   PCM_8Gb_x8,   PCM_8Gb_x16,
         MAX
     };
 
@@ -173,7 +173,7 @@ public:
     /* Speed */
     enum class Speed : int
     {
-        STT_1600_1_2, STT_1600_1_5, STT_1600_2_0,
+        PCM_800D,
         MAX
     };
 
@@ -187,14 +187,12 @@ public:
         int nCL, nRCD, nRP, nCWL;
         int nRAS, nRC;
         int nRTP, nWTR, nWR;
-        int nRRD, nFAW;
+        int nRRDact, nRRDpre, nFAW;
         int nRFC, nREFI;
         int nPD, nXP, nXPDLL;
         int nCKESR, nXS, nXSDLL;
     } speed_table[int(Speed::MAX)] = {
-          {1600, (400.0/3)*6, 1.25, 4, 4,   2,   11, 14,  14,  8,   20,   34,  6,    6,   12,  12,   12,   1,    6240, 4, 5, 20,        5,     0,   512}, //1.2x
-          {1600, (400.0/3)*6, 1.25, 4, 4,   2,   11, 17,  17,  8,   23,   40,  6,    6,   12,  15,   15,   1,    6240, 4, 5, 20,        5,     0,   512}, //1.5x
-          {1600, (400.0/3)*6, 1.25, 4, 4,   2,   11, 22,  22,  8,   28,   50,  6,    6,   12,  20,   20,   1,    6240, 4, 5, 20,        5,     0,   512}, //2.0x
+        {800,  (400.0/3)*3, 2.5, 4, 4, 2,  5,  22,  60,  5, 22, 60, 3, 3,  6, 2, 11, 0, 0, 3900, 0, 3, 10, 4, 0, 512},
     }, speed_entry;
 
     int read_latency;
@@ -210,4 +208,4 @@ private:
 
 } /*namespace ramulator*/
 
-#endif /*__STTMRAM_H*/
+#endif /*__PCM_H*/
