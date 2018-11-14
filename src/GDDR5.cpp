@@ -8,6 +8,8 @@ using namespace std;
 using namespace ramulator;
 
 string GDDR5::standard_name = "GDDR5";
+string GDDR5::level_str [int(Level::MAX)] = {"Ch", "Ra", "Bg", "Ba", "Ro", "Co"};
+
 
 map<string, enum GDDR5::Org> GDDR5::org_map = {
     {"GDDR5_512Mb_x16", GDDR5::Org::GDDR5_512Mb_x16}, {"GDDR5_512Mb_x32", GDDR5::Org::GDDR5_512Mb_x32},

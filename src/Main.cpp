@@ -200,14 +200,23 @@ int main(int argc, const char *argv[])
 
     int trace_start = 3;
     string stats_out;
-    if (strcmp(argv[3], "--stats") == 0) {
-      Stats::statlist.output(argv[4]);
-      stats_out = argv[4];
-      trace_start = 5;
+    if (strcmp(argv[trace_start], "--stats") == 0) {
+      Stats::statlist.output(argv[trace_start+1]);
+      stats_out = argv[trace_start+1];
+      trace_start += 2;
     } else {
       Stats::statlist.output(standard+".stats");
       stats_out = standard + string(".stats");
     }
+    
+    // A separate file defines mapping for easy config.
+    if (strcmp(argv[trace_start], "--mapping") == 0) {
+      configs.add("mapping", argv[trace_start+1]);
+      trace_start += 2;
+    } else {
+      configs.add("mapping", "defaultmapping");
+    }
+    
     std::vector<const char*> files(&argv[trace_start], &argv[argc]);
     configs.set_core_num(argc - trace_start);
 

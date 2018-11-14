@@ -8,6 +8,7 @@ using namespace std;
 using namespace ramulator;
 
 string DDR3::standard_name = "DDR3";
+string DDR3::level_str [int(Level::MAX)] = {"Ch", "Ra", "Ba", "Ro", "Co"};
 
 map<string, enum DDR3::Org> DDR3::org_map = {
     {"DDR3_512Mb_x4", DDR3::Org::DDR3_512Mb_x4}, {"DDR3_512Mb_x8", DDR3::Org::DDR3_512Mb_x8}, {"DDR3_512Mb_x16", DDR3::Org::DDR3_512Mb_x16},

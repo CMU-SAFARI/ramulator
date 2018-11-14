@@ -9,6 +9,7 @@ using namespace std;
 using namespace ramulator;
 
 string LPDDR3::standard_name = "LPDDR3";
+string LPDDR3::level_str [int(Level::MAX)] = {"Ch", "Ra", "Ba", "Ro", "Co"};
 
 map<string, enum LPDDR3::Org> LPDDR3::org_map = {
     {"LPDDR3_4Gb_x16", LPDDR3::Org::LPDDR3_4Gb_x16}, {"LPDDR3_4Gb_x32", LPDDR3::Org::LPDDR3_4Gb_x32},

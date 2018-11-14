@@ -10,6 +10,7 @@ using namespace std;
 using namespace ramulator;
 
 string ALDRAM::standard_name = "ALDRAM";
+string ALDRAM::level_str [int(Level::MAX)] = {"Ch", "Ra", "Ba", "Ro", "Co"};
 
 map<string, enum ALDRAM::Org> ALDRAM::org_map = {
     {"ALDRAM_512Mb_x4", ALDRAM::Org::ALDRAM_512Mb_x4}, {"ALDRAM_512Mb_x8", ALDRAM::Org::ALDRAM_512Mb_x8}, {"ALDRAM_512Mb_x16", ALDRAM::Org::ALDRAM_512Mb_x16},
