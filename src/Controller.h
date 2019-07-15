@@ -356,10 +356,7 @@ public:
         /*** 3. Should we schedule writes? ***/
         if (!write_mode) {
             // yes -- write queue is almost full or read queue is empty
-            if (writeq.size() > int(wr_high_watermark * writeq.max) 
-                    /*|| readq.size() == 0*/) // Hasan: Switching to write mode when there are just a few 
-                                              // write requests, even if the read queue is empty, incurs a lot of overhead. 
-                                              // Commented out the read request queue empty condition
+            if (writeq.size() > int(wr_high_watermark * writeq.max) || readq.size() == 0)
                 write_mode = true;
         }
         else {
@@ -452,6 +449,7 @@ public:
 
         if (req->type == Request::Type::WRITE) {
             channel->update_serving_requests(req->addr_vec.data(), -1, clk);
+            req->callback(*req);
         }
 
         // remove request from queue
