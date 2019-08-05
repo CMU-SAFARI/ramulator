@@ -13,6 +13,18 @@ wide array of commercial, as well as academic, DRAM standards:
 - RowClone \[4\]
 - DSARP \[5\]
 
+The initial release of Ramulator is described in the following paper:
+>Y. Kim, W. Yang, O. Mutlu.
+>"[**Ramulator: A Fast and Extensible DRAM Simulator**](https://people.inf.ethz.ch/omutlu/pub/ramulator_dram_simulator-ieee-cal15.pdf)".
+>In _IEEE Computer Architecture Letters_, March 2015.
+
+For information on new features, along with an extensive memory characterization using Ramulator, please read:
+>S. Ghose, T. Li, N. Hajinazar, D. Senol Cali, O. Mutlu.
+>"**Demystifying Complex Workload–DRAM Interactions: An Experimental Study**".
+>In _Proceedings of the ACM International Conference on Measurement and Modeling of Computer Systems (SIGMETRICS)_, June 2019 ([slides](https://people.inf.ethz.ch/omutlu/pub/Workload-DRAM-Interaction-Analysis_sigmetrics19-talk.pdf)).
+>To appear in _Proceedings of the ACM on Measurement and Analysis of Computing Systems (POMACS)_, 2019.
+>[Preprint available on arXiv.](https://arxiv.org/pdf/1902.07609.pdf)
+
 [\[1\] Kim et al. *Ramulator: A Fast and Extensible DRAM Simulator.* IEEE CAL
 2015.](https://users.ece.cmu.edu/~omutlu/pub/ramulator_dram_simulator-ieee-cal15.pdf)  
 [\[2\] Kim et al. *A Case for Exploiting Subarray-Level Parallelism (SALP) in
