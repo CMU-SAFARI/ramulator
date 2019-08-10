@@ -35,73 +35,73 @@ public:
 
     list<Request>::iterator get_head(list<Request>& q)
     {
-      // TODO make the decision at compile time
-      if (type != Type::FRFCFS_PriorHit) {
-        if (!q.size())
-            return q.end();
+        // TODO make the decision at compile time
+        if (type != Type::FRFCFS_PriorHit) {
+            if (!q.size())
+                return q.end();
 
-        auto head = q.begin();
-        for (auto itr = next(q.begin(), 1); itr != q.end(); itr++)
-            head = compare[int(type)](head, itr);
+            auto head = q.begin();
+            for (auto itr = next(q.begin(), 1); itr != q.end(); itr++)
+                head = compare[int(type)](head, itr);
 
-        return head;
-      } else {
-        if (!q.size())
-            return q.end();
+            return head;
+        } else {
+            if (!q.size())
+                return q.end();
 
-        auto head = q.begin();
-        for (auto itr = next(q.begin(), 1); itr != q.end(); itr++) {
-            head = compare[int(Type::FRFCFS_PriorHit)](head, itr);
-        }
-
-        if (this->ctrl->is_ready(head) && this->ctrl->is_row_hit(head)) {
-          return head;
-        }
-
-        // prepare a list of hit request
-        vector<vector<int>> hit_reqs;
-        for (auto itr = q.begin() ; itr != q.end() ; ++itr) {
-          if (this->ctrl->is_row_hit(itr)) {
-            auto begin = itr->addr_vec.begin();
-            // TODO Here it assumes all DRAM standards use PRE to close a row
-            // It's better to make it more general.
-            auto end = begin + int(ctrl->channel->spec->scope[int(T::Command::PRE)]) + 1;
-            vector<int> rowgroup(begin, end); // bank or subarray
-            hit_reqs.push_back(rowgroup);
-          }
-        }
-        // if we can't find proper request, we need to return q.end(),
-        // so that no command will be scheduled
-        head = q.end();
-        for (auto itr = q.begin(); itr != q.end(); itr++) {
-          bool violate_hit = false;
-          if ((!this->ctrl->is_row_hit(itr)) && this->ctrl->is_row_open(itr)) {
-            // so the next instruction to be scheduled is PRE, might violate hit
-            auto begin = itr->addr_vec.begin();
-            // TODO Here it assumes all DRAM standards use PRE to close a row
-            // It's better to make it more general.
-            auto end = begin + int(ctrl->channel->spec->scope[int(T::Command::PRE)]) + 1;
-            vector<int> rowgroup(begin, end); // bank or subarray
-            for (const auto& hit_req_rowgroup : hit_reqs) {
-              if (rowgroup == hit_req_rowgroup) {
-                  violate_hit = true;
-                  break;
-              }
+            auto head = q.begin();
+            for (auto itr = next(q.begin(), 1); itr != q.end(); itr++) {
+                head = compare[int(Type::FRFCFS_PriorHit)](head, itr);
             }
-          }
-          if (violate_hit) {
-            continue;
-          }
-          // If it comes here, that means it won't violate any hit request
-          if (head == q.end()) {
-            head = itr;
-          } else {
-            head = compare[int(Type::FRFCFS)](head, itr);
-          }
-        }
 
-        return head;
-      }
+            if (this->ctrl->is_ready(head) && this->ctrl->is_row_hit(head)) {
+                return head;
+            }
+
+            // prepare a list of hit request
+            vector<vector<int>> hit_reqs;
+            for (auto itr = q.begin() ; itr != q.end() ; ++itr) {
+                if (this->ctrl->is_row_hit(itr)) {
+                    auto begin = itr->addr_vec.begin();
+                    // TODO Here it assumes all DRAM standards use PRE to close a row
+                    // It's better to make it more general.
+                    auto end = begin + int(ctrl->channel->spec->scope[int(T::Command::PRE)]) + 1;
+                    vector<int> rowgroup(begin, end); // bank or subarray
+                    hit_reqs.push_back(rowgroup);
+                }
+            }
+            // if we can't find proper request, we need to return q.end(),
+            // so that no command will be scheduled
+            head = q.end();
+            for (auto itr = q.begin(); itr != q.end(); itr++) {
+                bool violate_hit = false;
+                if ((!this->ctrl->is_row_hit(itr)) && this->ctrl->is_row_open(itr)) {
+                    // so the next instruction to be scheduled is PRE, might violate hit
+                    auto begin = itr->addr_vec.begin();
+                    // TODO Here it assumes all DRAM standards use PRE to close a row
+                    // It's better to make it more general.
+                    auto end = begin + int(ctrl->channel->spec->scope[int(T::Command::PRE)]) + 1;
+                    vector<int> rowgroup(begin, end); // bank or subarray
+                    for (const auto& hit_req_rowgroup : hit_reqs) {
+                        if (rowgroup == hit_req_rowgroup) {
+                            violate_hit = true;
+                            break;
+                        }  
+                    }
+                }
+                if (violate_hit) {
+                    continue;
+                }
+                // If it comes here, that means it won't violate any hit request
+                if (head == q.end()) {
+                    head = itr;
+                } else {
+                    head = compare[int(Type::FRFCFS)](head, itr);
+                }
+            }
+
+            return head;
+        }
     }
 
 private:
