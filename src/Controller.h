@@ -372,7 +372,7 @@ public:
         Queue* queue = &actq;
 
         auto req = scheduler->get_head(queue->q);
-        if (req == queue->q.end() || !is_ready(req)) {
+        if ((req == queue->q.end() || !is_ready(req)) && actq.size()==0 ) {
             queue = !write_mode ? &readq : &writeq;
 
             if (otherq.size())
