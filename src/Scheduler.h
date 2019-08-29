@@ -19,24 +19,27 @@ Current Memory Scheduling Policies:
        This scheduling policy behaves the same way as FRFCS, except that it has
        a cap on the number of hits you can get in a certain row. The CAP VALUE
        can be altered by changing the number for the "cap" variable in 
-       line number ___. 
+       line number 76. 
 
 4) FRFCFS_PriorHit - First Ready First Come First Serve Prioritize Hits
        This scheduling policy behaves the same way as FRFCFS, except that it
        prioritizes row hits more than readiness. 
 
 You can select which scheduler you want to use by changing the value of 
-"type" variable on line number ___.
+"type" variable on line number 74.
 
                 _______________________________________
 
 Current Row Policies:
 
-1) Closed   
-2) ClosedAP 
-3) Opened   
-4) Timeout  
-
+1) Closed   - Precharges a row as soon as there are no pending references to 
+              the active row.
+2) ClosedAP - Closed Auto Precharge
+3) Opened   - Precharges a row only if there are pending references to 
+              other rows.
+4) Timeout  - Precharges a row after X time if there are no pending references.
+              'X' time can be changed by changing the variable timeout 
+              on line number 221
 
 *****************************************************************************/
 
