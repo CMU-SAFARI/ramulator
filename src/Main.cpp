@@ -4,6 +4,7 @@
 #include "SpeedyController.h"
 #include "Memory.h"
 #include "DRAM.h"
+#include "Debug.h"
 #include "Statistics.h"
 #include <cstdio>
 #include <cstdlib>
@@ -184,6 +185,7 @@ int main(int argc, const char *argv[])
     }
 
     Config configs(argv[1]);
+    DEBUG_MSG("test_flag", "test_msg");
 
     const std::string& standard = configs["standard"];
     assert(standard != "" || "DRAM standard should be specified.");
