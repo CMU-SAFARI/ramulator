@@ -370,18 +370,33 @@ public:
         // First check the actq (which has higher priority) to see if there
         // are requests available to service in this cycle
         Queue* queue = &actq;
-
+        typename T::Command cmd;
         auto req = scheduler->get_head(queue->q);
-        if ((req == queue->q.end() || !is_ready(req)) && actq.size()==0 ) {
+
+        bool is_valid_req = (req != queue->q.end());
+
+        if(is_valid_req) {
+            cmd = get_first_cmd(req);
+            is_valid_req = is_ready(cmd, req->addr_vec);
+        }
+
+        if (!is_valid_req) {
             queue = !write_mode ? &readq : &writeq;
 
             if (otherq.size())
                 queue = &otherq;  // "other" requests are rare, so we give them precedence over reads/writes
 
             req = scheduler->get_head(queue->q);
+
+            is_valid_req = (req != queue->q.end());
+
+            if(is_valid_req){
+                cmd = get_first_cmd(req);
+                is_valid_req = is_ready(cmd, req->addr_vec);
+            }
         }
 
-        if (req == queue->q.end() || !is_ready(req)) {
+        if (!is_valid_req) {
             // we couldn't find a command to schedule -- let's try to be speculative
             auto cmd = T::Command::PRE;
             vector<int> victim = rowpolicy->get_victim(cmd);
@@ -426,12 +441,11 @@ public:
         }
 
         // issue command on behalf of request
-        auto cmd = get_first_cmd(req);
         issue_cmd(cmd, get_addr_vec(cmd, req));
 
         // check whether this is the last command (which finishes the request)
         //if (cmd != channel->spec->translate[int(req->type)]){
-        if (!(channel->spec->is_accessing(cmd) || channel->spec->is_refreshing(cmd))) {
+        if (cmd != channel->spec->translate[int(req->type)]) {
             if(channel->spec->is_opening(cmd)) {
                 // promote the request that caused issuing activation to actq
                 actq.q.push_back(*req);
