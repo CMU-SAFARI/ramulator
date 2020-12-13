@@ -7,6 +7,22 @@ Config::Config(const std::string& fname) {
   parse(fname);
 }
 
+void Config::parse_to_const(const string& name, const string& value) {
+  if (name == "stacks") {
+    stacks = atoi(value.c_str());
+  } else if (name == "channels") {
+    channels = atoi(value.c_str());
+  } else if (name == "ranks") {
+    ranks = atoi(value.c_str());
+  } else if (name == "subarrays") {
+    subarrays = atoi(value.c_str());
+  } else if (name == "cpu_frequency") {
+    cpu_frequency = atoi(value.c_str());
+  } else if (name == "expected_limit_insts") {
+    expected_limit_insts = atoi(value.c_str());
+  }
+}
+
 void Config::parse(const string& fname)
 {
     ifstream file(fname);
@@ -43,20 +59,7 @@ void Config::parse(const string& fname)
         assert(tokens.size() == 2 && "Only allow two tokens in one line");
 
         options[tokens[0]] = tokens[1];
-
-        if (tokens[0] == "channels") {
-          channels = atoi(tokens[1].c_str());
-        } else if (tokens[0] == "ranks") {
-          ranks = atoi(tokens[1].c_str());
-        } else if (tokens[0] == "subarrays") {
-          subarrays = atoi(tokens[1].c_str());
-        } else if (tokens[0] == "cpu_tick") {
-          cpu_tick = atoi(tokens[1].c_str());
-        } else if (tokens[0] == "mem_tick") {
-          mem_tick = atoi(tokens[1].c_str());
-        } else if (tokens[0] == "expected_limit_insts") {
-          expected_limit_insts = atoi(tokens[1].c_str());
-        }
+        parse_to_const(tokens[0], tokens[1]);
     }
     file.close();
 }

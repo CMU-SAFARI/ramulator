@@ -152,7 +152,7 @@ public:
             addr_vec[0] = channel->id;
             for (auto child : channel->children) {
                 addr_vec[1] = child->id;
-                Request req(addr_vec, req_type, NULL);
+                Request req(addr_vec, req_type, NULL, -1);
                 bool res = enqueue(req);
                 assert(res);
             }

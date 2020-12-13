@@ -18,7 +18,7 @@ namespace ramulator
 
 class Trace {
 public:
-    Trace(const char* trace_fname);
+    Trace(const string& trace_fname);
     // trace file format 1:
     // [# of bubbles(non-mem instructions)] [read address(dec or hex)] <optional: write address(evicted cacheline)>
     bool get_unfiltered_request(long& bubble_cnt, long& req_addr, Request::Type& req_type);
@@ -26,6 +26,7 @@ public:
     // trace file format 2:
     // [address(hex)] [R/W]
     bool get_dramtrace_request(long& req_addr, Request::Type& req_type);
+    bool get_rowclone_request(long& bubble_cnt, long& req_addr, Request::Type& req_type);
 
 private:
     std::ifstream file;
@@ -62,7 +63,7 @@ public:
     function<bool(Request)> send;
 
     Core(const Config& configs, int coreid,
-        const char* trace_fname,
+        const string& trace_fname,
         function<bool(Request)> send_next, Cache* llc,
         std::shared_ptr<CacheSystem> cachesys, MemoryBase& memory);
     void tick();
@@ -92,6 +93,8 @@ public:
     // This is set true iff expected number of instructions has been executed or all instructions are executed.
     bool reached_limit = false;;
 
+    bool rc_trace = false;
+
 private:
     Trace trace;
     Window window;
@@ -109,7 +112,7 @@ private:
 
 class Processor {
 public:
-    Processor(const Config& configs, vector<const char*> trace_list,
+    Processor(const Config& configs, vector<string> trace_list,
         function<bool(Request)> send, MemoryBase& memory);
     void tick();
     void receive(Request& req);

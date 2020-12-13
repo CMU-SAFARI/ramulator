@@ -47,6 +47,7 @@ WideIO2::WideIO2(Org org, Speed speed, int channels) :
     speed_entry.nRPab = (channels == 4)? speed_entry.nRP8b: speed_entry.nRPpb;
     init_prereq();
     init_rowhit(); // SAUGATA: added row hit function
+    init_rowopen();
     init_lambda();
     init_timing();
 }

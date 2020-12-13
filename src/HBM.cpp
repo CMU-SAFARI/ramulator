@@ -14,10 +14,16 @@ map<string, enum HBM::Org> HBM::org_map = {
     {"HBM_1Gb", HBM::Org::HBM_1Gb},
     {"HBM_2Gb", HBM::Org::HBM_2Gb},
     {"HBM_4Gb", HBM::Org::HBM_4Gb},
+    {"HBM_4Gb_bank32", HBM::Org::HBM_4Gb_bank32},
+    {"HBM_4Gb_bank64", HBM::Org::HBM_4Gb_bank64},
+    {"HBM_4Gb_bank128", HBM::Org::HBM_4Gb_bank128},
+    {"HBM_4Gb_bank256", HBM::Org::HBM_4Gb_bank256},
+    {"HBM_4Gb_bank512", HBM::Org::HBM_4Gb_bank512},
 };
 
 map<string, enum HBM::Speed> HBM::speed_map = {
     {"HBM_1Gbps", HBM::Speed::HBM_1Gbps},
+    {"HBM_1Gbps_unlimit_bandwidth", HBM::Speed::HBM_1Gbps_unlimit_bandwidth},
 };
 
 HBM::HBM(Org org, Speed speed)
@@ -316,10 +322,6 @@ void HBM::init_timing()
     t[int(Command::RD)].push_back({Command::RDA, 1, s.nCCDL});
     t[int(Command::RDA)].push_back({Command::RD, 1, s.nCCDL});
     t[int(Command::RDA)].push_back({Command::RDA, 1, s.nCCDL});
-    t[int(Command::WR)].push_back({Command::WR, 1, s.nCCDL});
-    t[int(Command::WR)].push_back({Command::WRA, 1, s.nCCDL});
-    t[int(Command::WRA)].push_back({Command::WR, 1, s.nCCDL});
-    t[int(Command::WRA)].push_back({Command::WRA, 1, s.nCCDL});
     t[int(Command::WR)].push_back({Command::WR, 1, s.nCCDL});
     t[int(Command::WR)].push_back({Command::WRA, 1, s.nCCDL});
     t[int(Command::WRA)].push_back({Command::WR, 1, s.nCCDL});

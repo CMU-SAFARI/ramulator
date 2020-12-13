@@ -5,6 +5,7 @@
 #include "Request.h"
 #include "MemoryFactory.h"
 #include "Memory.h"
+#include "HMC_Memory.h"
 #include "DDR3.h"
 #include "DDR4.h"
 #include "LPDDR3.h"
@@ -13,6 +14,7 @@
 #include "WideIO.h"
 #include "WideIO2.h"
 #include "HBM.h"
+#include "HMC.h"
 #include "SALP.h"
 
 using namespace ramulator;
@@ -27,13 +29,11 @@ static map<string, function<MemoryBase *(const Config&, int)> > name_to_func = {
 };
 
 
-Gem5Wrapper::Gem5Wrapper(const string& config_file, int cacheline)
+Gem5Wrapper::Gem5Wrapper(const Config& configs, int cacheline)
 {
-    Config cfg;
-    cfg.parse(config_file);
-    const string& std_name = cfg["standard"];
+    const string& std_name = configs["standard"];
     assert(name_to_func.find(std_name) != name_to_func.end() && "unrecognized standard name");
-    mem = name_to_func[std_name](cfg, cacheline);
+    mem = name_to_func[std_name](configs, cacheline);
     tCK = mem->clk_ns();
 }
 

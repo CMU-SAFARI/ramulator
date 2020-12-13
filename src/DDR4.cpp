@@ -21,6 +21,7 @@ map<string, enum DDR4::Speed> DDR4::speed_map = {
     {"DDR4_1866M", DDR4::Speed::DDR4_1866M}, {"DDR4_1866N", DDR4::Speed::DDR4_1866N},
     {"DDR4_2133P", DDR4::Speed::DDR4_2133P}, {"DDR4_2133R", DDR4::Speed::DDR4_2133R},
     {"DDR4_2400R", DDR4::Speed::DDR4_2400R}, {"DDR4_2400U", DDR4::Speed::DDR4_2400U},
+    {"DDR4_2400R_disable_bg", DDR4::Speed::DDR4_2400R_disable_bg}
 };
 
 
@@ -66,9 +67,9 @@ void DDR4::init_speed()
         {28, 28, 32, 36}
     };
     const static int RFC_TABLE[int(RefreshMode::MAX)][3][4] = {{   
-            {128, 150, 171, 192},
-            {208, 243, 278, 312},
-            {280, 327, 374, 420}
+            {128, 150, 171, 193},
+            {208, 243, 278, 313},
+            {280, 327, 374, 421}
         },{
             {88, 103, 118, 132},
             {128, 150, 171, 192},
@@ -364,10 +365,6 @@ void DDR4::init_timing()
     t[int(Command::RD)].push_back({Command::RDA, 1, s.nCCDL});
     t[int(Command::RDA)].push_back({Command::RD, 1, s.nCCDL});
     t[int(Command::RDA)].push_back({Command::RDA, 1, s.nCCDL});
-    t[int(Command::WR)].push_back({Command::WR, 1, s.nCCDL});
-    t[int(Command::WR)].push_back({Command::WRA, 1, s.nCCDL});
-    t[int(Command::WRA)].push_back({Command::WR, 1, s.nCCDL});
-    t[int(Command::WRA)].push_back({Command::WRA, 1, s.nCCDL});
     t[int(Command::WR)].push_back({Command::WR, 1, s.nCCDL});
     t[int(Command::WR)].push_back({Command::WRA, 1, s.nCCDL});
     t[int(Command::WRA)].push_back({Command::WR, 1, s.nCCDL});

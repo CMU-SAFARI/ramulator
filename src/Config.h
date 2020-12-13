@@ -15,12 +15,13 @@ class Config {
 
 private:
     std::map<std::string, std::string> options;
+    int stacks;
     int channels;
     int ranks;
     int subarrays;
-    int cpu_tick;
-    int mem_tick;
+    int cpu_frequency;
     int core_num = 0;
+    int cacheline_size = 64;
     long expected_limit_insts = 0;
 
 public:
@@ -34,6 +35,8 @@ public:
         return "";
       }
     }
+
+    void parse_to_const(const std::string& name, const std::string& value);
 
     bool contains(const std::string& name) const {
       if (options.find(name) != options.end()) {
@@ -51,15 +54,33 @@ public:
       }
     }
 
-    void set_core_num(int _core_num) {core_num = _core_num;}
+    void set(const std::string& name, const std::string& value) {
+      options[name] = value;
+      // TODO call this function only name maps to a constant
+      parse_to_const(name, value);
+    }
 
-    int get_channels() const {return channels;}
-    int get_subarrays() const {return subarrays;}
-    int get_ranks() const {return ranks;}
-    int get_cpu_tick() const {return cpu_tick;}
-    int get_mem_tick() const {return mem_tick;}
+    void set_core_num(int _core_num) {core_num = _core_num;}
+    void set_cacheline_size(int _cacheline_size) {cacheline_size = _cacheline_size;}
+
+    int get_int_value(const std::string& name) const {
+      assert(options.find(name) != options.end() && "can't find this argument");
+      return atoi(options.find(name)->second.c_str());
+    }
+    int get_stacks() const {return get_int_value("stacks");}
+    int get_channels() const {return get_int_value("channels");}
+    int get_subarrays() const {return get_int_value("subarrays");}
+    int get_ranks() const {return get_int_value("ranks");}
+    int get_cpu_tick() const {return int(1000000.0 / get_int_value("cpu_frequency"));}
     int get_core_num() const {return core_num;}
-    long get_expected_limit_insts() const {return expected_limit_insts;}
+    int get_cacheline_size() const {return cacheline_size;}
+    long get_expected_limit_insts() const {
+      if (contains("expected_limit_insts")) {
+        return get_int_value("expected_limit_insts");
+      } else {
+        return 0;
+      }
+    }
     bool has_l3_cache() const {
       if (options.find("cache") != options.end()) {
         const std::string& cache_option = (options.find("cache"))->second;
