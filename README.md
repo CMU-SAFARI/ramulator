@@ -1,6 +1,6 @@
 # Ramulator: A DRAM Simulator
 
-Ramulator is a fast and cycle-accurate DRAM simulator \[1\] that supports a
+Ramulator is a fast and cycle-accurate DRAM simulator \[1, 2\] that supports a
 wide array of commercial, as well as academic, DRAM standards:
 
 - DDR3 (2007), DDR4 (2012)
@@ -8,10 +8,10 @@ wide array of commercial, as well as academic, DRAM standards:
 - GDDR5 (2009)
 - WIO (2011), WIO2 (2014)
 - HBM (2013)
-- SALP \[2\]
-- TL-DRAM \[3\]
-- RowClone \[4\]
-- DSARP \[5\]
+- SALP \[3\]
+- TL-DRAM \[4\]
+- RowClone \[5\]
+- DSARP \[6\]
 
 The initial release of Ramulator is described in the following paper:
 >Y. Kim, W. Yang, O. Mutlu.
@@ -20,21 +20,21 @@ The initial release of Ramulator is described in the following paper:
 
 For information on new features, along with an extensive memory characterization using Ramulator, please read:
 >S. Ghose, T. Li, N. Hajinazar, D. Senol Cali, O. Mutlu.
->"**Demystifying Complex Workload–DRAM Interactions: An Experimental Study**".
+>"[**Demystifying Complex Workload–DRAM Interactions: An Experimental Study**](https://people.inf.ethz.ch/omutlu/pub/Workload-DRAM-Interaction-Analysis_sigmetrics19_pomacs19.pdf)".
 >In _Proceedings of the ACM International Conference on Measurement and Modeling of Computer Systems (SIGMETRICS)_, June 2019 ([slides](https://people.inf.ethz.ch/omutlu/pub/Workload-DRAM-Interaction-Analysis_sigmetrics19-talk.pdf)).
->To appear in _Proceedings of the ACM on Measurement and Analysis of Computing Systems (POMACS)_, 2019.
->[Preprint available on arXiv.](https://arxiv.org/pdf/1902.07609.pdf)
+>In _Proceedings of the ACM on Measurement and Analysis of Computing Systems (POMACS)_, 2019.
 
 [\[1\] Kim et al. *Ramulator: A Fast and Extensible DRAM Simulator.* IEEE CAL
-2015.](https://users.ece.cmu.edu/~omutlu/pub/ramulator_dram_simulator-ieee-cal15.pdf)  
-[\[2\] Kim et al. *A Case for Exploiting Subarray-Level Parallelism (SALP) in
+2015.](https://people.inf.ethz.ch/omutlu/pub/ramulator_dram_simulator-ieee-cal15.pdf)  
+[\[2\] Ghose et al. *Demystifying Complex Workload–DRAM Interactions: An Experimental Study.* SIGMETRICS 2019.](https://people.inf.ethz.ch/omutlu/pub/Workload-DRAM-Interaction-Analysis_sigmetrics19_pomacs19.pdf)  
+[\[3\] Kim et al. *A Case for Exploiting Subarray-Level Parallelism (SALP) in
 DRAM.* ISCA 2012.](https://users.ece.cmu.edu/~omutlu/pub/salp-dram_isca12.pdf)  
-[\[3\] Lee et al. *Tiered-Latency DRAM: A Low Latency and Low Cost DRAM
+[\[4\] Lee et al. *Tiered-Latency DRAM: A Low Latency and Low Cost DRAM
 Architecture.* HPCA 2013.](https://users.ece.cmu.edu/~omutlu/pub/tldram_hpca13.pdf)  
-[\[4\] Seshadri et al. *RowClone: Fast and Energy-Efficient In-DRAM Bulk Data
+[\[5\] Seshadri et al. *RowClone: Fast and Energy-Efficient In-DRAM Bulk Data
 Copy and Initialization.* MICRO
 2013.](https://users.ece.cmu.edu/~omutlu/pub/rowclone_micro13.pdf)  
-[\[5\] Chang et al. *Improving DRAM Performance by Parallelizing Refreshes with
+[\[6\] Chang et al. *Improving DRAM Performance by Parallelizing Refreshes with
 Accesses.* HPCA 2014.](https://users.ece.cmu.edu/~omutlu/pub/dram-access-refresh-parallelization_hpca14.pdf)
 
 
@@ -68,16 +68,16 @@ Ramulator supports three different usage modes.
         before it.
 
 3. **gem5 Driven:** Ramulator runs as part of a full-system simulator (gem5
-  \[6\]), from which it receives memory request as they are generated.
+  \[7\]), from which it receives memory request as they are generated.
 
 For some of the DRAM standards, Ramulator is also capable of reporting
-power consumption by relying on either VAMPIRE \[7\] or DRAMPower \[8\] 
+power consumption by relying on either VAMPIRE \[8\] or DRAMPower \[9\] 
 as the backend. 
 
-[\[6\] The gem5 Simulator System.](http://www.gem5.org)  
-[\[7\] Ghose et al. *What Your DRAM Power Models Are Not Telling You:
+[\[7\] The gem5 Simulator System.](http://www.gem5.org)  
+[\[8\] Ghose et al. *What Your DRAM Power Models Are Not Telling You:
 Lessons from a Detailed Experimental Study.* SIGMETRICS 2018.](https://github.com/CMU-SAFARI/VAMPIRE)  
-[\[8\] Chandrasekar et al. *DRAMPower: Open-Source DRAM Power & Energy
+[\[9\] Chandrasekar et al. *DRAMPower: Open-Source DRAM Power & Energy
 Estimation Tool.* IEEE CAL 2015.](http://www.drampower.info)
 
 
@@ -200,8 +200,8 @@ command it issues to a file in DRAMPower \[8\] format.  To do so, please turn
 on the `record_cmd_trace` variable in the configuration file.  The resulting
 DRAM command trace (e.g., `cmd-trace-chan-N-rank-M.cmdtrace`) should be fed
 into a compatible DRAM energy simulator such as 
-[VAMPIRE](https://github.com/CMU-SAFARI/VAMPIRE) \[7\] or 
-[DRAMPower](http://www.drampower.info) \[8\] with the correct configuration 
+[VAMPIRE](https://github.com/CMU-SAFARI/VAMPIRE) \[8\] or 
+[DRAMPower](http://www.drampower.info) \[9\] with the correct configuration 
 (standard/speed/organization) to estimate energy/power usage for a single rank
 (a current limitation of both VAMPIRE and DRAMPower).
 
