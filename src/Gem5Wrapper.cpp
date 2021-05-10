@@ -53,3 +53,10 @@ bool Gem5Wrapper::send(Request req)
 void Gem5Wrapper::finish(void) {
     mem->finish();
 }
+
+unsigned int Gem5Wrapper::rdqueuesize(void) {
+    return mem->rdqueuesize();
+}
+unsigned int Gem5Wrapper::wrqueuesize(void) {
+    return mem->wrqueuesize();
+}

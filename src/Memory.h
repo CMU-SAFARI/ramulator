@@ -37,6 +37,8 @@ public:
     virtual bool send(Request req) = 0;
     virtual int pending_requests() = 0;
     virtual void finish(void) = 0;
+    virtual unsigned int rdqueuesize(void) = 0;
+    virtual unsigned int wrqueuesize(void) = 0;
     virtual long page_allocator(long addr, int coreid) = 0;
     virtual void record_core(int coreid) = 0;
     virtual void set_high_writeq_watermark(const float watermark) = 0;
@@ -518,6 +520,14 @@ public:
       in_queue_req_num_avg = in_queue_req_num_sum.value() / dram_cycles;
       in_queue_read_req_num_avg = in_queue_read_req_num_sum.value() / dram_cycles;
       in_queue_write_req_num_avg = in_queue_write_req_num_sum.value() / dram_cycles;
+    }
+
+    unsigned int rdqueuesize() {
+            return ctrls[0]->readq.max;
+    }
+
+    unsigned int wrqueuesize() {
+            return ctrls[0]->writeq.max;
     }
 
     long page_allocator(long addr, int coreid) {
