@@ -6,11 +6,7 @@ import time
 import tempfile
 import subprocess
 import psutil
-import Queue
-import thread
 import shutil
-
-
 
 class Sim(object):
   def __init__(self, _name, _trace):
@@ -25,7 +21,7 @@ class Ramulator(Sim):
   def __init__(self):
     super(Ramulator, self).__init__('Ramulator', 'ramulator')
   def argv(self, trc):
-    return ['./ramulator', 'configs/DDR3-config.cfg', '--mode=mem', trc]
+    return ['./ramulator', 'configs/DDR3-config.cfg', '--mode=dram', trc]
   def parse_clk(self, stdout):
     stdout = open("DDR3.stats")
     stdout.seek(0)
@@ -101,20 +97,6 @@ def gen_stream(cb, n, rw):
   for i in range(w):
     cb((r+i)*64, False, r+i)
 
-# def collect_res(p, sim, ofile, res, q):
-#   proc = psutil.Process(p.pid)
-#   t, mem = 0, 0
-#   while p.poll() is None:
-#     try:
-#       mem = max(mem, proc.memory_info()[0]) # rss
-#       t = sum(proc.cpu_times())
-#     except psutil.AccessDenied, e: print "======== Oops %s %d failed ===============" % (sim.name, p.pid)
-#     time.sleep(0.1)
-#   print '%s(%d) finished.' % (sim.name, p.pid)
-#   clk = sim.parse_clk(ofile)
-#   res[sim.name] = (clk, t, mem)
-#   q.get()
-#   q.task_done()
 
 def main(n_reqs, rw, rec):
   trace_names = ['ramulator', 'usimm', 'drsim', 'nvmain']
@@ -129,14 +111,14 @@ def main(n_reqs, rw, rec):
   s = 64
   traces = []
   
-  tmps = {name: tempfile.NamedTemporaryFile() for name in trace_names}
+  tmps = {name: tempfile.NamedTemporaryFile(prefix='random-') for name in trace_names}
   gen_random(make_cb(tmps), n_reqs, rw, s, 31)
   for f in tmps.itervalues():
     f.file.seek(0)
   traces.append(tmps)
   print 'Random trace created'
 
-  tmps = {name: tempfile.NamedTemporaryFile() for name in trace_names}
+  tmps = {name: tempfile.NamedTemporaryFile(prefix='stream-') for name in trace_names}
   gen_stream(make_cb(tmps), n_reqs, rw)
   for f in tmps.itervalues():
     f.file.seek(0)
@@ -149,7 +131,8 @@ def main(n_reqs, rw, rec):
       for name, tmpf in traces[1].iteritems():
         shutil.copy(tmpf.name, './%s-stream.trace' % name)
 
-  sims = [Ramulator(), DRAMSim2(), USIMM(), DrSim(), NVMain()]
+#  sims = [Ramulator(), DRAMSim2(), USIMM(), DrSim(), NVMain()]
+  sims = [Ramulator()] # EDIT: Include the other simulators to test in this list. Make sure these simulators are installed and modify 'base' path above for each simulator you would like to test
   cnt = len(traces) * len(sims)
 
   blackhole = open('/dev/null', 'w')
@@ -170,11 +153,14 @@ def main(n_reqs, rw, rec):
         time.sleep(0.1)
       print '%s(%d) finished.' % (sim.name, p.pid)
       clk = sim.parse_clk(tmp.file)
-      res_dict[sim.name] = (clk, t, mem)
+      res_dict[sim.name] = {'Trace': v[sim.trace].name, 'SimulatedDRAMCycles': clk, 'Runtime (s)': "{:.2f}".format(t), 'MemoryUsage (MB)': "{:.2f}".format(float(mem)/2**20)}
       tmp.file.close()
     results.append(res_dict)
   blackhole.close()
-  print results
+
+  print "\n=== Simulation Results ==="
+  for r in results:
+    print r
 
 
 if __name__ == '__main__':
