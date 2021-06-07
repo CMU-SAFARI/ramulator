@@ -65,7 +65,7 @@ class StatBase {
     StatBase() {
         all_stats.push_back(this);
     }
-
+    virtual ~StatBase() {}
 
   // TODO implement print for Distribution, Histogram,
   // AverageDeviation, StandardDeviation
