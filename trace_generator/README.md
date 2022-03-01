@@ -209,3 +209,8 @@ $ cat temp-example/example.1.pp
 ### Fast Option
 
 Overall result can be calculated using the weight of the chosen slice again using the .pp file in the temporary files directory.
+
+
+### Contributors
+
+- Nisa Bostanci (@nisabostanci) (TOBB University of Economics and Technology)
