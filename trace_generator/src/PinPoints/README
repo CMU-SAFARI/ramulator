@@ -1,0 +1,45 @@
+Download the right PinPoints kit for your platform + compiler.
+
+* Building PinPoints tools:
+    %cd <your_pin-kit_location>/PinPoints
+    % make
+Assuming you have the right kit + compiler, this will create isimpoint, controller, branch_predictor,  and bbtrace and copy them to the 'bin' sub-directory.
+
+* Building Simpoint tool:
+Obtain the latest (3.*) SimPoint tool from UCSD 
+[ http://www-cse.ucsd.edu/~calder/simpoint/ ], build the 'simpoint' binary
+for your platform and copy it to the 'bin' sub-directory.
+    
+* Generating PinPoints for your application:
+Start with the script 'runpinpoints.template.sh'; change various variables 
+as suggested by CHANGEME in the script.
+
+Parameters you must set:
+
+PATH : Make sure 'simpoint' and 'pin' are in your PATH 
+        Add the directories (from a pin kit) PinPoints and PinPoints/bin to 
+         your PATH.
+WORKDIR : to point to your work-directory.
+
+PROGRAM and INPUT : Only used to name your PinPoints files.
+
+COMMAND : The actual command to run your application.
+
+Parameters you can set:
+
+SLICE_SIZE, MAXK, CUTOFF
+
+The modified script, will run your base.exe natively,
+under 'isimpoint' to generate basic block profile, run "simpoint" to generate 
+a PinPoints file, and check that the PinPoints can be reached using 
+'controller'.
+
+How to use PinPoints generated with your Pintool?
+------------------------------------------------
+You need to base your  your simulator/trace-generator pintool on 
+'PinPoints/controller.cpp' and run it in a similar manner with "-ppfile".
+
+----------------------
+-Harish Patil
+
+Send questions to pinheads@yahoogroups.com

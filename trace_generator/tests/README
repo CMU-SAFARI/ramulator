@@ -1,0 +1,29 @@
+# Tests
+This directory includes tests listed below:
+## 1. TraceTest.py
+This test checks if the bubble counts in two traces generated with the same input are the same.
+
+Because of ASLR the addresses used in the traces are changing even the user uses virtual addresses.
+Changing addresses cause differences in traces due to the behavior of the cache system.
+Different instructions are filtered because of the caches.
+To prevent this, tracetest.py turns off the ASLR and generates two traces of the chosen program with the same options
+
+### Usage
+***warning:*** user needs to have root permissions
+
+python TraceTest.py _"chosen program"_
+
+Example:
+- `sudo su`
+- `export PIN_ROOT=*your pin root*`
+- `python TraceTest.py ls`
+
+## 2. SeqNumberTest.py
+This test checks if the sequence numbers are correctly recorded for a given dependency trace.
+
+### Usage
+python SeqNumberTest.py _"dependency trace file"_ _"window size : if not changed give 128"_
+
+Example:
+- `./tracegenerator.sh -icache 0 -paddr 0 -d 1 -t test.out -fast -- ls -al`
+- `python tests/SeqNumberTest.py test.out 128`

@@ -1,0 +1,133 @@
+#!/bin/sh 
+
+# Exit on error
+ERROR ( )
+{
+    echo "  *** Problem running Step2 of pinpoints kit ***"
+    echo "  *** See FAQ  in ./README ***"
+    echo ""
+    exit
+}
+
+GET_YES_NO ( )
+{
+    echo "  'yes' to continue, 'no' to exit."
+    read ACCEPTANCE &> /dev/null
+    if [ "$ACCEPTANCE" = no ] ; then
+    ERROR
+    elif [ "$ACCEPTANCE" != yes ] ; then
+    GET_YES_NO
+    fi
+}
+
+WARMUP=0
+if [ $# -eq 1 ]
+then
+    WARMUP=$1
+    echo 'WARMUP FACTOR' = $WARMUP
+fi
+
+echo "Welcome to Step 2 : Generating pinpoints file"
+echo "This step is almost completely automated."
+if which runsimpoint
+then
+    echo "PATH set correctly."
+else
+    echo "Please add SimPoint tools to `pwd`/bin."
+    echo "Add `pwd`/bin to your PATH"
+    exit
+fi
+
+
+cd Data
+
+echo " Name the profile file generated in Step1:"
+read TMP &> /dev/null
+
+for i in $TMP
+do
+if  [ ! -r $i ];  then
+    echo "`pwd`/$TMP does not exist or is not readable."
+    ERROR
+fi
+done
+
+extension=${TMP##*.}
+if   [ $extension != "bb" ]; then
+    echo "`pwd`/$TMP is not a bb file."
+    ERROR
+fi
+
+
+if  cat $TMP > t.bb 
+then
+    echo "Concatenated $TMP"
+else
+    echo "Error concatenating $TMP"
+    ERROR
+fi
+
+let inscount=`grep Dynamic t.bb | tail -1 | awk '{print $NF}'`
+let slicesize=`cat t.bb | grep SliceSize | tail -1 | awk '{print $NF}'`
+# 'let' command does not work on older (7.1) Red Hat versions
+# in that case coment the two lines above and uncomment the two lines
+# below
+#inscount=`grep Dynamic t.bb | tail -1 | awk '{print $NF}'`
+#slicesize=`cat t.bb | grep SliceSize | tail -1 | awk '{print $NF}'`
+
+echo "slicesize=$slicesize"
+echo "inscount=$inscount"
+
+if  [ $slicesize -gt $inscount ] ; then
+    echo "SliceSize ($slicesize) is too large (> total # instructions: $inscount)"
+    tmp=`echo "($inscount/100)" | bc`
+    recommended_slice_size=`echo "10^(length($tmp)-1)" | bc`
+    echo "Recommended SliceSize == $recommended_slice_size"
+    echo "Please re-run Step1 with 'pin -t `which isimpoint` -slice_size $recommended_slice_size --'"
+    exit
+fi
+
+runsimpoint t.bb `pwd` 
+
+if  [ -e  "t.simpoints" ];  then
+    echo "Ran UCSD Cluster Analysis Successfully"
+else
+    echo "Error running UCSD Cluster Analysis."
+    ERROR
+fi
+
+echo
+echo "Creating pinpoints file : version1:"
+echo "      What is the prefix for the file (short name of your program)?"
+read TMP &> /dev/null
+
+
+echo "Creating pinpoints file for PIN tools:"
+ppgen $TMP.pintool t.bb t.simpoints t.weights t.labels $WARMUP >& ppgen.out
+
+if  [ -e  "$TMP.pintool.1.pp" ];  then
+    echo ""
+    echo "Generated pinpoints file `pwd`/$TMP.pintool.1.pp."
+else
+    echo "Error generating PIN tool pinpoints file."
+    ERROR
+fi
+
+
+list="t.simpoints "
+for i in 2 3 4
+do
+    echo "Creating pinpoints file #$i for PIN tools:"
+    pick_alternate_simpoints..Simpoint1-2.sh $i t.simpoints t.labels > t.$i.simpoints
+    ppgen $TMP.ALT$i.pintool t.bb t.$i.simpoints t.weights t.labels $WARMUP >& ppgen.out
+    if  [ -e  "$TMP.ALT$i.pintool.1.pp" ];  then
+        echo ""
+        echo "Generated alternate pinpoints file `pwd`/$TMP.ALT$i.pintool.1.pp."
+    else
+        echo "Error generating alternate PIN tool pinpoints file."
+        ERROR
+    fi
+    list=${list}" ""t.$i.simpoints"
+done
+pptable.sh  $list > $TMP.ALT.PINPOINTS.TABLE
+echo "Step2:  Done "
