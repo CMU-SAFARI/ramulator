@@ -216,3 +216,13 @@ into a compatible DRAM energy simulator such as
 - Saugata Ghose (Carnegie Mellon University)
 - Tianshi Li (Carnegie Mellon University)
 - @henryzh
+
+### Acknowledgments
+
+We thank the SAFARI group members who have contributed to
+the initial development of Ramulator, including Kevin Chang, Saugata
+Ghose, Donghyuk Lee, Tianshi Li, and Vivek Seshadri. We also
+thank the anonymous reviewers for feedback. This work was
+supported by NSF, SRC, and gifts from our industrial partners,
+including Google, Intel, Microsoft, Nvidia, Samsung, Seagate
+and VMware.
