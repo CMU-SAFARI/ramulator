@@ -53,41 +53,51 @@ Cache::Cache(int size, int assoc, int block_size,
   // regStats
   cache_read_miss.name(level_string + string("_cache_read_miss"))
                  .desc("cache read miss count")
-                 .precision(0);
+                 .precision(0)
+                 ;
 
   cache_write_miss.name(level_string + string("_cache_write_miss"))
                   .desc("cache write miss count")
-                  .precision(0);
+                  .precision(0)
+                  ;
 
   cache_total_miss.name(level_string + string("_cache_total_miss"))
                   .desc("cache total miss count")
-                  .precision(0);
+                  .precision(0)
+                  ;
 
   cache_eviction.name(level_string + string("_cache_eviction"))
                 .desc("number of evict from this level to lower level")
-                .precision(0);
+                .precision(0)
+                ;
 
   cache_read_access.name(level_string + string("_cache_read_access"))
                   .desc("cache read access count")
-                  .precision(0);
+                  .precision(0)
+                  ;
 
   cache_write_access.name(level_string + string("_cache_write_access"))
                     .desc("cache write access count")
-                    .precision(0);
+                    .precision(0)
+                    ;
 
   cache_total_access.name(level_string + string("_cache_total_access"))
                     .desc("cache total access count")
-                    .precision(0);
+                    .precision(0)
+                    ;
 
   cache_mshr_hit.name(level_string + string("_cache_mshr_hit"))
                 .desc("cache mshr hit count")
-                .precision(0);
+                .precision(0)
+                ;
   cache_mshr_unavailable.name(level_string + string("_cache_mshr_unavailable"))
                          .desc("cache mshr not available count")
-                         .precision(0);
+                         .precision(0)
+                         ;
   cache_set_unavailable.name(level_string + string("_cache_set_unavailable"))
                          .desc("cache set not available")
-                         .precision(0);
+                         .precision(0)
+                         ;
 }
 
 bool Cache::send(Request req) {
@@ -175,7 +185,9 @@ bool Cache::send(Request req) {
 
     // Send the request to next level;
     if (!is_last_level) {
-      lower_cache->send(req);
+      if(!lower_cache->send(req)) {
+        retry_list.push_back(req);
+      }
     } else {
       cachesys->wait_list.push_back(
           make_pair(cachesys->clk + latency[int(level)], req));
@@ -370,6 +382,18 @@ void Cache::callback(Request& req) {
       hc->callback(req);
     }
   }
+}
+
+void Cache::tick() {
+
+    if(!lower_cache->is_last_level)
+        lower_cache->tick();
+
+    for (auto it = retry_list.begin(); it != retry_list.end(); it++) {
+        if(lower_cache->send(*it))
+            it = retry_list.erase(it);
+    }
+
 }
 
 void CacheSystem::tick() {

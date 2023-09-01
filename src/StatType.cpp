@@ -8,6 +8,12 @@ StatList statlist;
 // The smallest timing granularity.
 Tick curTick = 0;
 
+std::vector<StatBase*> all_stats;
+void reset_stats() {
+    for(auto s : all_stats)
+        s->reset();
+}
+
 void
 Histogram::grow_out()
 {

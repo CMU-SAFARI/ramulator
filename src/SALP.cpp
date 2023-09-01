@@ -6,6 +6,8 @@
 
 using namespace ramulator;
 
+string SALP::level_str [int(Level::MAX)] = {"Ch", "Ra", "Ba", "Sa", "Ro", "Co"};
+
 map<string, enum SALP::Org> SALP::org_map = {
     {"SALP_512Mb_x4", SALP::Org::SALP_512Mb_x4}, {"SALP_512Mb_x8", SALP::Org::SALP_512Mb_x8}, {"SALP_512Mb_x16", SALP::Org::SALP_512Mb_x16},
     {"SALP_1Gb_x4", SALP::Org::SALP_1Gb_x4}, {"SALP_1Gb_x8", SALP::Org::SALP_1Gb_x8}, {"SALP_1Gb_x16", SALP::Org::SALP_1Gb_x16},

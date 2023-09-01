@@ -1,6 +1,8 @@
+We have released an updated version of Ramulator, called [Ramulator 2.0](https://github.com/CMU-SAFARI/ramulator2), in August 2023. Ramulator 2.0 is easier to use, extend, and modify. It also has support for the latest DRAM standards at the time (e.g., DDR5, LPDDR5, HBM3 GDDR6). We suggest that you use Ramulator 2.0 and welcome your feedback and bug/issue reports.
+
 # Ramulator: A DRAM Simulator
 
-Ramulator is a fast and cycle-accurate DRAM simulator \[1\] that supports a
+Ramulator is a fast and cycle-accurate DRAM simulator \[1, 2\] that supports a
 wide array of commercial, as well as academic, DRAM standards:
 
 - DDR3 (2007), DDR4 (2012)
@@ -8,22 +10,34 @@ wide array of commercial, as well as academic, DRAM standards:
 - GDDR5 (2009)
 - WIO (2011), WIO2 (2014)
 - HBM (2013)
-- SALP \[2\]
-- TL-DRAM \[3\]
-- RowClone \[4\]
-- DSARP \[5\]
+- SALP \[3\]
+- TL-DRAM \[4\]
+- RowClone \[5\]
+- DSARP \[6\]
+
+The initial release of Ramulator is described in the following paper:
+>Y. Kim, W. Yang, O. Mutlu.
+>"[**Ramulator: A Fast and Extensible DRAM Simulator**](https://people.inf.ethz.ch/omutlu/pub/ramulator_dram_simulator-ieee-cal15.pdf)".
+>In _IEEE Computer Architecture Letters_, March 2015.
+
+For information on new features, along with an extensive memory characterization using Ramulator, please read:
+>S. Ghose, T. Li, N. Hajinazar, D. Senol Cali, O. Mutlu.
+>"[**Demystifying Complex Workload–DRAM Interactions: An Experimental Study**](https://people.inf.ethz.ch/omutlu/pub/Workload-DRAM-Interaction-Analysis_sigmetrics19_pomacs19.pdf)".
+>In _Proceedings of the ACM International Conference on Measurement and Modeling of Computer Systems (SIGMETRICS)_, June 2019 ([slides](https://people.inf.ethz.ch/omutlu/pub/Workload-DRAM-Interaction-Analysis_sigmetrics19-talk.pdf)).
+>In _Proceedings of the ACM on Measurement and Analysis of Computing Systems (POMACS)_, 2019.
 
 [\[1\] Kim et al. *Ramulator: A Fast and Extensible DRAM Simulator.* IEEE CAL
-2015.](http://dx.doi.org/10.1109/LCA.2015.2414456)  
-[\[2\] Kim et al. *A Case for Exploiting Subarray-Level Parallelism (SALP) in
-DRAM.* ISCA 2012.](http://dx.doi.org/10.1109/ISCA.2012.6237032)  
-[\[3\] Lee et al. *Tiered-Latency DRAM: A Low Latency and Low Cost DRAM
-Architecture.* HPCA 2013.](http://dx.doi.org/10.1109/HPCA.2013.6522354)  
-[\[4\] Seshadri et al. *RowClone: Fast and Energy-Efficient In-DRAM Bulk Data
+2015.](https://people.inf.ethz.ch/omutlu/pub/ramulator_dram_simulator-ieee-cal15.pdf)  
+[\[2\] Ghose et al. *Demystifying Complex Workload–DRAM Interactions: An Experimental Study.* SIGMETRICS 2019.](https://people.inf.ethz.ch/omutlu/pub/Workload-DRAM-Interaction-Analysis_sigmetrics19_pomacs19.pdf)  
+[\[3\] Kim et al. *A Case for Exploiting Subarray-Level Parallelism (SALP) in
+DRAM.* ISCA 2012.](https://users.ece.cmu.edu/~omutlu/pub/salp-dram_isca12.pdf)  
+[\[4\] Lee et al. *Tiered-Latency DRAM: A Low Latency and Low Cost DRAM
+Architecture.* HPCA 2013.](https://users.ece.cmu.edu/~omutlu/pub/tldram_hpca13.pdf)  
+[\[5\] Seshadri et al. *RowClone: Fast and Energy-Efficient In-DRAM Bulk Data
 Copy and Initialization.* MICRO
-2013.](http://dx.doi.org/10.1145/2540708.2540725)  
-[\[5\] Chang et al. *Improving DRAM Performance by Parallelizing Refreshes with
-Accesses.* HPCA 2014.](http://dx.doi.org/10.1109/HPCA.2014.6835946)
+2013.](https://users.ece.cmu.edu/~omutlu/pub/rowclone_micro13.pdf)  
+[\[6\] Chang et al. *Improving DRAM Performance by Parallelizing Refreshes with
+Accesses.* HPCA 2014.](https://users.ece.cmu.edu/~omutlu/pub/dram-access-refresh-parallelization_hpca14.pdf)
 
 
 ## Usage
@@ -58,13 +72,16 @@ Ramulator supports four different usage modes.
 2. **CPU Trace Driven(Multi-Program):** Ramulator also supports multi-program simulation mode. It reads multiple trace files and instantiates the same number of cores to execute those traces simultaneously. We have a configurable cache model that supports several modes: only L1 and L2 cache, only last level cache(shared by all cores) and all three levels, so the contention of memory requests at the last level cache can be correctly modeled and we can also simulate with traces not filtered by any cache model. Our memory translation mechanism can map the same original address from different cores to different physical addresses. Random translation is supported now and can be enabled in the config file.
 
 3. **gem5 Driven:** Ramulator runs as part of a full-system simulator (gem5
-  \[6\]), from which it receives memory request as they are generated.
+  \[7\]), from which it receives memory request as they are generated.
 
 For some of the DRAM standards, Ramulator is also capable of reporting
-power consumption by relying on DRAMPower \[7\] as the backend. 
+power consumption by relying on either VAMPIRE \[8\] or DRAMPower \[9\] 
+as the backend. 
 
-[\[6\] The gem5 Simulator System.](http://www.gem5.org)  
-[\[7\] Chandrasekar et al. *DRAMPower: Open-Source DRAM Power & Energy
+[\[7\] The gem5 Simulator System.](http://www.gem5.org)  
+[\[8\] Ghose et al. *What Your DRAM Power Models Are Not Telling You:
+Lessons from a Detailed Experimental Study.* SIGMETRICS 2018.](https://github.com/CMU-SAFARI/VAMPIRE)  
+[\[9\] Chandrasekar et al. *DRAMPower: Open-Source DRAM Power & Energy
 Estimation Tool.* IEEE CAL 2015.](http://www.drampower.info)
 
 
@@ -120,6 +137,7 @@ Ramulator requires a C++11 compiler (e.g., `clang++`, `g++-5`).
         # Compile gem5
         # Run gem5 with `--mem-type=ramulator` and `--ramulator-config=configs/DDR3-config.cfg`
 
+  By default, gem5 uses the atomic CPU and uses atomic memory accesses, i.e. a detailed memory model like ramulator is not really used. To actually run gem5 in timing mode, a CPU type need to be specified by command line parameter `--cpu-type`. e.g. `--cpu-type=timing`
         
 ## Simulation Output
 
@@ -162,7 +180,7 @@ designated lines in the script's source code:
 
 * Ramulator
 * DRAMSim2 (https://wiki.umd.edu/DRAMSim2): `test_ddr3.py` lines 39-40
-* USIMM, (http://www.cs.utah.edu/~rajeev/jwac12): `test_ddr3.py` lines 54-55
+* USIMM (http://www.cs.utah.edu/~rajeev/jwac12): `test_ddr3.py` lines 54-55
 * DrSim (http://lph.ece.utexas.edu/public/Main/DrSim): `test_ddr3.py` lines 66-67
 * NVMain (http://wiki.nvmain.org): `test_ddr3.py`  lines 78-79
 
@@ -194,11 +212,14 @@ CPU trace driven simulations.
 ### Power Estimation
 
 For estimating power consumption, Ramulator can record the trace of every DRAM
-command it issues to a file in DRAMPower \[7\] format.  To do so, please turn
+command it issues to a file in DRAMPower \[8\] format.  To do so, please turn
 on the `record_cmd_trace` variable in the configuration file.  The resulting
 DRAM command trace (e.g., `cmd-trace-chan-N-rank-M.cmdtrace`) should be fed
-into DRAMPower with the correct configuration (standard/speed/organization)
-to estimate energy/power usage for a single rank (a limitation of DRAMPower).
+into a compatible DRAM energy simulator such as 
+[VAMPIRE](https://github.com/CMU-SAFARI/VAMPIRE) \[8\] or 
+[DRAMPower](http://www.drampower.info) \[9\] with the correct configuration 
+(standard/speed/organization) to estimate energy/power usage for a single rank
+(a current limitation of both VAMPIRE and DRAMPower).
 
 
 ### Contributors
@@ -211,3 +232,13 @@ to estimate energy/power usage for a single rank (a limitation of DRAMPower).
 - Saugata Ghose (Carnegie Mellon University)
 - Tianshi Li (Carnegie Mellon University)
 - @henryzh
+
+### Acknowledgments
+
+We thank the SAFARI group members who have contributed to
+the initial development of Ramulator, including Kevin Chang, Saugata
+Ghose, Donghyuk Lee, Tianshi Li, and Vivek Seshadri. We also
+thank the anonymous reviewers for feedback. This work was
+supported by NSF, SRC, and gifts from our industrial partners,
+including Google, Intel, Microsoft, Nvidia, Samsung, Seagate
+and VMware.

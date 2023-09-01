@@ -3,6 +3,8 @@
 
 #include <string>
 
+#include "Config.h"
+
 using namespace std;
 
 namespace ramulator
@@ -17,7 +19,7 @@ private:
     MemoryBase *mem;
 public:
     double tCK;
-    Gem5Wrapper(const string& config_file, int cacheline);
+    Gem5Wrapper(const Config& configs, int cacheline);
     ~Gem5Wrapper();
     void tick();
     bool send(Request req);

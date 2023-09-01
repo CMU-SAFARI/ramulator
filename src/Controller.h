@@ -25,6 +25,8 @@ using namespace std;
 namespace ramulator
 {
 
+    extern bool warmup_complete;
+
 template <typename T>
 class Controller
 {
@@ -42,6 +44,7 @@ protected:
     VectorStat write_row_hits;
     VectorStat write_row_misses;
     VectorStat write_row_conflicts;
+    ScalarStat useless_activates;
 
     ScalarStat read_latency_avg;
     ScalarStat read_latency_sum;
@@ -53,12 +56,14 @@ protected:
     ScalarStat write_req_queue_length_avg;
     ScalarStat write_req_queue_length_sum;
 
+#ifndef INTEGRATED_WITH_GEM5
     VectorStat record_read_hits;
     VectorStat record_read_misses;
     VectorStat record_read_conflicts;
     VectorStat record_write_hits;
     VectorStat record_write_misses;
     VectorStat record_write_conflicts;
+#endif
 
 public:
     /* Member Variables */
@@ -78,10 +83,17 @@ public:
 
     Queue readq;  // queue for read requests
     Queue writeq;  // queue for write requests
+    Queue actq; // read and write requests for which activate was issued are moved to 
+                   // actq, which has higher priority than readq and writeq.
+                   // This is an optimization
+                   // for avoiding useless activations (i.e., PRECHARGE
+                   // after ACTIVATE w/o READ of WRITE command)
     Queue otherq;  // queue for all "other" requests (e.g., refresh)
 
     deque<Request> pending;  // read requests that are about to receive data from DRAM
     bool write_mode = false;  // whether write requests should be prioritized over reads
+    float wr_high_watermark = 0.8f; // threshold for switching to write mode
+    float wr_low_watermark = 0.2f; // threshold for switching back to read mode
     //long refreshed = 0;  // last time refresh requests were generated
 
     /* Command trace for DRAMPower 3.1 */
@@ -115,56 +127,62 @@ public:
         // regStats
 
         row_hits
-            .name("row_hits_channel_"+to_string(channel->id))
-            .desc("Number of row hits per channel")
+            .name("row_hits_channel_"+to_string(channel->id) + "_core")
+            .desc("Number of row hits per channel per core")
             .precision(0)
             ;
         row_misses
-            .name("row_misses_channel_"+to_string(channel->id))
-            .desc("Number of row misses per channel")
+            .name("row_misses_channel_"+to_string(channel->id) + "_core")
+            .desc("Number of row misses per channel per core")
             .precision(0)
             ;
         row_conflicts
-            .name("row_conflicts_channel_"+to_string(channel->id))
-            .desc("Number of row conflicts per channel")
+            .name("row_conflicts_channel_"+to_string(channel->id) + "_core")
+            .desc("Number of row conflicts per channel per core")
             .precision(0)
             ;
 
         read_row_hits
             .init(configs.get_core_num())
-            .name("read_row_hits_channel_"+to_string(channel->id))
-            .desc("Number of row hits for read requests per channel")
+            .name("read_row_hits_channel_"+to_string(channel->id) + "_core")
+            .desc("Number of row hits for read requests per channel per core")
             .precision(0)
             ;
         read_row_misses
             .init(configs.get_core_num())
-            .name("read_row_misses_channel_"+to_string(channel->id))
-            .desc("Number of row misses for read requests per channel")
+            .name("read_row_misses_channel_"+to_string(channel->id) + "_core")
+            .desc("Number of row misses for read requests per channel per core")
             .precision(0)
             ;
         read_row_conflicts
             .init(configs.get_core_num())
-            .name("read_row_conflicts_channel_"+to_string(channel->id))
-            .desc("Number of row conflicts for read requests per channel")
+            .name("read_row_conflicts_channel_"+to_string(channel->id) + "_core")
+            .desc("Number of row conflicts for read requests per channel per core")
             .precision(0)
             ;
 
         write_row_hits
             .init(configs.get_core_num())
-            .name("write_row_hits_channel_"+to_string(channel->id))
-            .desc("Number of row hits for write requests per channel")
+            .name("write_row_hits_channel_"+to_string(channel->id) + "_core")
+            .desc("Number of row hits for write requests per channel per core")
             .precision(0)
             ;
         write_row_misses
             .init(configs.get_core_num())
-            .name("write_row_misses_channel_"+to_string(channel->id))
-            .desc("Number of row misses for write requests per channel")
+            .name("write_row_misses_channel_"+to_string(channel->id) + "_core")
+            .desc("Number of row misses for write requests per channel per core")
             .precision(0)
             ;
         write_row_conflicts
             .init(configs.get_core_num())
-            .name("write_row_conflicts_channel_"+to_string(channel->id))
-            .desc("Number of row conflicts for write requests per channel")
+            .name("write_row_conflicts_channel_"+to_string(channel->id) + "_core")
+            .desc("Number of row conflicts for write requests per channel per core")
+            .precision(0)
+            ;
+
+        useless_activates
+            .name("useless_activates_"+to_string(channel->id)+ "_core")
+            .desc("Number of useless activations. E.g, ACT -> PRE w/o RD or WR")
             .precision(0)
             ;
 
@@ -223,6 +241,7 @@ public:
             .precision(6)
             ;
 
+#ifndef INTEGRATED_WITH_GEM5
         record_read_hits
             .init(configs.get_core_num())
             .name("record_read_hits")
@@ -258,6 +277,7 @@ public:
             .name("record_write_conflicts")
             .desc("record write conflict for this core when it reaches request limit or to the end")
             ;
+#endif
     }
 
     ~Controller(){
@@ -271,7 +291,7 @@ public:
         cmd_trace_files.clear();
     }
 
-    void finish(int read_req, int write_req, int dram_cycles) {
+    void finish(long read_req, long dram_cycles) {
       read_latency_avg = read_latency_sum.value() / read_req;
       req_queue_length_avg = req_queue_length_sum.value() / dram_cycles;
       read_req_queue_length_avg = read_req_queue_length_sum.value() / dram_cycles;
@@ -336,22 +356,47 @@ public:
         /*** 3. Should we schedule writes? ***/
         if (!write_mode) {
             // yes -- write queue is almost full or read queue is empty
-            if (writeq.size() >= int(0.8 * writeq.max) || readq.size() == 0)
+            if (writeq.size() > int(wr_high_watermark * writeq.max) || readq.size() == 0)
                 write_mode = true;
         }
         else {
             // no -- write queue is almost empty and read queue is not empty
-            if (writeq.size() <= int(0.2 * writeq.max) && readq.size() != 0)
+            if (writeq.size() < int(wr_low_watermark * writeq.max) && readq.size() != 0)
                 write_mode = false;
         }
 
         /*** 4. Find the best command to schedule, if any ***/
-        Queue* queue = !write_mode ? &readq : &writeq;
-        if (otherq.size())
-            queue = &otherq;  // "other" requests are rare, so we give them precedence over reads/writes
 
+        // First check the actq (which has higher priority) to see if there
+        // are requests available to service in this cycle
+        Queue* queue = &actq;
+        typename T::Command cmd;
         auto req = scheduler->get_head(queue->q);
-        if (req == queue->q.end() || !is_ready(req)) {
+
+        bool is_valid_req = (req != queue->q.end());
+
+        if(is_valid_req) {
+            cmd = get_first_cmd(req);
+            is_valid_req = is_ready(cmd, req->addr_vec);
+        }
+
+        if (!is_valid_req) {
+            queue = !write_mode ? &readq : &writeq;
+
+            if (otherq.size())
+                queue = &otherq;  // "other" requests are rare, so we give them precedence over reads/writes
+
+            req = scheduler->get_head(queue->q);
+
+            is_valid_req = (req != queue->q.end());
+
+            if(is_valid_req){
+                cmd = get_first_cmd(req);
+                is_valid_req = is_ready(cmd, req->addr_vec);
+            }
+        }
+
+        if (!is_valid_req) {
             // we couldn't find a command to schedule -- let's try to be speculative
             auto cmd = T::Command::PRE;
             vector<int> victim = rowpolicy->get_victim(cmd);
@@ -396,12 +441,19 @@ public:
         }
 
         // issue command on behalf of request
-        auto cmd = get_first_cmd(req);
         issue_cmd(cmd, get_addr_vec(cmd, req));
 
         // check whether this is the last command (which finishes the request)
-        if (cmd != channel->spec->translate[int(req->type)])
+        //if (cmd != channel->spec->translate[int(req->type)]){
+        if (cmd != channel->spec->translate[int(req->type)]) {
+            if(channel->spec->is_opening(cmd)) {
+                // promote the request that caused issuing activation to actq
+                actq.q.push_back(*req);
+                queue->q.erase(req);
+            }
+
             return;
+        }
 
         // set a future completion time for read requests
         if (req->type == Request::Type::READ) {
@@ -411,6 +463,7 @@ public:
 
         if (req->type == Request::Type::WRITE) {
             channel->update_serving_requests(req->addr_vec.data(), -1, clk);
+            // req->callback(*req);
         }
 
         // remove request from queue
@@ -466,13 +519,23 @@ public:
       return clk <= channel->end_of_refreshing;
     }
 
+    void set_high_writeq_watermark(const float watermark) {
+       wr_high_watermark = watermark; 
+    }
+
+    void set_low_writeq_watermark(const float watermark) {
+       wr_low_watermark = watermark;
+    }
+
     void record_core(int coreid) {
+#ifndef INTEGRATED_WITH_GEM5
       record_read_hits[coreid] = read_row_hits[coreid];
       record_read_misses[coreid] = read_row_misses[coreid];
       record_read_conflicts[coreid] = read_row_conflicts[coreid];
       record_write_hits[coreid] = write_row_hits[coreid];
       record_write_misses[coreid] = write_row_misses[coreid];
       record_write_conflicts[coreid] = write_row_conflicts[coreid];
+#endif
     }
 
 private:
@@ -482,10 +545,68 @@ private:
         return channel->decode(cmd, req->addr_vec.data());
     }
 
+    // upgrade to an autoprecharge command
+    void cmd_issue_autoprecharge(typename T::Command& cmd,
+                                            const vector<int>& addr_vec) {
+
+        // currently, autoprecharge is only used with closed row policy
+        if(channel->spec->is_accessing(cmd) && rowpolicy->type == RowPolicy<T>::Type::ClosedAP) {
+            // check if it is the last request to the opened row
+            Queue* queue = write_mode ? &writeq : &readq;
+
+            auto begin = addr_vec.begin();
+            vector<int> rowgroup(begin, begin + int(T::Level::Row) + 1);
+
+			int num_row_hits = 0;
+
+            for (auto itr = queue->q.begin(); itr != queue->q.end(); ++itr) {
+                if (is_row_hit(itr)) { 
+                    auto begin2 = itr->addr_vec.begin();
+                    vector<int> rowgroup2(begin2, begin2 + int(T::Level::Row) + 1);
+                    if(rowgroup == rowgroup2)
+                        num_row_hits++;
+                }
+            }
+
+            if(num_row_hits == 0) {
+                Queue* queue = &actq;
+                for (auto itr = queue->q.begin(); itr != queue->q.end(); ++itr) {
+                    if (is_row_hit(itr)) {
+                        auto begin2 = itr->addr_vec.begin();
+                        vector<int> rowgroup2(begin2, begin2 + int(T::Level::Row) + 1);
+                        if(rowgroup == rowgroup2)
+                            num_row_hits++;
+                    }
+                }
+            }
+
+            assert(num_row_hits > 0); // The current request should be a hit, 
+                                      // so there should be at least one request 
+                                      // that hits in the current open row
+            if(num_row_hits == 1) {
+                if(cmd == T::Command::RD)
+                    cmd = T::Command::RDA;
+                else if (cmd == T::Command::WR)
+                    cmd = T::Command::WRA;
+                else
+                    assert(false && "Unimplemented command type.");
+            }
+        }
+
+    }
+
     void issue_cmd(typename T::Command cmd, const vector<int>& addr_vec)
     {
+        cmd_issue_autoprecharge(cmd, addr_vec);
         assert(is_ready(cmd, addr_vec));
         channel->update(cmd, addr_vec.data(), clk);
+
+        if(cmd == T::Command::PRE){
+            if(rowtable->get_hits(addr_vec, true) == 0){
+                useless_activates++;
+            }
+        }
+ 
         rowtable->update(cmd, addr_vec, clk);
         if (record_cmd_trace){
             // select rank
@@ -526,6 +647,10 @@ void Controller<ALDRAM>::update_temp(ALDRAM::Temp current_temperature);
 
 template <>
 void Controller<TLDRAM>::tick();
+
+template <>
+void Controller<TLDRAM>::cmd_issue_autoprecharge(typename TLDRAM::Command& cmd,
+                                                    const vector<int>& addr_vec);
 
 } /*namespace ramulator*/
 

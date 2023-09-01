@@ -27,6 +27,8 @@ public:
     // [address(hex)] [R/W]
     bool get_dramtrace_request(long& req_addr, Request::Type& req_type);
 
+    long expected_limit_insts = 0;
+
 private:
     std::ifstream file;
     std::string trace_name;
@@ -67,9 +69,11 @@ public:
         std::shared_ptr<CacheSystem> cachesys, MemoryBase& memory);
     void tick();
     void receive(Request& req);
+    void reset_stats();
     double calc_ipc();
     bool finished();
     bool has_reached_limit();
+    long get_insts(); // the number of the instructions issued to the core
     function<void(Request&)> callback;
 
     bool no_core_caches = true;
@@ -90,7 +94,7 @@ public:
     ScalarStat record_insts;
     long expected_limit_insts;
     // This is set true iff expected number of instructions has been executed or all instructions are executed.
-    bool reached_limit = false;;
+    bool reached_limit = false;
 
 private:
     Trace trace;
@@ -101,6 +105,8 @@ private:
     Request::Type req_type;
     bool more_reqs;
     long last = 0;
+
+    Cache* first_level_cache = nullptr;
 
     ScalarStat memory_access_cycles;
     ScalarStat cpu_inst;
@@ -113,8 +119,10 @@ public:
         function<bool(Request)> send, MemoryBase& memory);
     void tick();
     void receive(Request& req);
+    void reset_stats();
     bool finished();
     bool has_reached_limit();
+    long get_insts(); // the total number of instructions issued to all cores
 
     std::vector<std::unique_ptr<Core>> cores;
     std::vector<double> ipcs;

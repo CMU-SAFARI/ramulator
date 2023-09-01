@@ -1,0 +1,499 @@
+: # -*-Perl-*-
+eval 'exec perl -wS "$0" ${1+"$@"}'
+       if 0;
+
+#Mark Charney   <mark.charney@intel.com>
+#$Id: ppgen,v 1.10 2004/07/30 23:09:44 hgpatil Exp $
+
+###
+### Takes 4 files as inputs. Produces a .pp (pinpoints) file 
+###   in one of two formats. 
+###
+### The 4 input files are: 
+###      (1) a large basic-block vector file
+###      (2) a small simpoints file listing which vectors we want
+###      (3) a small weights file listing the weights of each simpoint in file #2
+
+###      (4) a labels file that has 2 columns, but we only care about
+###      the first column which is the phase identifier. The second
+###      column is the distance from the centroid. The line number is
+###      the slice identifier and that is implicit, of course.
+###
+###  
+
+
+
+if ($#ARGV != 5 and $#ARGV != 6) {
+    die "Usage: [-i] $0 pp-prefix bb simpoint weights labels warmup_factor\n";
+} 
+
+if ($#ARGV == 6) {
+    $icount_arg = shift;
+    if ($icount_arg ne "-i") {
+        die "Usage: [-i] $0 pp-prefix bb simpoint weights labels warmup_factor\n";
+    }
+    $icount_format = 1;
+}
+
+$prefix = shift;
+$bb = shift;
+$simpoints = shift;
+$weights = shift;
+$labels  = shift;
+$warmup_factor  = shift;
+
+# compute the slice size
+die "'$bb' is not readable.\n" if !-r $bb;
+$insts_per_marker = `zgrep -m1 '^SliceSize:' $bb | awk '{ print \$NF }'`;
+chomp $insts_per_marker;
+printf STDERR "Slice Size: %d\n", $insts_per_marker;
+ReadLabelsFile();
+
+sub ReadLabelsFile
+{
+  my $phase;
+  my $distance;
+
+  my $line = 0;
+  open(Q, $labels);
+  while(<Q>) {
+    chomp $_;
+    ## split on one or more spaces, aka \s+
+    ($phase, $distance) = split(/\s+/,$_);
+    # printf STDERR "%d %f\n", $phase, $distance;
+    # store the phase and distance by the line/slice number
+    $gphase[$line] = $phase;
+    $gdistance[$line] = $distance;
+    # SimPoint 3 numbers slices starting at 0
+    $line++; ## line numbers start from line 0 and are the slice numbers
+  }
+}
+
+
+##
+## Marked instruction subroutines track addresses at which event counters
+## will be inserted.  A unique monotonically increasing index is assigned
+## to mark instruction addresses as new ones are encountered.
+##
+$nMarkedInstrs = 0;
+$startTag = 1;
+$endTag = 2;
+
+sub FinishFile
+{
+  # Finish the previous file
+  if ($file_open == 1) {
+    close(H);
+  }
+}
+
+sub FinishThread
+{
+  if ($first != 1) {
+    if (! $icount_format) {
+      PrintMarkedInstrs();
+      ForgetMarkedInstrs();
+    }
+
+    $dyn_count =~ s/Dynamic instruction count //;
+    printf H "\ntotalIcount %s\n", $dyn_count;
+    printf H "pinpoints %d\n", $lpp;
+    printf H "endp\n";
+  }
+
+  $first = 0;
+  $lpp = 0;
+}
+
+##
+## Two arguments: address and operation.  Operation is one of
+## $startTag or $endTag.  
+## OLD: 3rd arg :isNop is 1 if instruction is a NOP and 0 otherwise.
+##
+sub NoteMarkedInstr
+{
+    my $addr = shift;
+    my $operation = shift;
+    my $symbolic_info = shift; ## could be ""
+    my $isNop = 0;
+
+
+    if (!defined($markedInstrs{$addr})) {
+        $nMarkedInstrs += 1;
+        $markedInstrs{$addr} = [$nMarkedInstrs, $operation, $isNop, $symbolic_info];
+    }
+    else {
+        $markedInstrs{$addr}[1] |= $operation;
+    }
+}
+
+##
+## Return an index given an address of marked instruction.
+##
+sub MarkedInstrIdx
+{
+    my $addr = shift;
+    die "Undefined marked instruction\n" if (!defined($markedInstrs{$addr}));
+    return $markedInstrs{$addr}[0];
+}
+
+sub PrintMarkedInstrs
+{
+    my $m;
+    printf H "\nmarkedInstrs %d\n", $nMarkedInstrs;
+    foreach $m (sort { $markedInstrs{$a}[0] <=> $markedInstrs{$b}[0] } keys %markedInstrs) {
+    my $symbolic_info = $markedInstrs{$m}[3];
+    if ($symbolic_info eq "" ) {
+             printf H "mark";
+    }
+    else {
+      printf H "mark-symbolic";
+    }
+
+    printf H " %d %s %d %d %d", 
+      $markedInstrs{$m}[0], 
+        $m,
+            $markedInstrs{$m}[1] & 1,
+          $markedInstrs{$m}[1] >> 1,
+        $markedInstrs{$m}[2];
+
+
+    if ($symbolic_info ne "" ) {
+      printf H " %s", $symbolic_info;
+    }
+
+    printf H "\n";
+    }
+}
+
+
+sub ForgetMarkedInstrs
+{
+    $nMarkedInstrs = 0;
+    undef %markedInstrs;
+}
+
+sub printout
+{
+
+    my $lpp = shift;
+    my $start = shift;
+    my $end = shift;
+    my $slice = shift;
+    my $weight = shift;
+    my $pp_warmup_factor = shift;
+
+    #printf STDERR "input: [%s]\n",$start;
+    # split the input arg based on 1 or more whitespace characters
+
+    my (@s) = split(/\s+/,$start);
+    my (@e) = split(/\s+/,$end);
+
+    #      my $p;
+    #      foreach $p (@s) {
+    #        printf STDERR "s[%s] ", $p;
+    #      }
+    #      foreach $p (@e) {
+    #        printf  STDERR "e[%s] ", $p;
+    #      }
+
+
+
+    # SimPoint 3 numbers slices starting at 0
+    $skip_to_start_icount = ($slice) * $insts_per_marker;
+
+    if ($icount_format) {
+        printf H "%d %s %d %.3f\n",
+        $lpp+1, $skip_to_start_icount, $insts_per_marker, $weight;
+    } else {
+        printf H "\n\#Pinpoint= %d Slice= %s  Icount= %s  Len= %d\n", 
+        $lpp+1, $slice, $skip_to_start_icount,
+        $insts_per_marker;
+
+        my %startpoints = ();
+        my %endpoints = ();
+        my $nstart = 0;
+        my $nend = 0;
+
+        ## startpoints is an associative array (of arrays) indexed
+        ## by the pc of the marker. As is endpoints. 
+
+        ## Process the start  marker 
+
+        my $start_pc = $s[0];
+        my $start_count = $s[1];
+        my $start_symbolic = "";
+        if ($#s == 5) {
+            $start_symbolic = $s[2] . " " . $s[3] . " " . $s[5];
+        }
+
+        $nstart += 1;
+        ## Record the marker for later emission
+        NoteMarkedInstr($start_pc, $startTag, $start_symbolic);
+        $startpoints{$start_pc} = $start_count;
+
+        ## Process the end marker 
+
+        my $end_pc = $e[0];
+        my $end_count = $e[1];
+        my $end_symbolic = "";
+        if ($#e == 5) {
+            $end_symbolic = $e[2] . " " . $e[3] . " " . $e[5];
+        }
+
+        $nend += 1;
+        ## Record the marker for later emission
+        NoteMarkedInstr($end_pc, $endTag, $end_symbolic);
+        $endpoints{$end_pc} = $end_count;
+
+
+        printf H "region %d %0.3f %d %d %d %s\n", 
+        $lpp+1, $weight,
+        $nstart, $nend,
+        $insts_per_marker, $skip_to_start_icount;
+
+        printf H "slice %d %d %f\n", 
+        # The real simulation point is $pp_warmup_factor away from $slice
+        $slice,    $gphase[$slice+$pp_warmup_factor], $gdistance[$slice+$pp_warmup_factor];
+
+        printf H "warmup_factor %d \n", 
+        $pp_warmup_factor;
+
+        my $point;
+
+        foreach $point (sort keys %startpoints) {
+            # printf STDERR "output %s\n",$point;
+            printf H "start %d %s  0\n", 
+            MarkedInstrIdx($point),
+            $startpoints{$point};
+        }
+
+        foreach $point (sort keys %endpoints) {
+            printf H "end   %d %s 0\n", 
+            MarkedInstrIdx($point),
+            $endpoints{$point};
+        }
+    }
+}
+
+
+
+# read the pin points and weights
+
+open(F,"paste $simpoints $weights | sort -n |");
+$x = 0;
+while(<F>) {
+    chop $_;
+    s/^\s+//;
+    ### printf STDERR "Length = %d\n", length($_);
+    if (length($_) != 0) {
+        ($marker, $phase1,  $weight, $phase2) = split(/\s+/,$_);
+        if ($phase1 != $phase2)
+        {
+            die "Phase number from t.simpoints does not match those from t.weights.\n"
+        }
+        $m[$x] = $marker;
+        $wmf[$x] = 0;
+        if ( $warmup_factor > 0)
+        {
+        # Warmup factor == N => emit Nth previous slice
+        # as the pinpoint.
+            $wmf[$x] = $warmup_factor;
+            $m[$x] = $marker - $warmup_factor;
+            # SimPoint 3 numbers slices starting at 0
+            # WAS: if ( $marker <= $warmup_factor )
+            if ( $marker <  $warmup_factor )
+            {
+                #For initial few slices < N
+                printf STDERR "slice: %d <= %d\n", $marker, $warmup_factor;
+                # SimPoint 3 numbers slices starting at 0
+                #WAS: $m[$x] = 1;
+                $m[$x] = 0;
+                # SimPoint 3 numbers slices starting at 0
+                #WAS: $wmf[$x] = $marker - 1;
+                $wmf[$x] = $marker;
+                printf STDERR "new slice: %d new wmf %d\n", $m[$x], $wmf[$x];
+            }
+        }
+        $w[$x++] = $weight;
+        $tw += $weight;
+        # printf "bb = %s\n", $_;
+    }
+}
+close(F);
+
+
+# normalize weights
+my $sum = 0;
+for($i=0; $i < $x ; $i++ )
+{
+    $w[$i] = (100.0 * $w[$i]) / $tw;
+    $sum = $sum + $w[$i];
+}
+
+
+sub header()
+{
+   if ($icount_format) {
+       printf H "#Format: pin-point-number icount-skip length weight \n";
+   }
+   else {
+       printf H "#\n";
+       printf H "# Format:\n";
+       printf H "#   A region tag must preceed its start and end tags with no other\n";
+       printf H "#   tags in between:\n";
+       printf H "#     region <region-id> <weight> <n-start-points> <n-end-points> <length> <icount-from-program-start>\n";
+       printf H "#     slice <slice-id> <phase-id> <distance-from-centroid>\n";
+       printf H "#     start <marked-instr-id> <execution-count-since-program-start> <icount-from-slice-start>\n";
+       printf H "#     end   <marked-instr-id> <execution-count-since-program-start> <icount-from-slice-start>\n";
+       printf H "#\n";
+       printf H "#   A markedInstrs tag must preceed the mark tags.  There must be\n";
+       printf H "#   exactly one markedInstrs tag in the file.\n";
+       printf H "#     markedInstrs <n-marked-instrs>\n";
+       printf H "#     mark <mark-id> <instr-address> <used-in-start> <used-in-end> <is-nop-instr>\n";
+       printf H "#\n";
+   }
+}
+
+
+$first = 1;
+$input = -1;
+$tlines = 0;
+$file_open = 0;
+$pp = 0;
+$seenC = 0;
+my $bbCmd = ($bb =~ /\.([gb])z2?$/) ? "${1}zcat $bb |" : "< $bb";
+open(G,$bbCmd) or die "cannot open '$bbCmd': $!.\n";
+while(<G>) {
+    chop $_;
+    if (/^Dynamic/) {
+        $dyn_count = $_;
+    }
+
+    if (/^C:/) {
+        if ($seenC != 1) {
+            printf H "\# %s\n", $_;
+        }
+        $seenC = 1;
+    }        
+
+    # Every P gets its own info
+    if (/^P:/) {
+      (@line) = split(/ /,$_);
+      $thread = $line[1];
+      #WAS: $firstThreadSlice = $tlines + 1;
+      $firstThreadSlice = $tlines;
+      printf H "\n\nthread %d\n",$thread;
+      printf H "version 3\n"; # SimPoint 3.0
+    }
+
+    if (/^I:/) {
+        (@line) = split(/ /,$_);
+
+        FinishThread();
+
+        # finish the previous thread info
+
+        # If this is a new input, give it a file
+        if ($input != $line[1]) {
+            $input = $line[1];
+
+            FinishFile();
+
+            # start a new pp file
+            $seenC = 0;
+            $file_open = 1;
+            #$fn = $prefix . "." . "I" . "." . $line[1] . ".pp";
+            $fn = $prefix . ".1.pp";
+            printf STDERR "Writing [%s]\n", $fn;
+            open(H,">$fn");
+            header();
+            printf H "\# %s\n", $_;
+        }
+    }
+
+    # Count the T markers
+    if (/^T:/) {
+      $tlines++;
+    }
+
+    if (/V:/) {
+        printf H "#Isimpoint %s\n",$_;
+    }
+
+    if (/G:/) {
+        my $g;
+        my $image;
+        my $addrstr;
+        my $addr;
+        my $offsetstr;
+        my $offset;
+        ## split on one or more spaces, aka \s+
+        ($g, $image, $addrstr, $addr, $offsetstr, $offset) = split(/\s+/,$_);
+        #printf H "Image %s %s\n",$image, $addr;
+    }
+
+    if (/^M:/ or /^S:/) {
+        ## Lines that begin with "M:" are simple markers:
+        ## Here is an example:
+        ##   M: 0x2a95556f83 1 
+        ##   0       1       2 
+        ##
+        ##  Column 0 is S:
+        ##  Column 1 is the marker location
+        ##  Column 2 is the marker count
+    
+        ## Lines that begin with "S:" are symbolic markers that have
+        ## additional information over and above the "M:" marker lines.
+        ## Here is an example:
+        ##   S: 0x2a95556f83 1 /lib64/ld-linux-x86-64.so.2 0x2a95556000 +  0xf83
+        ##   0       1       2      3                       4           5   6
+        ##
+        ##  0 is S:
+        ##  1 is the marker location
+        ##  2 is the marker count
+        ##  3 is the image name
+        ##  4 is the image low address
+        ##  5 is the "+"
+        ##  6 is the offset from the image low address.  (Column 6 equals Column 1 - Column 4)
+
+    
+        if ($file_open == 0) {
+            die "Error: we didn't see a required \"C:\" line before an \"M:\" line\n";
+        }
+    
+        # clean up the input line 
+        $d = $_;
+        $d =~ s/^[SM]:\s+//; 
+
+        # Still some pinpoints left
+        if ($pp <= $#m) {
+            # we have seen the right number of t lines
+            # SimPoint 3 numbers slices starting at 0
+            #WAS: while (($pp <= $#m) and ($m[$pp] == $tlines) ) {
+            while (($pp <= $#m) and ( ($m[$pp] + 1) == $tlines) ) {
+                $e = $d;
+                # printout() can take lines from the "M:" markers or the  "S:" markers.
+                # SimPoint 3 numbers slices starting at 0
+                #WAS: printout($lpp, $s, $e, $m[$pp] - $firstThreadSlice + 1, $w[$pp], $wmf[$pp]);
+                printout($lpp, $s, $e, $m[$pp] - $firstThreadSlice, $w[$pp], $wmf[$pp]);
+                $pp++;
+                $lpp++;
+            }
+        }
+
+        # Remember the m marker in case it is the start
+        $s = $d;
+    }
+}
+
+FinishThread();
+FinishFile();
+
+close(G);
+
+if ($pp < $#m) {
+    printf STDERR "%d < %d\n", $pp, $#m;
+    unlink $fn;
+    die "Did not see end marker\n";
+}

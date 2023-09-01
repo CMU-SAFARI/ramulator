@@ -8,6 +8,7 @@ using namespace std;
 using namespace ramulator;
 
 string DDR3::standard_name = "DDR3";
+string DDR3::level_str [int(Level::MAX)] = {"Ch", "Ra", "Ba", "Ro", "Co"};
 
 map<string, enum DDR3::Org> DDR3::org_map = {
     {"DDR3_512Mb_x4", DDR3::Org::DDR3_512Mb_x4}, {"DDR3_512Mb_x8", DDR3::Org::DDR3_512Mb_x8}, {"DDR3_512Mb_x16", DDR3::Org::DDR3_512Mb_x16},
@@ -296,8 +297,11 @@ void DDR3::init_timing()
     t[int(Command::PREA)].push_back({Command::ACT, 1, s.nRP});
 
     // RAS <-> REF
+    t[int(Command::ACT)].push_back({Command::REF, 1, s.nRC});
     t[int(Command::PRE)].push_back({Command::REF, 1, s.nRP});
     t[int(Command::PREA)].push_back({Command::REF, 1, s.nRP});
+    t[int(Command::RDA)].push_back({Command::REF, 1, s.nRTP + s.nRP});
+    t[int(Command::WRA)].push_back({Command::REF, 1, s.nCWL + s.nBL + s.nWR + s.nRP});
     t[int(Command::REF)].push_back({Command::ACT, 1, s.nRFC});
 
     // RAS <-> PD

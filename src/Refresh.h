@@ -26,7 +26,6 @@
 #include "ALDRAM.h"
 
 using namespace std;
-using namespace ramulator;
 
 namespace ramulator {
 

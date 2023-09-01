@@ -8,6 +8,7 @@ using namespace std;
 using namespace ramulator;
 
 string WideIO::standard_name = "WideIO";
+string WideIO::level_str [int(Level::MAX)] = {"Ch", "Ra", "Ba", "Ro", "Co"};
 
 map<string, enum WideIO::Org> WideIO::org_map = {
     {"WideIO_1Gb", WideIO::Org::WideIO_1Gb},
